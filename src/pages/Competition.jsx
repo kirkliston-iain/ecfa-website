@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { useParams } from 'react-router-dom'
 import { supabase } from '../supabaseClient'
 import StandingsTable, { TopScorersTable } from '../components/StandingsTable'
-import FixtureList from '../components/FixtureList'
+import FixtureWeekNav from '../components/FixtureWeekNav'
 
 export default function Competition() {
   const { slug } = useParams()
@@ -46,7 +46,7 @@ export default function Competition() {
           const { data: fixtures } = await supabase
             .from('fixtures')
             .select(
-              'id, round_name, fixture_date, home_score, away_score, status, group_id, home_team:home_team_id(id, name), away_team:away_team_id(id, name)'
+              'id, round_name, fixture_date, home_score, away_score, status, group_id, home_team:home_team_id(id, name, logo_url), away_team:away_team_id(id, name, logo_url)'
             )
             .eq('stage_id', stage.id)
             .order('fixture_date', { ascending: true })
@@ -56,7 +56,7 @@ export default function Competition() {
           if (stage.stage_type === 'group') {
             const { data: stageTeams } = await supabase
               .from('stage_teams')
-              .select('group_id, team:team_id(id, name)')
+              .select('group_id, team:team_id(id, name, logo_url)')
               .eq('stage_id', stage.id)
 
             for (const group of stage.groups || []) {
@@ -124,8 +124,8 @@ export default function Competition() {
                 />
               ))}
 
-          <h3 style={{ fontSize: 16, marginBottom: 10, color: '#5A5646' }}>Fixtures &amp; Results</h3>
-          <FixtureList fixtures={stage.fixtures} />
+          <h3 style={{ fontSize: 16, marginBottom: 10, color: '#5A6B85' }}>Fixtures &amp; Results</h3>
+          <FixtureWeekNav fixtures={stage.fixtures} />
         </section>
       ))}
 
@@ -156,6 +156,7 @@ function computeStandings(teams, fixtures) {
     table[team.id] = {
       teamId: team.id,
       teamName: team.name,
+      teamLogo: team.logo_url,
       played: 0,
       won: 0,
       drawn: 0,
