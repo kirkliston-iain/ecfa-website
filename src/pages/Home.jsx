@@ -122,6 +122,7 @@ async function loadCompetition(meta) {
       'id, fixture_date, home_score, away_score, status, group_id, stage_id, home_team:home_team_id(id, name), away_team:away_team_id(id, name)'
     )
     .in('stage_id', stageIds.length ? stageIds : ['00000000-0000-0000-0000-000000000000'])
+    .eq('hidden_from_public', false)
 
   const groupTeams = {}
   for (const stage of stages || []) {
