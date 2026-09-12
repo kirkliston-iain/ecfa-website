@@ -93,8 +93,6 @@ export default function AdminDashboard() {
       .eq('id', fixture.id)
     setSaving(null)
 
-    // If it was just marked postponed, it should disappear from this list
-    // and show up in the Postponed Games section instead.
     if (fixture.status === 'postponed') {
       loadFixtures()
       loadPostponed()
@@ -117,8 +115,6 @@ export default function AdminDashboard() {
       })
       .eq('id', fixture.id)
     setSavingPostponed(null)
-    // Refresh both lists — if status changed away from 'postponed' it should
-    // move back into the normal fixtures list (if that stage is selected).
     loadPostponed()
     if (stageId) loadFixtures()
   }
@@ -142,7 +138,6 @@ export default function AdminDashboard() {
 
     const teamId = side === 'home' ? fixture.home_team?.id : fixture.away_team?.id
 
-    // Find or create the player by name
     let { data: existing } = await supabase
       .from('players')
       .select('id')
@@ -183,16 +178,16 @@ export default function AdminDashboard() {
   }
 
   return (
-    <div className="container" style={{ padding: '40px 20px' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
-        <h1 style={{ fontSize: 26, color: 'var(--pitch)' }}>Admin — Fixtures &amp; Results</h1>
+    <div className="container" style={{ padding: '24px 16px', maxWidth: 480 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 20 }}>
+        <h1 style={{ fontSize: 22, color: 'var(--pitch)', margin: 0 }}>Admin</h1>
         <button onClick={handleSignOut} style={linkButtonStyle}>
           Sign out
         </button>
       </div>
 
-      <div style={{ display: 'flex', gap: 16, margin: '24px 0' }}>
-        <select value={competitionId} onChange={(e) => setCompetitionId(e.target.value)} style={selectStyle}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 24 }}>
+        <select value={competitionId} onChange={(e) => setCompetitionId(e.target.value)} style={fullSelectStyle}>
           <option value="">Select competition…</option>
           {competitions.map((c) => (
             <option key={c.id} value={c.id}>
@@ -205,7 +200,7 @@ export default function AdminDashboard() {
           value={stageId}
           onChange={(e) => setStageId(e.target.value)}
           disabled={!competitionId}
-          style={selectStyle}
+          style={fullSelectStyle}
         >
           <option value="">Select stage…</option>
           {stages.map((s) => (
@@ -217,233 +212,239 @@ export default function AdminDashboard() {
       </div>
 
       {stageId && (
-        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 14 }}>
-          <thead>
-            <tr style={{ borderBottom: '2px solid var(--pitch)', textAlign: 'left' }}>
-              <th style={{ padding: 8 }}>Fixture</th>
-              <th style={{ padding: 8, width: 70 }}>Home</th>
-              <th style={{ padding: 8, width: 70 }}>Away</th>
-              <th style={{ padding: 8, width: 130 }}>Status</th>
-              <th style={{ padding: 8, width: 90 }}></th>
-              <th style={{ padding: 8, width: 90 }}></th>
-            </tr>
-          </thead>
-          <tbody>
-            {fixtures.map((f) => (
-              <tr key={f.id} style={{ borderBottom: '1px solid var(--line)' }}>
-                <td style={{ padding: 8 }}>
-                  {f.home_team?.name} v {f.away_team?.name}
-                </td>
-                <td style={{ padding: 8 }}>
-                  <input
-                    type="number"
-                    value={f.home_score ?? ''}
-                    onChange={(e) => updateLocal(f.id, 'home_score', e.target.value)}
-                    style={scoreInputStyle}
-                  />
-                </td>
-                <td style={{ padding: 8 }}>
-                  <input
-                    type="number"
-                    value={f.away_score ?? ''}
-                    onChange={(e) => updateLocal(f.id, 'away_score', e.target.value)}
-                    style={scoreInputStyle}
-                  />
-                </td>
-                <td style={{ padding: 8 }}>
-                  <select
-                    value={f.status}
-                    onChange={(e) => updateLocal(f.id, 'status', e.target.value)}
-                    style={selectStyle}
-                  >
-                    <option value="scheduled">Scheduled</option>
-                    <option value="played">Played</option>
-                    <option value="postponed">Postponed</option>
-                    <option value="cancelled">Cancelled</option>
-                  </select>
-                </td>
-                <td style={{ padding: 8 }}>
-                  <button onClick={() => saveFixture(f)} disabled={saving === f.id} style={saveButtonStyle}>
-                    {saving === f.id ? 'Saving…' : 'Save'}
-                  </button>
-                </td>
-                <td style={{ padding: 8 }}>
-                  <button onClick={() => toggleScorers(f.id)} style={linkButtonStyle}>
-                    {expandedFixture === f.id ? 'Hide scorers' : 'Scorers'}
-                  </button>
-                </td>
-              </tr>
-            ))}
-            {fixtures.map(
-              (f) =>
-                expandedFixture === f.id && (
-                  <tr key={`${f.id}-scorers`}>
-                    <td colSpan={6} style={{ padding: '8px 8px 20px', background: '#FBFAF6' }}>
-                      <div style={{ marginBottom: 10 }}>
-                        {(scorersByFixture[f.id] || []).map((s) => (
-                          <div key={s.id} style={{ fontSize: 13, padding: '4px 0' }}>
-                            {s.player.first_name} {s.player.last_name} ({s.team.name}) — {s.goals} goal
-                            {s.goals === 1 ? '' : 's'}
-                          </div>
-                        ))}
-                        {(scorersByFixture[f.id] || []).length === 0 && (
-                          <div style={{ fontSize: 13, color: '#8A8570' }}>No scorers recorded yet.</div>
-                        )}
+        <div style={{ marginBottom: 40 }}>
+          {fixtures.map((f) => (
+            <div key={f.id} style={cardStyle}>
+              <div style={{ fontWeight: 600, marginBottom: 10 }}>
+                {f.home_team?.name} v {f.away_team?.name}
+              </div>
+
+              <div style={{ display: 'flex', gap: 8, marginBottom: 10 }}>
+                <input
+                  type="number"
+                  placeholder="Home"
+                  value={f.home_score ?? ''}
+                  onChange={(e) => updateLocal(f.id, 'home_score', e.target.value)}
+                  style={{ ...scoreInputStyle, flex: 1 }}
+                />
+                <span style={{ alignSelf: 'center', color: '#8A8570' }}>–</span>
+                <input
+                  type="number"
+                  placeholder="Away"
+                  value={f.away_score ?? ''}
+                  onChange={(e) => updateLocal(f.id, 'away_score', e.target.value)}
+                  style={{ ...scoreInputStyle, flex: 1 }}
+                />
+              </div>
+
+              <select
+                value={f.status}
+                onChange={(e) => updateLocal(f.id, 'status', e.target.value)}
+                style={{ ...fullSelectStyle, marginBottom: 10 }}
+              >
+                <option value="scheduled">Scheduled</option>
+                <option value="played">Played</option>
+                <option value="postponed">Postponed</option>
+                <option value="cancelled">Cancelled</option>
+              </select>
+
+              <div style={{ display: 'flex', gap: 8 }}>
+                <button
+                  onClick={() => saveFixture(f)}
+                  disabled={saving === f.id}
+                  style={{ ...saveButtonStyle, flex: 1 }}
+                >
+                  {saving === f.id ? 'Saving…' : 'Save'}
+                </button>
+                <button
+                  onClick={() => toggleScorers(f.id)}
+                  style={{ ...outlineButtonStyle, flex: 1 }}
+                >
+                  {expandedFixture === f.id ? 'Hide scorers' : 'Scorers'}
+                </button>
+              </div>
+
+              {expandedFixture === f.id && (
+                <div style={{ marginTop: 14, paddingTop: 14, borderTop: '1px solid var(--line)' }}>
+                  <div style={{ marginBottom: 10 }}>
+                    {(scorersByFixture[f.id] || []).map((s) => (
+                      <div key={s.id} style={{ fontSize: 13, padding: '4px 0' }}>
+                        {s.player.first_name} {s.player.last_name} ({s.team.name}) — {s.goals} goal
+                        {s.goals === 1 ? '' : 's'}
                       </div>
-                      <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
-                        <input
-                          placeholder="First name"
-                          value={scorerForm.firstName}
-                          onChange={(e) => setScorerForm((p) => ({ ...p, firstName: e.target.value }))}
-                          style={{ ...scoreInputStyle, width: 110 }}
-                        />
-                        <input
-                          placeholder="Last name"
-                          value={scorerForm.lastName}
-                          onChange={(e) => setScorerForm((p) => ({ ...p, lastName: e.target.value }))}
-                          style={{ ...scoreInputStyle, width: 110 }}
-                        />
-                        <select
-                          value={scorerForm.side}
-                          onChange={(e) => setScorerForm((p) => ({ ...p, side: e.target.value }))}
-                          style={selectStyle}
-                        >
-                          <option value="home">{f.home_team?.name} (home)</option>
-                          <option value="away">{f.away_team?.name} (away)</option>
-                        </select>
-                        <input
-                          type="number"
-                          min="1"
-                          value={scorerForm.goals}
-                          onChange={(e) => setScorerForm((p) => ({ ...p, goals: e.target.value }))}
-                          style={{ ...scoreInputStyle, width: 60 }}
-                        />
-                        <button onClick={() => addScorer(f)} style={saveButtonStyle}>
-                          Add scorer
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                )
-            )}
-            {fixtures.length === 0 && (
-              <tr>
-                <td colSpan={6} style={{ padding: 16, color: '#8A8570' }}>
-                  No fixtures in this stage yet.
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
+                    ))}
+                    {(scorersByFixture[f.id] || []).length === 0 && (
+                      <div style={{ fontSize: 13, color: '#8A8570' }}>No scorers recorded yet.</div>
+                    )}
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                    <div style={{ display: 'flex', gap: 8 }}>
+                      <input
+                        placeholder="First name"
+                        value={scorerForm.firstName}
+                        onChange={(e) => setScorerForm((p) => ({ ...p, firstName: e.target.value }))}
+                        style={{ ...scoreInputStyle, flex: 1 }}
+                      />
+                      <input
+                        placeholder="Last name"
+                        value={scorerForm.lastName}
+                        onChange={(e) => setScorerForm((p) => ({ ...p, lastName: e.target.value }))}
+                        style={{ ...scoreInputStyle, flex: 1 }}
+                      />
+                    </div>
+                    <select
+                      value={scorerForm.side}
+                      onChange={(e) => setScorerForm((p) => ({ ...p, side: e.target.value }))}
+                      style={fullSelectStyle}
+                    >
+                      <option value="home">{f.home_team?.name} (home)</option>
+                      <option value="away">{f.away_team?.name} (away)</option>
+                    </select>
+                    <div style={{ display: 'flex', gap: 8 }}>
+                      <input
+                        type="number"
+                        min="1"
+                        value={scorerForm.goals}
+                        onChange={(e) => setScorerForm((p) => ({ ...p, goals: e.target.value }))}
+                        style={{ ...scoreInputStyle, width: 70 }}
+                      />
+                      <button onClick={() => addScorer(f)} style={{ ...saveButtonStyle, flex: 1 }}>
+                        Add scorer
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          ))}
+          {fixtures.length === 0 && (
+            <p style={{ color: '#8A8570', fontSize: 14 }}>No fixtures in this stage yet.</p>
+          )}
+        </div>
       )}
 
-      <div style={{ marginTop: 56 }}>
-        <h2 style={{ fontSize: 22, color: 'var(--pitch)', marginBottom: 6 }}>Postponed Games</h2>
+      <div>
+        <h2 style={{ fontSize: 18, color: 'var(--pitch)', marginBottom: 6 }}>Postponed Games</h2>
         <p style={{ fontSize: 13, color: '#8A8570', marginBottom: 16 }}>
-          These don't show anywhere on the public site. Rearrange the date and set the status back to
-          Scheduled or Played once sorted, and it'll move back to its normal fixture list.
+          These don't show anywhere on the public site. Set the status back to Scheduled or Played
+          once sorted, and it moves back to its normal fixture list.
         </p>
-        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 14 }}>
-          <thead>
-            <tr style={{ borderBottom: '2px solid var(--pitch)', textAlign: 'left' }}>
-              <th style={{ padding: 8 }}>Fixture</th>
-              <th style={{ padding: 8 }}>Competition</th>
-              <th style={{ padding: 8, width: 170 }}>New date</th>
-              <th style={{ padding: 8, width: 130 }}>Status</th>
-              <th style={{ padding: 8, width: 30 }}>Week off?</th>
-              <th style={{ padding: 8, width: 160 }}>Requested by</th>
-              <th style={{ padding: 8, width: 80 }}></th>
-            </tr>
-          </thead>
-          <tbody>
-            {postponedFixtures.map((f) => (
-              <tr key={f.id} style={{ borderBottom: '1px solid var(--line)' }}>
-                <td style={{ padding: 8 }}>
-                  {f.home_team?.name} v {f.away_team?.name}
-                </td>
-                <td style={{ padding: 8, color: '#8A8570' }}>
-                  {f.stage?.competition?.name} — {f.stage?.name}
-                </td>
-                <td style={{ padding: 8 }}>
-                  <input
-                    type="datetime-local"
-                    value={f.fixture_date ? f.fixture_date.slice(0, 16) : ''}
-                    onChange={(e) => updatePostponedLocal(f.id, 'fixture_date', e.target.value)}
-                    style={scoreInputStyle}
-                  />
-                </td>
-                <td style={{ padding: 8 }}>
-                  <select
-                    value={f.status}
-                    onChange={(e) => updatePostponedLocal(f.id, 'status', e.target.value)}
-                    style={selectStyle}
-                  >
-                    <option value="postponed">Postponed</option>
-                    <option value="scheduled">Scheduled</option>
-                    <option value="played">Played</option>
-                    <option value="cancelled">Cancelled</option>
-                  </select>
-                </td>
-                <td style={{ padding: 8, textAlign: 'center' }}>
-                  <input
-                    type="checkbox"
-                    checked={f.week_off_requested}
-                    onChange={(e) => updatePostponedLocal(f.id, 'week_off_requested', e.target.checked)}
-                  />
-                </td>
-                <td style={{ padding: 8 }}>
-                  <select
-                    value={f.week_off_requested_team_id || ''}
-                    onChange={(e) => updatePostponedLocal(f.id, 'week_off_requested_team_id', e.target.value)}
-                    disabled={!f.week_off_requested}
-                    style={selectStyle}
-                  >
-                    <option value="">—</option>
-                    {allTeams.map((t) => (
-                      <option key={t.id} value={t.id}>
-                        {t.name}
-                      </option>
-                    ))}
-                  </select>
-                </td>
-                <td style={{ padding: 8 }}>
-                  <button
-                    onClick={() => savePostponed(f)}
-                    disabled={savingPostponed === f.id}
-                    style={saveButtonStyle}
-                  >
-                    {savingPostponed === f.id ? 'Saving…' : 'Save'}
-                  </button>
-                </td>
-              </tr>
-            ))}
-            {postponedFixtures.length === 0 && (
-              <tr>
-                <td colSpan={7} style={{ padding: 16, color: '#8A8570' }}>
-                  No postponed games right now.
-                </td>
-              </tr>
+
+        {postponedFixtures.map((f) => (
+          <div key={f.id} style={cardStyle}>
+            <div style={{ fontWeight: 600, marginBottom: 2 }}>
+              {f.home_team?.name} v {f.away_team?.name}
+            </div>
+            <div style={{ fontSize: 12, color: '#8A8570', marginBottom: 10 }}>
+              {f.stage?.competition?.name} — {f.stage?.name}
+            </div>
+
+            <label style={labelStyle}>New date</label>
+            <input
+              type="datetime-local"
+              value={f.fixture_date ? f.fixture_date.slice(0, 16) : ''}
+              onChange={(e) => updatePostponedLocal(f.id, 'fixture_date', e.target.value)}
+              style={{ ...fullSelectStyle, marginBottom: 10 }}
+            />
+
+            <label style={labelStyle}>Status</label>
+            <select
+              value={f.status}
+              onChange={(e) => updatePostponedLocal(f.id, 'status', e.target.value)}
+              style={{ ...fullSelectStyle, marginBottom: 10 }}
+            >
+              <option value="postponed">Postponed</option>
+              <option value="scheduled">Scheduled</option>
+              <option value="played">Played</option>
+              <option value="cancelled">Cancelled</option>
+            </select>
+
+            <label style={{ ...labelStyle, display: 'flex', alignItems: 'center', gap: 8 }}>
+              <input
+                type="checkbox"
+                checked={f.week_off_requested}
+                onChange={(e) => updatePostponedLocal(f.id, 'week_off_requested', e.target.checked)}
+              />
+              Week off requested
+            </label>
+
+            {f.week_off_requested && (
+              <select
+                value={f.week_off_requested_team_id || ''}
+                onChange={(e) => updatePostponedLocal(f.id, 'week_off_requested_team_id', e.target.value)}
+                style={{ ...fullSelectStyle, marginTop: 8, marginBottom: 10 }}
+              >
+                <option value="">Which team asked?</option>
+                {allTeams.map((t) => (
+                  <option key={t.id} value={t.id}>
+                    {t.name}
+                  </option>
+                ))}
+              </select>
             )}
-          </tbody>
-        </table>
+
+            <button
+              onClick={() => savePostponed(f)}
+              disabled={savingPostponed === f.id}
+              style={{ ...saveButtonStyle, width: '100%', marginTop: 10 }}
+            >
+              {savingPostponed === f.id ? 'Saving…' : 'Save'}
+            </button>
+          </div>
+        ))}
+        {postponedFixtures.length === 0 && (
+          <p style={{ color: '#8A8570', fontSize: 14 }}>No postponed games right now.</p>
+        )}
       </div>
     </div>
   )
 }
 
-const selectStyle = {
-  padding: '8px 10px',
+const cardStyle = {
+  border: '1px solid var(--line)',
+  borderRadius: 8,
+  padding: 14,
+  marginBottom: 12,
+}
+const labelStyle = {
+  display: 'block',
+  fontSize: 12,
+  color: '#8A8570',
+  marginBottom: 4,
+}
+const fullSelectStyle = {
+  width: '100%',
+  boxSizing: 'border-box',
+  padding: '10px 10px',
   border: '1px solid var(--line)',
   fontFamily: 'var(--font-body)',
   fontSize: 14,
+  borderRadius: 6,
 }
-const scoreInputStyle = { width: 50, padding: '6px 8px', border: '1px solid var(--line)' }
+const scoreInputStyle = {
+  width: '100%',
+  boxSizing: 'border-box',
+  padding: '8px 10px',
+  border: '1px solid var(--line)',
+  borderRadius: 6,
+  fontSize: 14,
+}
 const saveButtonStyle = {
-  padding: '6px 12px',
+  padding: '10px 12px',
   background: 'var(--pitch)',
   color: 'var(--paper)',
   border: 'none',
-  fontSize: 13,
+  fontSize: 14,
+  borderRadius: 6,
+  cursor: 'pointer',
+}
+const outlineButtonStyle = {
+  padding: '10px 12px',
+  background: 'none',
+  color: 'var(--pitch)',
+  border: '1px solid var(--pitch)',
+  fontSize: 14,
+  borderRadius: 6,
   cursor: 'pointer',
 }
 const linkButtonStyle = {
