@@ -23,6 +23,15 @@ const COMPETITIONS = [
   },
 ]
 
+const SPONSORS = [
+  {
+    name: 'Appin Sports',
+    url: 'https://appinsports.com/',
+    logo: 'https://appinsports.com/wp-content/uploads/logo/logo-footer.png',
+    blurb: 'Custom teamwear specialists — proud kit sponsor of the ECFA.',
+  },
+]
+
 export default function Home() {
   return (
     <div className="container" style={{ padding: '48px 20px' }}>
@@ -52,6 +61,48 @@ export default function Home() {
             </div>
             <span style={{ fontSize: 22, color: 'var(--brass)' }}>&rarr;</span>
           </Link>
+        ))}
+      </div>
+
+      <h2
+        style={{
+          fontSize: 15,
+          fontWeight: 700,
+          letterSpacing: 0.6,
+          textTransform: 'uppercase',
+          color: '#8A8570',
+          marginTop: 56,
+          marginBottom: 16,
+        }}
+      >
+        Our Sponsors
+      </h2>
+      <div style={{ display: 'grid', gap: 1, background: 'var(--line)' }}>
+        {SPONSORS.map((s) => (
+          <a
+            key={s.name}
+            href={s.url}
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{
+              background: 'var(--paper)',
+              padding: '20px 24px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 20,
+            }}
+          >
+            <img
+              src={s.logo}
+              alt={s.name}
+              style={{ height: 40, width: 'auto', objectFit: 'contain', flexShrink: 0 }}
+            />
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontWeight: 600, fontSize: 15 }}>{s.name}</div>
+              <p style={{ margin: '2px 0 0', fontSize: 13, color: '#8A8570' }}>{s.blurb}</p>
+            </div>
+            <span style={{ fontSize: 22, color: 'var(--brass)' }}>&rarr;</span>
+          </a>
         ))}
       </div>
     </div>
