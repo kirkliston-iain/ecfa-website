@@ -58,7 +58,7 @@ export default function AdminDashboard() {
     const { data } = await supabase
       .from('fixtures')
       .select(
-        'id, round_name, fixture_date, home_score, away_score, status, home_team:home_team_id(id, name), away_team:away_team_id(id, name)'
+        'id, round_name, fixture_date, home_score, away_score, status, hidden_from_public, home_team:home_team_id(id, name), away_team:away_team_id(id, name)'
       )
       .eq('stage_id', stageId)
       .neq('status', 'postponed')
@@ -70,7 +70,7 @@ export default function AdminDashboard() {
     const { data } = await supabase
       .from('fixtures')
       .select(
-        'id, fixture_date, venue, status, week_off_requested, week_off_requested_team_id, home_team:home_team_id(id, name), away_team:away_team_id(id, name), stage:stage_id(name, competition:competition_id(name))'
+        'id, fixture_date, venue, status, hidden_from_public, week_off_requested, week_off_requested_team_id, home_team:home_team_id(id, name), away_team:away_team_id(id, name), stage:stage_id(name, competition:competition_id(name))'
       )
       .eq('status', 'postponed')
       .order('fixture_date')
@@ -78,7 +78,17 @@ export default function AdminDashboard() {
   }
 
   function updateLocal(id, field, value) {
-    setFixtures((prev) => prev.map((f) => (f.id === id ? { ...f, [field]: value } : f)))
+    setFixtures((prev) =>
+      prev.map((f) => {
+        if (f.id !== id) return f
+        const updated = { ...f, [field]: value }
+        // Marking a fixture postponed should hide it from the public site by default.
+        if (field === 'status' && value === 'postponed') {
+          updated.hidden_from_public = true
+        }
+        return updated
+      })
+    )
   }
 
   async function saveFixture(fixture) {
@@ -89,6 +99,7 @@ export default function AdminDashboard() {
         home_score: fixture.home_score === '' ? null : Number(fixture.home_score),
         away_score: fixture.away_score === '' ? null : Number(fixture.away_score),
         status: fixture.status,
+        hidden_from_public: fixture.hidden_from_public,
       })
       .eq('id', fixture.id)
     setSaving(null)
@@ -100,7 +111,18 @@ export default function AdminDashboard() {
   }
 
   function updatePostponedLocal(id, field, value) {
-    setPostponedFixtures((prev) => prev.map((f) => (f.id === id ? { ...f, [field]: value } : f)))
+    setPostponedFixtures((prev) =>
+      prev.map((f) => {
+        if (f.id !== id) return f
+        const updated = { ...f, [field]: value }
+        // Moving it back to Scheduled/Played should un-hide it, unless they
+        // explicitly want it still hidden — they can re-tick the box.
+        if (field === 'status' && value !== 'postponed') {
+          updated.hidden_from_public = false
+        }
+        return updated
+      })
+    )
   }
 
   async function savePostponed(fixture) {
@@ -110,6 +132,7 @@ export default function AdminDashboard() {
       .update({
         fixture_date: fixture.fixture_date || null,
         status: fixture.status,
+        hidden_from_public: fixture.hidden_from_public,
         week_off_requested: fixture.week_off_requested,
         week_off_requested_team_id: fixture.week_off_requested ? fixture.week_off_requested_team_id : null,
       })
@@ -248,6 +271,15 @@ export default function AdminDashboard() {
                 <option value="cancelled">Cancelled</option>
               </select>
 
+              <label style={{ ...labelStyle, display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
+                <input
+                  type="checkbox"
+                  checked={!!f.hidden_from_public}
+                  onChange={(e) => updateLocal(f.id, 'hidden_from_public', e.target.checked)}
+                />
+                Hide from public site
+              </label>
+
               <div style={{ display: 'flex', gap: 8 }}>
                 <button
                   onClick={() => saveFixture(f)}
@@ -358,6 +390,15 @@ export default function AdminDashboard() {
               <option value="played">Played</option>
               <option value="cancelled">Cancelled</option>
             </select>
+
+            <label style={{ ...labelStyle, display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
+              <input
+                type="checkbox"
+                checked={!!f.hidden_from_public}
+                onChange={(e) => updatePostponedLocal(f.id, 'hidden_from_public', e.target.checked)}
+              />
+              Hide from public site
+            </label>
 
             <label style={{ ...labelStyle, display: 'flex', alignItems: 'center', gap: 8 }}>
               <input
