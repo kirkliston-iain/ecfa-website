@@ -127,10 +127,17 @@ async function importFixtures(competitionSlug, stages, teamMap) {
         targetStage = knockoutStage
       } else if (groupStage) {
         targetStage = groupStage
-        groupId = teamGroupMap.get(homeTeamId) || null
       }
     }
     if (!targetStage) continue
+
+    // Group_id needs setting for ANY group-stage fixture, not just the
+    // multi-stage branch above — single-stage competitions (e.g. Appin League)
+    // hit the `targetStage = singleStage` shortcut and were being skipped,
+    // leaving group_id null and breaking the standings table.
+    if (targetStage.stage_type === 'group') {
+      groupId = teamGroupMap.get(homeTeamId) || null
+    }
 
     const hasResult = f.result === true || f.result === 'true'
     const row = {
