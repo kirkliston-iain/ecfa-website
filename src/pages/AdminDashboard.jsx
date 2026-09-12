@@ -12,12 +12,24 @@ export default function AdminDashboard() {
   const [scorersByFixture, setScorersByFixture] = useState({})
   const [scorerForm, setScorerForm] = useState({ firstName: '', lastName: '', side: 'home', goals: 1 })
 
+  const [postponedFixtures, setPostponedFixtures] = useState([])
+  const [allTeams, setAllTeams] = useState([])
+  const [savingPostponed, setSavingPostponed] = useState(null)
+
   useEffect(() => {
     supabase
       .from('competitions')
       .select('id, name')
       .order('sort_order')
       .then(({ data }) => setCompetitions(data || []))
+
+    supabase
+      .from('teams')
+      .select('id, name')
+      .order('name')
+      .then(({ data }) => setAllTeams(data || []))
+
+    loadPostponed()
   }, [])
 
   useEffect(() => {
@@ -49,8 +61,20 @@ export default function AdminDashboard() {
         'id, round_name, fixture_date, home_score, away_score, status, home_team:home_team_id(id, name), away_team:away_team_id(id, name)'
       )
       .eq('stage_id', stageId)
+      .neq('status', 'postponed')
       .order('fixture_date')
     setFixtures(data || [])
+  }
+
+  async function loadPostponed() {
+    const { data } = await supabase
+      .from('fixtures')
+      .select(
+        'id, fixture_date, venue, status, week_off_requested, week_off_requested_team_id, home_team:home_team_id(id, name), away_team:away_team_id(id, name), stage:stage_id(name, competition:competition_id(name))'
+      )
+      .eq('status', 'postponed')
+      .order('fixture_date')
+    setPostponedFixtures(data || [])
   }
 
   function updateLocal(id, field, value) {
@@ -68,6 +92,35 @@ export default function AdminDashboard() {
       })
       .eq('id', fixture.id)
     setSaving(null)
+
+    // If it was just marked postponed, it should disappear from this list
+    // and show up in the Postponed Games section instead.
+    if (fixture.status === 'postponed') {
+      loadFixtures()
+      loadPostponed()
+    }
+  }
+
+  function updatePostponedLocal(id, field, value) {
+    setPostponedFixtures((prev) => prev.map((f) => (f.id === id ? { ...f, [field]: value } : f)))
+  }
+
+  async function savePostponed(fixture) {
+    setSavingPostponed(fixture.id)
+    await supabase
+      .from('fixtures')
+      .update({
+        fixture_date: fixture.fixture_date || null,
+        status: fixture.status,
+        week_off_requested: fixture.week_off_requested,
+        week_off_requested_team_id: fixture.week_off_requested ? fixture.week_off_requested_team_id : null,
+      })
+      .eq('id', fixture.id)
+    setSavingPostponed(null)
+    // Refresh both lists — if status changed away from 'postponed' it should
+    // move back into the normal fixtures list (if that stage is selected).
+    loadPostponed()
+    if (stageId) loadFixtures()
   }
 
   async function toggleScorers(fixtureId) {
@@ -283,6 +336,97 @@ export default function AdminDashboard() {
           </tbody>
         </table>
       )}
+
+      <div style={{ marginTop: 56 }}>
+        <h2 style={{ fontSize: 22, color: 'var(--pitch)', marginBottom: 6 }}>Postponed Games</h2>
+        <p style={{ fontSize: 13, color: '#8A8570', marginBottom: 16 }}>
+          These don't show anywhere on the public site. Rearrange the date and set the status back to
+          Scheduled or Played once sorted, and it'll move back to its normal fixture list.
+        </p>
+        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 14 }}>
+          <thead>
+            <tr style={{ borderBottom: '2px solid var(--pitch)', textAlign: 'left' }}>
+              <th style={{ padding: 8 }}>Fixture</th>
+              <th style={{ padding: 8 }}>Competition</th>
+              <th style={{ padding: 8, width: 170 }}>New date</th>
+              <th style={{ padding: 8, width: 130 }}>Status</th>
+              <th style={{ padding: 8, width: 30 }}>Week off?</th>
+              <th style={{ padding: 8, width: 160 }}>Requested by</th>
+              <th style={{ padding: 8, width: 80 }}></th>
+            </tr>
+          </thead>
+          <tbody>
+            {postponedFixtures.map((f) => (
+              <tr key={f.id} style={{ borderBottom: '1px solid var(--line)' }}>
+                <td style={{ padding: 8 }}>
+                  {f.home_team?.name} v {f.away_team?.name}
+                </td>
+                <td style={{ padding: 8, color: '#8A8570' }}>
+                  {f.stage?.competition?.name} — {f.stage?.name}
+                </td>
+                <td style={{ padding: 8 }}>
+                  <input
+                    type="datetime-local"
+                    value={f.fixture_date ? f.fixture_date.slice(0, 16) : ''}
+                    onChange={(e) => updatePostponedLocal(f.id, 'fixture_date', e.target.value)}
+                    style={scoreInputStyle}
+                  />
+                </td>
+                <td style={{ padding: 8 }}>
+                  <select
+                    value={f.status}
+                    onChange={(e) => updatePostponedLocal(f.id, 'status', e.target.value)}
+                    style={selectStyle}
+                  >
+                    <option value="postponed">Postponed</option>
+                    <option value="scheduled">Scheduled</option>
+                    <option value="played">Played</option>
+                    <option value="cancelled">Cancelled</option>
+                  </select>
+                </td>
+                <td style={{ padding: 8, textAlign: 'center' }}>
+                  <input
+                    type="checkbox"
+                    checked={f.week_off_requested}
+                    onChange={(e) => updatePostponedLocal(f.id, 'week_off_requested', e.target.checked)}
+                  />
+                </td>
+                <td style={{ padding: 8 }}>
+                  <select
+                    value={f.week_off_requested_team_id || ''}
+                    onChange={(e) => updatePostponedLocal(f.id, 'week_off_requested_team_id', e.target.value)}
+                    disabled={!f.week_off_requested}
+                    style={selectStyle}
+                  >
+                    <option value="">—</option>
+                    {allTeams.map((t) => (
+                      <option key={t.id} value={t.id}>
+                        {t.name}
+                      </option>
+                    ))}
+                  </select>
+                </td>
+                <td style={{ padding: 8 }}>
+                  <button
+                    onClick={() => savePostponed(f)}
+                    disabled={savingPostponed === f.id}
+                    style={saveButtonStyle}
+                  >
+                    {savingPostponed === f.id ? 'Saving…' : 'Save'}
+                  </button>
+                </td>
+              </tr>
+            ))}
+            {postponedFixtures.length === 0 && (
+              <tr>
+                <td colSpan={7} style={{ padding: 16, color: '#8A8570' }}>
+                  No postponed games right now.
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
     </div>
   )
 }
