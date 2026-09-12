@@ -4,6 +4,7 @@ import Footer from './components/Footer'
 import ProtectedRoute from './components/ProtectedRoute'
 import Home from './pages/Home'
 import Competition from './pages/Competition'
+import FixtureDetail from './pages/FixtureDetail'
 import AdminLogin from './pages/AdminLogin'
 import AdminDashboard from './pages/AdminDashboard'
 
@@ -15,6 +16,7 @@ export default function App() {
         <Routes>
           <Route path="/" element={<Home />} />
           <Route path="/competitions/:slug" element={<Competition />} />
+          <Route path="/fixtures/:id" element={<FixtureDetail />} />
           <Route path="/admin" element={<AdminLogin />} />
           <Route
             path="/admin/dashboard"
