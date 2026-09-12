@@ -3,6 +3,8 @@ import Header from './components/Header'
 import Footer from './components/Footer'
 import ProtectedRoute from './components/ProtectedRoute'
 import Home from './pages/Home'
+import CompetitionsIndex from './pages/CompetitionsIndex'
+import StandingsPage from './pages/StandingsPage'
 import Competition from './pages/Competition'
 import FixtureDetail from './pages/FixtureDetail'
 import TeamDetail from './pages/TeamDetail'
@@ -18,6 +20,8 @@ export default function App() {
       <main style={{ flex: 1 }}>
         <Routes>
           <Route path="/" element={<Home />} />
+          <Route path="/competitions" element={<CompetitionsIndex />} />
+          <Route path="/standings" element={<StandingsPage />} />
           <Route path="/competitions/:slug" element={<Competition />} />
           <Route path="/fixtures/:id" element={<FixtureDetail />} />
           <Route path="/teams/:id" element={<TeamDetail />} />
