@@ -16,6 +16,27 @@ const SEASON_OPTIONS = [
   { value: '2015/16', label: '2015/16' },
 ]
 
+// Supabase/PostgREST caps a plain select at 1000 rows by default. historic_scorers
+// has more rows than that, so a single query silently truncates the tail end of the
+// table. Page through it in batches of 1000 so every row is loaded.
+async function fetchAllHistoricScorers() {
+  const pageSize = 1000
+  let from = 0
+  let all = []
+  while (true) {
+    const { data, error } = await supabase
+      .from('historic_scorers')
+      .select('player_name, team_name, goals, season')
+      .range(from, from + pageSize - 1)
+
+    if (error || !data) break
+    all = all.concat(data)
+    if (data.length < pageSize) break
+    from += pageSize
+  }
+  return all
+}
+
 export default function ScorersPage() {
   const [season, setSeason] = useState('overall')
   const [loading, setLoading] = useState(true)
@@ -28,9 +49,7 @@ export default function ScorersPage() {
     async function load() {
       setLoading(true)
 
-      const { data: hist } = await supabase
-        .from('historic_scorers')
-        .select('player_name, team_name, goals, season')
+      const hist = await fetchAllHistoricScorers()
 
       const { data: scorers } = await supabase
         .from('fixture_scorers')

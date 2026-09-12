@@ -269,26 +269,6 @@ export default function TeamDetail() {
 
       <section style={{ marginBottom: 48 }}>
         <h2 style={{ fontSize: 18, marginBottom: 16, paddingBottom: 8, borderBottom: '1px solid var(--line)' }}>
-          Squad
-        </h2>
-        {squad.length === 0 && <p style={{ color: '#8A8570', fontSize: 14 }}>Squad list not yet available.</p>}
-        <div
-          style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))',
-            gap: '6px 16px',
-          }}
-        >
-          {squad.map((p) => (
-            <div key={p.id} style={{ fontSize: 14, padding: '4px 0' }}>
-              {p.first_name} {p.last_name}
-            </div>
-          ))}
-        </div>
-      </section>
-
-      <section>
-        <h2 style={{ fontSize: 18, marginBottom: 16, paddingBottom: 8, borderBottom: '1px solid var(--line)' }}>
           Results
         </h2>
         {playedFixtures.length === 0 && <p style={{ color: '#8A8570', fontSize: 14 }}>No results yet.</p>}
@@ -344,6 +324,26 @@ export default function TeamDetail() {
             )
           })}
         </ul>
+      </section>
+
+      <section>
+        <h2 style={{ fontSize: 18, marginBottom: 16, paddingBottom: 8, borderBottom: '1px solid var(--line)' }}>
+          Squad
+        </h2>
+        {squad.length === 0 && <p style={{ color: '#8A8570', fontSize: 14 }}>Squad list not yet available.</p>}
+        <div
+          style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))',
+            gap: '6px 16px',
+          }}
+        >
+          {squad.map((p) => (
+            <div key={p.id} style={{ fontSize: 14, padding: '4px 0' }}>
+              {p.first_name} {p.last_name}
+            </div>
+          ))}
+        </div>
       </section>
     </div>
   )
