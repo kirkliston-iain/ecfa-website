@@ -31,7 +31,7 @@ export default function Footer() {
           justifyContent: 'space-between',
           alignItems: 'center',
           fontSize: 13,
-          color: '#6B6555',
+          color: 'var(--muted)',
         }}
       >
         <span>Edinburgh Churches Football Association</span>

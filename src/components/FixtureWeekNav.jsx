@@ -36,7 +36,7 @@ export default function FixtureWeekNav({ fixtures }) {
   const [index, setIndex] = useState(defaultIndex)
 
   if (days.length === 0) {
-    return <p style={{ color: '#8A8570' }}>No fixtures scheduled yet.</p>
+    return <p style={{ color: 'var(--muted)' }}>No fixtures scheduled yet.</p>
   }
 
   const current = days[index]
@@ -63,10 +63,9 @@ export default function FixtureWeekNav({ fixtures }) {
         </button>
         <div
           style={{
-            fontFamily: 'var(--font-display)',
-            fontWeight: 600,
+            fontWeight: 700,
             fontSize: 15,
-            color: current.date === today ? 'var(--pitch)' : 'var(--ink)',
+            color: 'var(--ink)',
             textAlign: 'center',
           }}
         >
@@ -78,7 +77,7 @@ export default function FixtureWeekNav({ fixtures }) {
                 fontSize: 10,
                 fontWeight: 700,
                 color: '#fff',
-                background: 'var(--pitch)',
+                background: 'var(--brass)',
                 borderRadius: 4,
                 padding: '2px 6px',
                 verticalAlign: 'middle',
@@ -105,7 +104,7 @@ export default function FixtureWeekNav({ fixtures }) {
 function navButtonStyle(disabled) {
   return {
     border: 'none',
-    background: disabled ? 'var(--line)' : 'var(--pitch)',
+    background: disabled ? 'var(--line)' : 'var(--ink)',
     color: disabled ? '#9AA5B1' : '#fff',
     width: 32,
     height: 32,
