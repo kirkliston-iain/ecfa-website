@@ -77,6 +77,20 @@ export default function Header() {
           >
             Scorers
           </NavLink>
+          <NavLink
+            to="/honours"
+            style={({ isActive }) => ({
+              padding: '0 0 12px',
+              fontSize: 14,
+              fontWeight: 500,
+              whiteSpace: 'nowrap',
+              borderBottom: isActive ? '2px solid #fff' : '2px solid transparent',
+              color: '#fff',
+              opacity: isActive ? 1 : 0.75,
+            })}
+          >
+            Honours
+          </NavLink>
         </nav>
       </div>
     </header>
