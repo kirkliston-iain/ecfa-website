@@ -24,7 +24,7 @@ function Badge({ logoUrl, name, size = 64 }) {
         width: size,
         height: size,
         borderRadius: '50%',
-        background: 'var(--pitch)',
+        background: 'var(--ink)',
         color: '#fff',
         display: 'inline-flex',
         alignItems: 'center',
@@ -49,8 +49,9 @@ function resultFor(fixture, teamId) {
   return 'D'
 }
 
+const RESULT_COLORS = { W: 'var(--win)', D: 'var(--muted)', L: 'var(--red-card)' }
+
 function FormPill({ result, fixtureId }) {
-  const colors = { W: '#1B8A4A', D: '#8A8570', L: 'var(--red-card)' }
   return (
     <Link
       to={`/fixtures/${fixtureId}`}
@@ -58,7 +59,7 @@ function FormPill({ result, fixtureId }) {
         width: 28,
         height: 28,
         borderRadius: '50%',
-        background: colors[result] || '#ccc',
+        background: RESULT_COLORS[result] || '#ccc',
         color: '#fff',
         display: 'inline-flex',
         alignItems: 'center',
@@ -181,7 +182,7 @@ export default function TeamDetail() {
   const competitionOrder = ['League', 'League Cup', 'Knockout Cup', 'Brian Latto Cup']
 
   return (
-    <div className="container" style={{ padding: '40px 20px' }}>
+    <div className="container" style={{ padding: '32px 20px 48px' }}>
       <button
         onClick={() => navigate(-1)}
         style={{
@@ -189,7 +190,7 @@ export default function TeamDetail() {
           background: 'none',
           color: 'var(--brass)',
           fontSize: 13,
-          fontWeight: 600,
+          fontWeight: 700,
           marginBottom: 24,
           cursor: 'pointer',
           padding: 0,
@@ -200,7 +201,7 @@ export default function TeamDetail() {
 
       <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 12 }}>
         <Badge logoUrl={team.logo_url} name={team.name} size={64} />
-        <h1 style={{ fontSize: 28, color: 'var(--pitch)' }}>{team.name}</h1>
+        <h1 style={{ fontSize: 26 }}>{team.name}</h1>
       </div>
 
       {honours.length > 0 && (
@@ -208,8 +209,8 @@ export default function TeamDetail() {
           style={{
             marginBottom: 24,
             padding: '14px 18px',
-            background: 'rgba(184, 149, 79, 0.08)',
-            border: '1px solid rgba(184, 149, 79, 0.3)',
+            background: 'rgba(187, 25, 25, 0.06)',
+            border: '1px solid rgba(187, 25, 25, 0.25)',
             borderRadius: 6,
           }}
         >
@@ -221,8 +222,8 @@ export default function TeamDetail() {
               .filter((c) => honoursByCompetition[c])
               .map((c) => (
                 <div key={c} style={{ fontSize: 14 }}>
-                  <span style={{ fontWeight: 600 }}>{c}</span>
-                  <span style={{ color: '#5A5646' }}> ({honoursByCompetition[c].length}): {honoursByCompetition[c].join(', ')}</span>
+                  <span style={{ fontWeight: 700 }}>{c}</span>
+                  <span style={{ color: 'var(--muted)' }}> ({honoursByCompetition[c].length}): {honoursByCompetition[c].join(', ')}</span>
                 </div>
               ))}
           </div>
@@ -230,10 +231,10 @@ export default function TeamDetail() {
       )}
 
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 40 }}>
-        <span style={{ fontSize: 12, color: '#8A8570', textTransform: 'uppercase', letterSpacing: 0.5, marginRight: 4 }}>
+        <span style={{ fontSize: 12, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: 0.5, marginRight: 4 }}>
           Form
         </span>
-        {form.length === 0 && <span style={{ fontSize: 13, color: '#8A8570' }}>No results yet.</span>}
+        {form.length === 0 && <span style={{ fontSize: 13, color: 'var(--muted)' }}>No results yet.</span>}
         {form
           .slice()
           .reverse()
@@ -251,10 +252,10 @@ export default function TeamDetail() {
         }}
       >
         <section>
-          <h2 style={{ fontSize: 18, marginBottom: 16, paddingBottom: 8, borderBottom: '1px solid var(--line)' }}>
+          <h2 style={{ fontSize: 13, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 16, paddingBottom: 8, borderBottom: '1px solid var(--line)' }}>
             Next Fixtures
           </h2>
-          {nextFive.length === 0 && <p style={{ color: '#8A8570', fontSize: 14 }}>No upcoming fixtures scheduled.</p>}
+          {nextFive.length === 0 && <p style={{ color: 'var(--muted)', fontSize: 14 }}>No upcoming fixtures scheduled.</p>}
           <ul style={{ listStyle: 'none', margin: 0, padding: 0 }}>
             {nextFive.map((f) => {
               const opponent = f.home_team?.id === team.id ? f.away_team : f.home_team
@@ -272,7 +273,7 @@ export default function TeamDetail() {
                   >
                     <Badge logoUrl={opponent?.logo_url} name={opponent?.name} size={22} />
                     <span style={{ flex: 1 }}>{opponent?.name}</span>
-                    <span style={{ color: '#8A8570', fontSize: 12 }}>
+                    <span style={{ color: 'var(--muted)', fontSize: 12 }}>
                       {f.fixture_date
                         ? new Date(f.fixture_date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })
                         : 'TBC'}
@@ -285,10 +286,10 @@ export default function TeamDetail() {
         </section>
 
         <section>
-          <h2 style={{ fontSize: 18, marginBottom: 16, paddingBottom: 8, borderBottom: '1px solid var(--line)' }}>
+          <h2 style={{ fontSize: 13, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 16, paddingBottom: 8, borderBottom: '1px solid var(--line)' }}>
             Top Scorers
           </h2>
-          {topScorers.length === 0 && <p style={{ color: '#8A8570', fontSize: 14 }}>No goals recorded yet.</p>}
+          {topScorers.length === 0 && <p style={{ color: 'var(--muted)', fontSize: 14 }}>No goals recorded yet.</p>}
           <ul style={{ listStyle: 'none', margin: 0, padding: 0 }}>
             {topScorers.map((s, i) => (
               <li
@@ -302,7 +303,7 @@ export default function TeamDetail() {
                 }}
               >
                 <span>{s.name}</span>
-                <span style={{ fontWeight: 700, color: 'var(--pitch)' }}>{s.goals}</span>
+                <span style={{ fontWeight: 800, color: 'var(--ink)' }}>{s.goals}</span>
               </li>
             ))}
           </ul>
@@ -310,16 +311,15 @@ export default function TeamDetail() {
       </div>
 
       <section style={{ marginBottom: 48 }}>
-        <h2 style={{ fontSize: 18, marginBottom: 16, paddingBottom: 8, borderBottom: '1px solid var(--line)' }}>
+        <h2 style={{ fontSize: 13, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 16, paddingBottom: 8, borderBottom: '1px solid var(--line)' }}>
           Results
         </h2>
-        {playedFixtures.length === 0 && <p style={{ color: '#8A8570', fontSize: 14 }}>No results yet.</p>}
+        {playedFixtures.length === 0 && <p style={{ color: 'var(--muted)', fontSize: 14 }}>No results yet.</p>}
         <ul style={{ listStyle: 'none', margin: 0, padding: 0 }}>
           {playedFixtures.map((f) => {
             const opponent = f.home_team?.id === team.id ? f.away_team : f.home_team
             const isHome = f.home_team?.id === team.id
             const result = resultFor(f, team.id)
-            const colors = { W: '#1B8A4A', D: '#8A8570', L: 'var(--red-card)' }
             return (
               <li key={f.id} style={{ borderBottom: '1px solid var(--line)' }}>
                 <Link
@@ -337,7 +337,7 @@ export default function TeamDetail() {
                       width: 20,
                       height: 20,
                       borderRadius: '50%',
-                      background: colors[result] || '#ccc',
+                      background: RESULT_COLORS[result] || '#ccc',
                       color: '#fff',
                       display: 'inline-flex',
                       alignItems: 'center',
@@ -353,10 +353,10 @@ export default function TeamDetail() {
                   <span style={{ flex: 1 }}>
                     {isHome ? 'vs' : '@'} {opponent?.name}
                   </span>
-                  <span style={{ fontWeight: 700, color: 'var(--pitch)' }}>
+                  <span style={{ fontWeight: 800, color: 'var(--ink)' }}>
                     {f.home_score} – {f.away_score}
                   </span>
-                  <span style={{ color: '#8A8570', fontSize: 12, minWidth: 60, textAlign: 'right' }}>
+                  <span style={{ color: 'var(--muted)', fontSize: 12, minWidth: 60, textAlign: 'right' }}>
                     {f.fixture_date
                       ? new Date(f.fixture_date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })
                       : ''}
@@ -369,10 +369,10 @@ export default function TeamDetail() {
       </section>
 
       <section>
-        <h2 style={{ fontSize: 18, marginBottom: 16, paddingBottom: 8, borderBottom: '1px solid var(--line)' }}>
+        <h2 style={{ fontSize: 13, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 16, paddingBottom: 8, borderBottom: '1px solid var(--line)' }}>
           Squad
         </h2>
-        {squad.length === 0 && <p style={{ color: '#8A8570', fontSize: 14 }}>Squad list not yet available.</p>}
+        {squad.length === 0 && <p style={{ color: 'var(--muted)', fontSize: 14 }}>Squad list not yet available.</p>}
         <div
           style={{
             display: 'grid',

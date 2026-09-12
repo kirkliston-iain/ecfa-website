@@ -6,42 +6,66 @@ const SEASONS = [
   '2013/14', '2014/15', '2015/16', '2016/17', '2017/18', '2018/19',
   '2019/20', '2020/21', '2021/22', '2022/23', '2023/24', '2024/25', '2025/26',
 ]
-
 const COMPETITIONS = ['League', 'League Cup', 'Knockout Cup', 'Brian Latto Cup']
 
 function Cell({ row }) {
-  if (!row || row.status === 'not_existing') {
-    return <span style={{ color: '#C7C2B0' }}>**</span>
-  }
-  if (row.status === 'void') {
-    return <span style={{ color: '#C7C2B0' }}>*</span>
-  }
-  if (row.team_id) {
+  if (!row || row.status === 'not_existing') return <span style={{ color: 'var(--line)' }}>**</span>
+  if (row.status === 'void') return <span style={{ color: 'var(--line)' }}>*</span>
+  if (row.team_id)
     return (
       <Link to={`/teams/${row.team_id}`} style={{ color: 'var(--brass)', textDecoration: 'underline' }}>
         {row.winner_name}
       </Link>
     )
-  }
   return <span>{row.winner_name}</span>
 }
 
 export default function HonoursPage() {
   const [loading, setLoading] = useState(true)
-  const [rows, setRows] = useState([])
+  const [grid, setGrid] = useState({})
+  const [totals, setTotals] = useState([])
 
   useEffect(() => {
     let cancelled = false
 
     async function load() {
-      setLoading(true)
       const { data } = await supabase
         .from('honours')
         .select('season, competition, status, winner_name, team_id')
-      if (!cancelled) {
-        setRows(data || [])
-        setLoading(false)
+
+      if (cancelled) return
+
+      const g = {}
+      const totalsMap = {}
+
+      for (const row of data || []) {
+        g[`${row.season}|${row.competition}`] = row
+
+        if (row.status !== 'winner') continue
+        const key = row.team_id || `name:${row.winner_name}`
+        if (!totalsMap[key]) {
+          totalsMap[key] = {
+            key,
+            name: row.winner_name,
+            teamId: row.team_id,
+            League: 0,
+            'League Cup': 0,
+            'Knockout Cup': 0,
+            'Brian Latto Cup': 0,
+            total: 0,
+          }
+        }
+        totalsMap[key][row.competition] = (totalsMap[key][row.competition] || 0) + 1
+        totalsMap[key].total += 1
       }
+
+      const totalsList = Object.values(totalsMap).sort(
+        (a, b) => b.total - a.total || a.name.localeCompare(b.name)
+      )
+
+      setGrid(g)
+      setTotals(totalsList)
+      setLoading(false)
     }
 
     load()
@@ -52,67 +76,34 @@ export default function HonoursPage() {
 
   if (loading) return <div className="container" style={{ padding: 48 }}>Loading…</div>
 
-  const grid = {}
-  for (const r of rows) {
-    grid[`${r.season}|${r.competition}`] = r
-  }
-
-  const totals = {}
-  for (const r of rows) {
-    if (r.status !== 'winner') continue
-    const key = r.team_id || `name:${r.winner_name}`
-    if (!totals[key]) {
-      totals[key] = {
-        name: r.winner_name,
-        team_id: r.team_id,
-        League: 0,
-        'League Cup': 0,
-        'Knockout Cup': 0,
-        'Brian Latto Cup': 0,
-      }
-    }
-    totals[key][r.competition] += 1
-  }
-  const totalRows = Object.values(totals)
-    .map((t) => ({
-      ...t,
-      total: t.League + t['League Cup'] + t['Knockout Cup'] + t['Brian Latto Cup'],
-    }))
-    .sort((a, b) => b.total - a.total || a.name.localeCompare(b.name))
-
   return (
-    <div className="container" style={{ padding: '40px 20px' }}>
-      <h1 style={{ fontSize: 32, marginBottom: 8, color: 'var(--pitch)' }}>Major Honours</h1>
-      <p style={{ color: '#8A8570', marginBottom: 40 }}>
+    <div className="container" style={{ padding: '32px 20px 48px' }}>
+      <h1 style={{ fontSize: 30, marginBottom: 4 }}>Major Honours</h1>
+      <p style={{ color: 'var(--muted)', marginBottom: 32 }}>
         Season-by-season winners across every ECFA competition.
       </p>
 
-      <h2 style={{ fontSize: 20, marginBottom: 16, paddingBottom: 8, borderBottom: '1px solid var(--line)' }}>
+      <h2 style={{ fontSize: 13, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 16 }}>
         Season by Season
       </h2>
-      <div style={{ overflowX: 'auto', marginBottom: 16 }}>
-        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 14, minWidth: 640 }}>
+      <div style={{ overflowX: 'auto', marginBottom: 12 }}>
+        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13.5 }}>
           <thead>
-            <tr style={{ borderBottom: '2px solid var(--pitch)' }}>
-              <th style={{ textAlign: 'left', padding: '8px', fontFamily: 'var(--font-display)', color: 'var(--pitch)' }}>
-                Season
-              </th>
+            <tr style={{ borderBottom: '3px solid var(--brass)' }}>
+              <th style={thStyle('left')}>Season</th>
               {COMPETITIONS.map((c) => (
-                <th key={c} style={{ textAlign: 'left', padding: '8px', fontFamily: 'var(--font-display)', color: 'var(--pitch)' }}>
+                <th key={c} style={thStyle('left')}>
                   {c}
                 </th>
               ))}
             </tr>
           </thead>
           <tbody>
-            {SEASONS.map((season, i) => (
-              <tr
-                key={season}
-                style={{ borderBottom: '1px solid var(--line)', background: i % 2 === 0 ? 'rgba(0,0,0,0.02)' : 'transparent' }}
-              >
-                <td style={{ padding: '10px 8px', fontWeight: 600 }}>{season}</td>
+            {SEASONS.map((season) => (
+              <tr key={season} style={{ borderBottom: '1px solid var(--line)' }}>
+                <td style={{ padding: '8px', fontWeight: 700, whiteSpace: 'nowrap' }}>{season}</td>
                 {COMPETITIONS.map((c) => (
-                  <td key={c} style={{ padding: '10px 8px' }}>
+                  <td key={c} style={{ padding: '8px' }}>
                     <Cell row={grid[`${season}|${c}`]} />
                   </td>
                 ))}
@@ -121,62 +112,63 @@ export default function HonoursPage() {
           </tbody>
         </table>
       </div>
-      <p style={{ fontSize: 12, color: '#8A8570', marginBottom: 48 }}>
+      <p style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 40 }}>
         * Season void (Covid) &nbsp;&nbsp; ** Tournament did not exist yet
       </p>
 
-      <h2 style={{ fontSize: 20, marginBottom: 16, paddingBottom: 8, borderBottom: '1px solid var(--line)' }}>
+      <h2 style={{ fontSize: 13, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 16 }}>
         Total Honours
       </h2>
       <div style={{ overflowX: 'auto' }}>
-        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 14, minWidth: 640 }}>
+        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 14 }}>
           <thead>
-            <tr style={{ borderBottom: '2px solid var(--pitch)' }}>
-              <th style={{ textAlign: 'left', padding: '8px', fontFamily: 'var(--font-display)', color: 'var(--pitch)' }}>#</th>
-              <th style={{ textAlign: 'left', padding: '8px', fontFamily: 'var(--font-display)', color: 'var(--pitch)' }}>Team</th>
-              {COMPETITIONS.map((c) => (
-                <th key={c} style={{ textAlign: 'center', padding: '8px', fontFamily: 'var(--font-display)', color: 'var(--pitch)' }}>
-                  {c}
-                </th>
-              ))}
-              <th style={{ textAlign: 'center', padding: '8px', fontFamily: 'var(--font-display)', color: 'var(--pitch)' }}>
-                Total
-              </th>
+            <tr style={{ borderBottom: '3px solid var(--brass)' }}>
+              <th style={thStyle('left')}>#</th>
+              <th style={thStyle('left')}>Team</th>
+              <th style={thStyle()}>League</th>
+              <th style={thStyle()}>League Cup</th>
+              <th style={thStyle()}>Knockout Cup</th>
+              <th style={thStyle()}>Brian Latto Cup</th>
+              <th style={thStyle()}>Total</th>
             </tr>
           </thead>
           <tbody>
-            {totalRows.map((t, i) => (
-              <tr key={t.team_id || t.name} style={{ borderBottom: '1px solid var(--line)' }}>
+            {totals.map((t, i) => (
+              <tr key={t.key} style={{ borderBottom: '1px solid var(--line)' }}>
                 <td style={{ padding: '10px 8px' }}>{i + 1}</td>
-                <td style={{ padding: '10px 8px', fontWeight: 500 }}>
-                  {t.team_id ? (
-                    <Link to={`/teams/${t.team_id}`} style={{ color: 'var(--brass)', textDecoration: 'underline' }}>
+                <td style={{ padding: '10px 8px', fontWeight: 600 }}>
+                  {t.teamId ? (
+                    <Link to={`/teams/${t.teamId}`} style={{ color: 'var(--brass)', textDecoration: 'underline' }}>
                       {t.name}
                     </Link>
                   ) : (
                     t.name
                   )}
                 </td>
-                {COMPETITIONS.map((c) => (
-                  <td key={c} style={{ padding: '10px 8px', textAlign: 'center' }}>
-                    {t[c] || ''}
-                  </td>
-                ))}
-                <td style={{ padding: '10px 8px', textAlign: 'center', fontWeight: 700, color: 'var(--pitch)' }}>
-                  {t.total}
-                </td>
+                <td style={tdStyle}>{t.League || ''}</td>
+                <td style={tdStyle}>{t['League Cup'] || ''}</td>
+                <td style={tdStyle}>{t['Knockout Cup'] || ''}</td>
+                <td style={tdStyle}>{t['Brian Latto Cup'] || ''}</td>
+                <td style={{ ...tdStyle, fontWeight: 800, color: 'var(--ink)' }}>{t.total}</td>
               </tr>
             ))}
-            {totalRows.length === 0 && (
-              <tr>
-                <td colSpan={6} style={{ padding: '24px 8px', textAlign: 'center', color: '#8A8570' }}>
-                  No honours recorded yet.
-                </td>
-              </tr>
-            )}
           </tbody>
         </table>
       </div>
     </div>
   )
+}
+
+const tdStyle = { padding: '10px 8px', textAlign: 'center' }
+
+function thStyle(align = 'center') {
+  return {
+    textAlign: align,
+    padding: '8px',
+    fontWeight: 700,
+    color: 'var(--ink)',
+    textTransform: 'uppercase',
+    fontSize: 12,
+    letterSpacing: 0.4,
+  }
 }

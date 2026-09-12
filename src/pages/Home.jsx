@@ -1,29 +1,13 @@
 import { Link } from 'react-router-dom'
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { supabase } from '../supabaseClient'
-import StandingsTable from '../components/StandingsTable'
+import MatchdayCarousel from '../components/MatchdayCarousel'
 
 const COMPETITIONS = [
-  {
-    slug: 'appin-league',
-    name: 'Appin Sports League',
-    description: '12 teams, home and away — the main ECFA league table.',
-  },
-  {
-    slug: 'knockout-cup',
-    name: 'ECFA Knockout Cup',
-    description: 'Straight knockout, right through to the final.',
-  },
-  {
-    slug: 'league-cup',
-    name: 'ECFA League Cup',
-    description: 'Two groups of six, top four go on to the knockout stage.',
-  },
-  {
-    slug: 'brian-latto-cup',
-    name: 'Brian Latto Cup',
-    description: 'For the four teams who just miss out on the League Cup knockout stage.',
-  },
+  { slug: 'appin-league', name: 'Appin Sports League' },
+  { slug: 'knockout-cup', name: 'ECFA Knockout Cup' },
+  { slug: 'league-cup', name: 'ECFA League Cup' },
+  { slug: 'brian-latto-cup', name: 'Brian Latto Cup' },
 ]
 
 const SPONSORS = [
@@ -35,11 +19,20 @@ const SPONSORS = [
   },
 ]
 
-// Games are typically played on Saturdays. Results (matchday recap) are the
-// priority display from Saturday through Sunday and into the small hours of
-// Monday; from 3am UK time on Monday the dashboard switches over to showing
-// the upcoming fixtures for the next matchday.
-function getDashboardMode() {
+function todayUK() {
+  const parts = new Intl.DateTimeFormat('en-GB', {
+    timeZone: 'Europe/London',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).formatToParts(new Date())
+  const y = parts.find((p) => p.type === 'year').value
+  const m = parts.find((p) => p.type === 'month').value
+  const d = parts.find((p) => p.type === 'day').value
+  return `${y}-${m}-${d}`
+}
+
+function getMode() {
   const parts = new Intl.DateTimeFormat('en-GB', {
     timeZone: 'Europe/London',
     weekday: 'short',
@@ -48,10 +41,19 @@ function getDashboardMode() {
   }).formatToParts(new Date())
   const weekday = parts.find((p) => p.type === 'weekday')?.value
   const hour = Number(parts.find((p) => p.type === 'hour')?.value)
-
   if (weekday === 'Sun' || weekday === 'Sat') return 'recap'
   if (weekday === 'Mon' && hour < 3) return 'recap'
   return 'fixtures'
+}
+
+function dateKey(fixtureDate) {
+  return fixtureDate ? fixtureDate.slice(0, 10) : null
+}
+
+function ordinal(n) {
+  const s = ['th', 'st', 'nd', 'rd']
+  const v = n % 100
+  return `${n}${s[(v - 20) % 10] || s[v] || s[0]}`
 }
 
 function computeStandings(teams, fixtures) {
@@ -102,188 +104,296 @@ function computeStandings(teams, fixtures) {
     .sort((a, b) => b.points - a.points || b.goalDifference - a.goalDifference || b.goalsFor - a.goalsFor)
 }
 
-function MiniFixtureRow({ f }) {
+async function loadCompetition(meta) {
+  const { data: comp } = await supabase.from('competitions').select('id').eq('slug', meta.slug).single()
+  if (!comp) return { ...meta, fixtures: [], groupTeams: {} }
+
+  const { data: stages } = await supabase
+    .from('stages')
+    .select('id, stage_type, groups(id, name)')
+    .eq('competition_id', comp.id)
+
+  const stageIds = (stages || []).map((s) => s.id)
+  const groupStageIds = new Set((stages || []).filter((s) => s.stage_type === 'group').map((s) => s.id))
+
+  const { data: fixtures } = await supabase
+    .from('fixtures')
+    .select(
+      'id, fixture_date, home_score, away_score, status, group_id, stage_id, home_team:home_team_id(id, name), away_team:away_team_id(id, name)'
+    )
+    .in('stage_id', stageIds.length ? stageIds : ['00000000-0000-0000-0000-000000000000'])
+
+  const groupTeams = {}
+  for (const stage of stages || []) {
+    if (stage.stage_type !== 'group') continue
+    for (const group of stage.groups || []) {
+      const { data: stageTeams } = await supabase
+        .from('stage_teams')
+        .select('team:team_id(id, name)')
+        .eq('stage_id', stage.id)
+        .eq('group_id', group.id)
+      groupTeams[group.id] = (stageTeams || []).map((st) => st.team)
+    }
+  }
+
+  const taggedFixtures = (fixtures || []).map((f) => ({
+    ...f,
+    compSlug: meta.slug,
+    compName: meta.name,
+    isGroupStage: groupStageIds.has(f.stage_id),
+  }))
+
+  return { ...meta, fixtures: taggedFixtures, groupTeams }
+}
+
+function pickDefaultDate(days, todayStr, mode) {
+  if (days.length === 0) return null
+  const past = days.filter((d) => d.date <= todayStr && d.played > 0)
+  const future = days.filter((d) => d.date >= todayStr && d.scheduled > 0)
+  if (mode === 'recap') {
+    if (past.length) return past[past.length - 1].date
+    if (future.length) return future[0].date
+  } else {
+    if (future.length) return future[0].date
+    if (past.length) return past[past.length - 1].date
+  }
+  return days[days.length - 1].date
+}
+
+function recapSentenceForFixture(f, allFixturesForComp, groupTeams, selectedDate) {
+  const homeName = f.home_team?.name
+  const awayName = f.away_team?.name
+  const hs = f.home_score
+  const as = f.away_score
+
+  if (!f.isGroupStage || !f.group_id || !groupTeams[f.group_id]) {
+    if (hs === as) return `${homeName} and ${awayName} drew ${hs}-${as} in the ${f.compName}.`
+    const winner = hs > as ? homeName : awayName
+    const loser = hs > as ? awayName : homeName
+    const ws = Math.max(hs, as)
+    const ls = Math.min(hs, as)
+    return `${winner} beat ${loser} ${ws}-${ls} in the ${f.compName}.`
+  }
+
+  const teams = groupTeams[f.group_id]
+  const before = computeStandings(
+    teams,
+    allFixturesForComp.filter(
+      (x) => x.group_id === f.group_id && x.status === 'played' && dateKey(x.fixture_date) < selectedDate
+    )
+  )
+  const after = computeStandings(
+    teams,
+    allFixturesForComp.filter(
+      (x) => x.group_id === f.group_id && x.status === 'played' && dateKey(x.fixture_date) <= selectedDate
+    )
+  )
+  const rankBefore = {}
+  before.forEach((r, i) => {
+    rankBefore[r.teamId] = { rank: i + 1, played: r.played }
+  })
+  const rankAfter = {}
+  after.forEach((r, i) => {
+    rankAfter[r.teamId] = { rank: i + 1, points: r.points }
+  })
+
+  if (hs === as) {
+    const hr = rankAfter[f.home_team?.id]?.rank
+    const ar = rankAfter[f.away_team?.id]?.rank
+    const tail = hr && ar ? `, leaving them ${ordinal(hr)} and ${ordinal(ar)} respectively` : ''
+    return `${homeName} and ${awayName} drew ${hs}-${as}${tail}.`
+  }
+
+  const winnerId = hs > as ? f.home_team?.id : f.away_team?.id
+  const winnerName = hs > as ? homeName : awayName
+  const loserName = hs > as ? awayName : homeName
+  const ws = Math.max(hs, as)
+  const ls = Math.min(hs, as)
+
+  const beforeInfo = rankBefore[winnerId]
+  const afterInfo = rankAfter[winnerId]
+  let movement = ''
+  if (afterInfo) {
+    if (!beforeInfo || beforeInfo.played === 0) {
+      movement = `, moving into ${ordinal(afterInfo.rank)} with ${afterInfo.points} points`
+    } else if (beforeInfo.rank !== afterInfo.rank) {
+      movement =
+        afterInfo.rank < beforeInfo.rank
+          ? `, climbing to ${ordinal(afterInfo.rank)} with ${afterInfo.points} points`
+          : `, though they stay ${ordinal(afterInfo.rank)} with ${afterInfo.points} points`
+    } else {
+      movement = `, staying ${ordinal(afterInfo.rank)} with ${afterInfo.points} points`
+    }
+  }
+  return `${winnerName} beat ${loserName} ${ws}-${ls}${movement}.`
+}
+
+function MatchCard({ f }) {
+  const played = f.status === 'played'
   return (
-    <li style={{ borderBottom: '1px solid var(--line)' }}>
-      <Link
-        to={`/fixtures/${f.id}`}
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          padding: '10px 4px',
-          fontSize: 14,
-        }}
-      >
-        <span style={{ flex: 1 }}>
-          {f.home_team?.name} <span style={{ color: '#8A8570' }}>v</span> {f.away_team?.name}
-        </span>
-        {f.status === 'played' ? (
-          <span style={{ fontWeight: 700, color: 'var(--pitch)' }}>
-            {f.home_score} – {f.away_score}
-          </span>
-        ) : (
-          <span style={{ color: '#8A8570', fontSize: 12 }}>
-            {f.fixture_date
-              ? new Date(f.fixture_date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })
-              : 'TBC'}
-          </span>
-        )}
-      </Link>
-    </li>
+    <Link
+      to={`/fixtures/${f.id}`}
+      style={{
+        display: 'block',
+        border: '1px solid var(--line)',
+        borderRadius: 6,
+        padding: '12px 16px',
+        marginBottom: 10,
+        background: '#fff',
+      }}
+    >
+      <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--brass)', textTransform: 'uppercase', letterSpacing: 0.4, marginBottom: 6 }}>
+        {f.compName}
+      </div>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+        <div style={{ flex: 1, fontWeight: 600, fontSize: 15, textAlign: 'right' }}>{f.home_team?.name}</div>
+        <div
+          style={{
+            minWidth: 60,
+            textAlign: 'center',
+            fontWeight: 800,
+            fontSize: 17,
+            color: played ? '#fff' : 'var(--muted)',
+            background: played ? 'var(--ink)' : 'transparent',
+            borderRadius: 4,
+            padding: played ? '4px 10px' : 0,
+          }}
+        >
+          {played ? `${f.home_score} - ${f.away_score}` : 'v'}
+        </div>
+        <div style={{ flex: 1, fontWeight: 600, fontSize: 15 }}>{f.away_team?.name}</div>
+      </div>
+    </Link>
   )
 }
 
-function CompetitionCard({ meta, mode }) {
+export default function Home() {
   const [loading, setLoading] = useState(true)
-  const [recap, setRecap] = useState([])
-  const [upcoming, setUpcoming] = useState([])
-  const [groupTables, setGroupTables] = useState([])
+  const [competitions, setCompetitions] = useState([])
+  const [selectedDate, setSelectedDate] = useState(null)
 
   useEffect(() => {
     let cancelled = false
 
     async function load() {
-      const { data: comp } = await supabase
-        .from('competitions')
-        .select('id')
-        .eq('slug', meta.slug)
-        .single()
+      const results = await Promise.all(COMPETITIONS.map((c) => loadCompetition(c)))
+      if (cancelled) return
+      setCompetitions(results)
 
-      if (!comp) {
-        if (!cancelled) setLoading(false)
-        return
-      }
-
-      const { data: stages } = await supabase
-        .from('stages')
-        .select('id, stage_type, sort_order, groups(id, name, sort_order)')
-        .eq('competition_id', comp.id)
-        .order('sort_order')
-
-      const stageIds = (stages || []).map((s) => s.id)
-
-      const { data: fixtures } = await supabase
-        .from('fixtures')
-        .select(
-          'id, fixture_date, home_score, away_score, status, group_id, stage_id, home_team:home_team_id(id, name), away_team:away_team_id(id, name)'
-        )
-        .in('stage_id', stageIds.length ? stageIds : ['00000000-0000-0000-0000-000000000000'])
-        .order('fixture_date', { ascending: true })
-
-      const all = fixtures || []
-      const played = all.filter((f) => f.status === 'played').sort((a, b) => new Date(b.fixture_date) - new Date(a.fixture_date))
-      const notPlayed = all.filter((f) => f.status !== 'played').sort((a, b) => new Date(a.fixture_date) - new Date(b.fixture_date))
-
-      const lastDate = played[0]?.fixture_date
-      const recapRows = lastDate ? played.filter((f) => f.fixture_date === lastDate) : []
-      const nextDate = notPlayed[0]?.fixture_date
-      const upcomingRows = nextDate ? notPlayed.filter((f) => f.fixture_date === nextDate) : []
-
-      const tables = []
-      for (const stage of stages || []) {
-        if (stage.stage_type !== 'group') continue
-        const groups = (stage.groups || []).sort((a, b) => a.sort_order - b.sort_order)
-        const { data: stageTeams } = await supabase
-          .from('stage_teams')
-          .select('group_id, team:team_id(id, name)')
-          .eq('stage_id', stage.id)
-
-        for (const group of groups) {
-          const teamsInGroup = (stageTeams || []).filter((st) => st.group_id === group.id).map((st) => st.team)
-          const groupFixtures = all.filter((f) => f.group_id === group.id)
-          tables.push({
-            groupId: group.id,
-            groupName: groups.length > 1 ? group.name : null,
-            rows: computeStandings(teamsInGroup, groupFixtures),
-          })
+      const dateMap = new Map()
+      for (const comp of results) {
+        for (const f of comp.fixtures) {
+          const key = dateKey(f.fixture_date)
+          if (!key) continue
+          if (!dateMap.has(key)) dateMap.set(key, { date: key, played: 0, scheduled: 0 })
+          const entry = dateMap.get(key)
+          if (f.status === 'played') entry.played += 1
+          else entry.scheduled += 1
         }
       }
-
-      if (!cancelled) {
-        setRecap(recapRows)
-        setUpcoming(upcomingRows)
-        setGroupTables(tables)
-        setLoading(false)
-      }
+      const days = Array.from(dateMap.values()).sort((a, b) => a.date.localeCompare(b.date))
+      const mode = getMode()
+      const initial = pickDefaultDate(days, todayUK(), mode)
+      setSelectedDate(initial)
+      setLoading(false)
     }
 
     load()
     return () => {
       cancelled = true
     }
-  }, [meta.slug])
+  }, [])
 
-  const showRecap = mode === 'recap' ? recap.length > 0 || upcoming.length === 0 : recap.length > 0 && upcoming.length === 0
-  const fixturesToShow = showRecap ? recap : upcoming
+  const allDays = useMemo(() => {
+    const dateMap = new Map()
+    for (const comp of competitions) {
+      for (const f of comp.fixtures) {
+        const key = dateKey(f.fixture_date)
+        if (!key) continue
+        if (!dateMap.has(key)) dateMap.set(key, { date: key, played: 0, scheduled: 0 })
+        const entry = dateMap.get(key)
+        if (f.status === 'played') entry.played += 1
+        else entry.scheduled += 1
+      }
+    }
+    return Array.from(dateMap.values()).sort((a, b) => a.date.localeCompare(b.date))
+  }, [competitions])
 
-  return (
-    <section
-      style={{
-        border: '1px solid var(--line)',
-        borderRadius: 8,
-        padding: '20px 24px',
-        marginBottom: 32,
-      }}
-    >
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 4 }}>
-        <Link to={`/competitions/${meta.slug}`} style={{ fontSize: 20, fontWeight: 700, color: 'var(--pitch)' }}>
-          {meta.name}
-        </Link>
-        <Link to={`/competitions/${meta.slug}`} style={{ fontSize: 13, color: 'var(--brass)' }}>
-          Full competition &rarr;
-        </Link>
+  const matchesForDate = useMemo(() => {
+    if (!selectedDate) return []
+    const rows = []
+    for (const comp of competitions) {
+      for (const f of comp.fixtures) {
+        if (dateKey(f.fixture_date) === selectedDate) rows.push(f)
+      }
+    }
+    return rows
+  }, [competitions, selectedDate])
+
+  const recapParagraphs = useMemo(() => {
+    if (!selectedDate) return []
+    const paragraphs = []
+    for (const comp of competitions) {
+      const playedToday = comp.fixtures.filter(
+        (f) => dateKey(f.fixture_date) === selectedDate && f.status === 'played'
+      )
+      if (playedToday.length === 0) continue
+      const sentences = playedToday.map((f) => recapSentenceForFixture(f, comp.fixtures, comp.groupTeams, selectedDate))
+      paragraphs.push({ compName: comp.name, text: sentences.join(' ') })
+    }
+    return paragraphs
+  }, [competitions, selectedDate])
+
+  const hasResultsToday = matchesForDate.some((f) => f.status === 'played')
+
+  if (loading) {
+    return (
+      <div className="container" style={{ padding: '48px 20px' }}>
+        <p style={{ color: 'var(--muted)' }}>Loading match hub…</p>
       </div>
-      <p style={{ margin: '0 0 16px', fontSize: 13, color: '#8A8570' }}>{meta.description}</p>
-
-      {loading ? (
-        <p style={{ color: '#8A8570', fontSize: 14 }}>Loading…</p>
-      ) : (
-        <>
-          <h3 style={{ fontSize: 14, textTransform: 'uppercase', letterSpacing: 0.5, color: '#5A5646', marginBottom: 4 }}>
-            {showRecap ? 'Matchday Recap' : 'Upcoming Fixtures'}
-          </h3>
-          {fixturesToShow.length === 0 ? (
-            <p style={{ color: '#8A8570', fontSize: 14, marginBottom: 16 }}>Nothing scheduled right now.</p>
-          ) : (
-            <ul style={{ listStyle: 'none', margin: '0 0 16px', padding: 0 }}>
-              {fixturesToShow.map((f) => (
-                <MiniFixtureRow key={f.id} f={f} />
-              ))}
-            </ul>
-          )}
-
-          {groupTables.map((t) => (
-            <StandingsTable key={t.groupId} groupName={t.groupName} rows={t.rows} />
-          ))}
-        </>
-      )}
-    </section>
-  )
-}
-
-export default function Home() {
-  const mode = getDashboardMode()
+    )
+  }
 
   return (
-    <div className="container" style={{ padding: '48px 20px' }}>
-      <h1 style={{ fontSize: 36, marginBottom: 12, color: 'var(--pitch)' }}>Dashboard</h1>
-      <p style={{ maxWidth: 560, color: '#5A5646', marginBottom: 40 }}>
-        2026–27 season — live tables, recent results and upcoming fixtures for every ECFA competition.
+    <div className="container" style={{ padding: '32px 20px 48px' }}>
+      <h1 style={{ fontSize: 30, marginBottom: 4 }}>Match Hub</h1>
+      <p style={{ color: 'var(--muted)', marginBottom: 24 }}>
+        Results and fixtures across every ECFA competition.
       </p>
 
-      {COMPETITIONS.map((c) => (
-        <CompetitionCard key={c.slug} meta={c} mode={mode} />
-      ))}
+      <MatchdayCarousel days={allDays} selected={selectedDate} onSelect={setSelectedDate} />
+
+      {hasResultsToday && recapParagraphs.length > 0 && (
+        <section style={{ marginBottom: 28 }}>
+          <h2 style={{ fontSize: 13, textTransform: 'uppercase', letterSpacing: 0.5, color: 'var(--brass)', marginBottom: 10 }}>
+            Match Day Recap
+          </h2>
+          {recapParagraphs.map((p) => (
+            <p key={p.compName} style={{ fontSize: 14, lineHeight: 1.6, marginBottom: 10 }}>
+              {p.text}
+            </p>
+          ))}
+        </section>
+      )}
+
+      <section style={{ marginBottom: 40 }}>
+        <h2 style={{ fontSize: 13, textTransform: 'uppercase', letterSpacing: 0.5, color: 'var(--muted)', marginBottom: 12 }}>
+          {hasResultsToday ? 'Full Time' : 'Upcoming Fixtures'}
+        </h2>
+        {matchesForDate.length === 0 ? (
+          <p style={{ color: 'var(--muted)', fontSize: 14 }}>No matches on this date.</p>
+        ) : (
+          matchesForDate.map((f) => <MatchCard key={f.id} f={f} />)
+        )}
+      </section>
 
       <h2
         style={{
-          fontSize: 15,
+          fontSize: 13,
           fontWeight: 700,
           letterSpacing: 0.6,
           textTransform: 'uppercase',
-          color: '#8A8570',
-          marginTop: 24,
+          color: 'var(--muted)',
           marginBottom: 16,
         }}
       >
@@ -297,21 +407,17 @@ export default function Home() {
             target="_blank"
             rel="noopener noreferrer"
             style={{
-              background: 'var(--paper)',
+              background: '#fff',
               padding: '20px 24px',
               display: 'flex',
               alignItems: 'center',
               gap: 20,
             }}
           >
-            <img
-              src={s.logo}
-              alt={s.name}
-              style={{ height: 40, width: 'auto', objectFit: 'contain', flexShrink: 0 }}
-            />
+            <img src={s.logo} alt={s.name} style={{ height: 40, width: 'auto', objectFit: 'contain', flexShrink: 0 }} />
             <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontWeight: 600, fontSize: 15 }}>{s.name}</div>
-              <p style={{ margin: '2px 0 0', fontSize: 13, color: '#8A8570' }}>{s.blurb}</p>
+              <div style={{ fontWeight: 700, fontSize: 15 }}>{s.name}</div>
+              <p style={{ margin: '2px 0 0', fontSize: 13, color: 'var(--muted)' }}>{s.blurb}</p>
             </div>
             <span style={{ fontSize: 22, color: 'var(--brass)' }}>&rarr;</span>
           </a>

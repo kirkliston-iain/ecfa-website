@@ -122,15 +122,15 @@ export default function ScorersPage() {
         : `Goals scored in the ${season} season.`
 
   return (
-    <div className="container" style={{ padding: '40px 20px' }}>
-      <h1 style={{ fontSize: 28, color: 'var(--pitch)', marginBottom: 8 }}>ECFA Scorers</h1>
-      <p style={{ color: '#8A8570', marginBottom: 24 }}>{seasonLabel}</p>
+    <div className="container" style={{ padding: '32px 20px 48px' }}>
+      <h1 style={{ fontSize: 30, marginBottom: 4 }}>Scorers</h1>
+      <p style={{ color: 'var(--muted)', marginBottom: 24 }}>{seasonLabel}</p>
 
       <select
         value={season}
         onChange={(e) => setSeason(e.target.value)}
         style={{
-          marginBottom: 32,
+          marginBottom: 28,
           padding: '8px 12px',
           fontSize: 14,
           borderRadius: 6,
@@ -147,39 +147,29 @@ export default function ScorersPage() {
 
       <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 14 }}>
         <thead>
-          <tr style={{ borderBottom: '2px solid var(--pitch)' }}>
-            <th style={{ textAlign: 'left', padding: '8px', fontFamily: 'var(--font-display)', color: 'var(--pitch)' }}>
-              #
-            </th>
-            <th style={{ textAlign: 'left', padding: '8px', fontFamily: 'var(--font-display)', color: 'var(--pitch)' }}>
-              Player
-            </th>
-            {season !== 'overall' && (
-              <th style={{ textAlign: 'left', padding: '8px', fontFamily: 'var(--font-display)', color: 'var(--pitch)' }}>
-                Team
-              </th>
-            )}
-            <th style={{ textAlign: 'center', padding: '8px', fontFamily: 'var(--font-display)', color: 'var(--pitch)' }}>
-              Goals
-            </th>
+          <tr style={{ borderBottom: '3px solid var(--brass)' }}>
+            <th style={thStyle('left')}>#</th>
+            <th style={thStyle('left')}>Player</th>
+            {season !== 'overall' && <th style={thStyle('left')}>Team</th>}
+            <th style={thStyle()}>Goals</th>
           </tr>
         </thead>
         <tbody>
           {rows.slice(0, 100).map((row, i) => (
             <tr key={row.player_name} style={{ borderBottom: '1px solid var(--line)' }}>
               <td style={{ padding: '10px 8px' }}>{i + 1}</td>
-              <td style={{ padding: '10px 8px', fontWeight: 500 }}>{row.player_name}</td>
+              <td style={{ padding: '10px 8px', fontWeight: 600 }}>{row.player_name}</td>
               {season !== 'overall' && (
-                <td style={{ padding: '10px 8px', color: '#5A6B85' }}>{row.team_name}</td>
+                <td style={{ padding: '10px 8px', color: 'var(--muted)' }}>{row.team_name}</td>
               )}
-              <td style={{ padding: '10px 8px', textAlign: 'center', fontWeight: 700, color: 'var(--pitch)' }}>
+              <td style={{ padding: '10px 8px', textAlign: 'center', fontWeight: 800, color: 'var(--ink)' }}>
                 {row.goals}
               </td>
             </tr>
           ))}
           {rows.length === 0 && (
             <tr>
-              <td colSpan={season === 'overall' ? 3 : 4} style={{ padding: '24px 8px', textAlign: 'center', color: '#8A8570' }}>
+              <td colSpan={season === 'overall' ? 3 : 4} style={{ padding: '24px 8px', textAlign: 'center', color: 'var(--muted)' }}>
                 No scorers recorded for this season.
               </td>
             </tr>
@@ -188,4 +178,16 @@ export default function ScorersPage() {
       </table>
     </div>
   )
+}
+
+function thStyle(align = 'center') {
+  return {
+    textAlign: align,
+    padding: '8px',
+    fontWeight: 700,
+    color: 'var(--ink)',
+    textTransform: 'uppercase',
+    fontSize: 12,
+    letterSpacing: 0.4,
+  }
 }

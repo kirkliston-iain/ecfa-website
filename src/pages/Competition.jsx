@@ -96,18 +96,21 @@ export default function Competition() {
   if (error) return <div className="container" style={{ padding: 48 }}>{error}</div>
 
   return (
-    <div className="container" style={{ padding: '48px 20px' }}>
-      <h1 style={{ fontSize: 32, marginBottom: 8, color: 'var(--pitch)' }}>{competition.name}</h1>
-      <p style={{ color: '#8A8570', marginBottom: 40 }}>{competition.season} season</p>
+    <div className="container" style={{ padding: '32px 20px 48px' }}>
+      <h1 style={{ fontSize: 30, marginBottom: 4 }}>{competition.name}</h1>
+      <p style={{ color: 'var(--muted)', marginBottom: 32 }}>{competition.season} season</p>
 
       {stages.map((stage) => (
-        <section key={stage.id} style={{ marginBottom: 48 }}>
+        <section key={stage.id} style={{ marginBottom: 44 }}>
           <h2
             style={{
-              fontSize: 22,
-              marginBottom: 20,
-              paddingBottom: 10,
-              borderBottom: '1px solid var(--line)',
+              fontSize: 13,
+              textTransform: 'uppercase',
+              letterSpacing: 0.5,
+              marginBottom: 18,
+              paddingBottom: 8,
+              borderBottom: '3px solid var(--brass)',
+              color: 'var(--ink)',
             }}
           >
             {stage.name}
@@ -124,20 +127,25 @@ export default function Competition() {
                 />
               ))}
 
-          <h3 style={{ fontSize: 16, marginBottom: 10, color: '#5A6B85' }}>Fixtures &amp; Results</h3>
+          <h3 style={{ fontSize: 13, marginBottom: 10, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: 0.4 }}>
+            Fixtures &amp; Results
+          </h3>
           <FixtureWeekNav fixtures={stage.fixtures} />
         </section>
       ))}
 
-      {stages.length === 0 && <p>No stages set up for this competition yet.</p>}
+      {stages.length === 0 && <p style={{ color: 'var(--muted)' }}>No stages set up for this competition yet.</p>}
 
       <section>
         <h2
           style={{
-            fontSize: 22,
-            marginBottom: 20,
-            paddingBottom: 10,
-            borderBottom: '1px solid var(--line)',
+            fontSize: 13,
+            textTransform: 'uppercase',
+            letterSpacing: 0.5,
+            marginBottom: 18,
+            paddingBottom: 8,
+            borderBottom: '3px solid var(--brass)',
+            color: 'var(--ink)',
           }}
         >
           Top Scorers

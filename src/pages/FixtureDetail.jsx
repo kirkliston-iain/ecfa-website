@@ -24,7 +24,7 @@ function Badge({ logoUrl, name, size = 56 }) {
         width: size,
         height: size,
         borderRadius: '50%',
-        background: 'var(--pitch)',
+        background: 'var(--ink)',
         color: '#fff',
         display: 'inline-flex',
         alignItems: 'center',
@@ -103,7 +103,7 @@ export default function FixtureDetail() {
           background: 'none',
           color: 'var(--brass)',
           fontSize: 13,
-          fontWeight: 600,
+          fontWeight: 700,
           marginBottom: 24,
           cursor: 'pointer',
           padding: 0,
@@ -113,7 +113,7 @@ export default function FixtureDetail() {
       </button>
 
       {fixture.round_name && (
-        <div style={{ fontSize: 13, color: 'var(--brass)', marginBottom: 8, fontWeight: 600 }}>
+        <div style={{ fontSize: 13, color: 'var(--brass)', marginBottom: 8, fontWeight: 700 }}>
           {fixture.round_name}
         </div>
       )}
@@ -134,18 +134,18 @@ export default function FixtureDetail() {
           style={{ textAlign: 'center', flex: 1, color: 'inherit' }}
         >
           <Badge logoUrl={fixture.home_team?.logo_url} name={fixture.home_team?.name} />
-          <div style={{ marginTop: 8, fontWeight: 600, fontSize: 15 }}>{fixture.home_team?.name}</div>
+          <div style={{ marginTop: 8, fontWeight: 700, fontSize: 15 }}>{fixture.home_team?.name}</div>
         </Link>
 
         <div style={{ textAlign: 'center', minWidth: 100 }}>
           {played ? (
-            <div style={{ fontFamily: 'var(--font-display)', fontSize: 36, fontWeight: 700, color: 'var(--pitch)' }}>
+            <div style={{ fontSize: 36, fontWeight: 800, color: 'var(--ink)' }}>
               {fixture.home_score} – {fixture.away_score}
             </div>
           ) : (
-            <div style={{ fontSize: 18, fontWeight: 600, color: '#8A8570' }}>vs</div>
+            <div style={{ fontSize: 18, fontWeight: 700, color: 'var(--muted)' }}>vs</div>
           )}
-          <div style={{ fontSize: 13, color: '#8A8570', marginTop: 6 }}>
+          <div style={{ fontSize: 13, color: 'var(--muted)', marginTop: 6 }}>
             {fixture.fixture_date
               ? new Date(fixture.fixture_date).toLocaleDateString('en-GB', {
                   weekday: 'short',
@@ -155,7 +155,7 @@ export default function FixtureDetail() {
                 })
               : 'Date TBC'}
           </div>
-          {fixture.venue && <div style={{ fontSize: 12, color: '#8A8570' }}>{fixture.venue}</div>}
+          {fixture.venue && <div style={{ fontSize: 12, color: 'var(--muted)' }}>{fixture.venue}</div>}
         </div>
 
         <Link
@@ -163,7 +163,7 @@ export default function FixtureDetail() {
           style={{ textAlign: 'center', flex: 1, color: 'inherit' }}
         >
           <Badge logoUrl={fixture.away_team?.logo_url} name={fixture.away_team?.name} />
-          <div style={{ marginTop: 8, fontWeight: 600, fontSize: 15 }}>{fixture.away_team?.name}</div>
+          <div style={{ marginTop: 8, fontWeight: 700, fontSize: 15 }}>{fixture.away_team?.name}</div>
         </Link>
       </div>
 
@@ -175,7 +175,7 @@ export default function FixtureDetail() {
       )}
 
       {!played && (
-        <p style={{ color: '#8A8570', textAlign: 'center' }}>This fixture hasn't been played yet.</p>
+        <p style={{ color: 'var(--muted)', textAlign: 'center' }}>This fixture hasn't been played yet.</p>
       )}
     </div>
   )
@@ -184,9 +184,11 @@ export default function FixtureDetail() {
 function ScorerColumn({ title, scorers }) {
   return (
     <div style={{ flex: 1 }}>
-      <h3 style={{ fontSize: 14, color: '#5A6B85', marginBottom: 10, fontWeight: 600 }}>{title} scorers</h3>
+      <h3 style={{ fontSize: 13, color: 'var(--muted)', marginBottom: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.4 }}>
+        {title} scorers
+      </h3>
       {scorers.length === 0 ? (
-        <p style={{ color: '#8A8570', fontSize: 13 }}>No goals recorded.</p>
+        <p style={{ color: 'var(--muted)', fontSize: 13 }}>No goals recorded.</p>
       ) : (
         <ul style={{ listStyle: 'none', margin: 0, padding: 0 }}>
           {scorers.map((s, i) => (
@@ -203,7 +205,7 @@ function ScorerColumn({ title, scorers }) {
               <span>
                 {s.player?.first_name} {s.player?.last_name}
               </span>
-              <span style={{ fontWeight: 700, color: 'var(--pitch)' }}>{s.goals}</span>
+              <span style={{ fontWeight: 800, color: 'var(--ink)' }}>{s.goals}</span>
             </li>
           ))}
         </ul>
