@@ -49,7 +49,7 @@ export default function Competition() {
               'id, round_name, fixture_date, home_score, away_score, status, group_id, home_team:home_team_id(id, name, logo_url), away_team:away_team_id(id, name, logo_url)'
             )
             .eq('stage_id', stage.id)
-            .neq('status', 'postponed')
+            .eq('hidden_from_public', false)
             .order('fixture_date', { ascending: true })
 
           let standingsByGroup = {}
