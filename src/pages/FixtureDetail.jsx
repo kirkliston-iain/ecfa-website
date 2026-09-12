@@ -43,6 +43,7 @@ export default function FixtureDetail() {
   const navigate = useNavigate()
   const [fixture, setFixture] = useState(null)
   const [scorers, setScorers] = useState([])
+  const [discipline, setDiscipline] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
 
@@ -74,9 +75,15 @@ export default function FixtureDetail() {
         .select('goals, team_id, player:player_id(first_name, last_name)')
         .eq('fixture_id', id)
 
+      const { data: d } = await supabase
+        .from('discipline_records')
+        .select('card_type, card_count, team_id, player:player_id(first_name, last_name)')
+        .eq('fixture_id', id)
+
       if (!cancelled) {
         setFixture(f)
         setScorers(s || [])
+        setDiscipline(d || [])
         setLoading(false)
       }
     }
@@ -92,6 +99,8 @@ export default function FixtureDetail() {
 
   const homeScorers = scorers.filter((s) => s.team_id === fixture.home_team?.id)
   const awayScorers = scorers.filter((s) => s.team_id === fixture.away_team?.id)
+  const homeCards = discipline.filter((d) => d.team_id === fixture.home_team?.id)
+  const awayCards = discipline.filter((d) => d.team_id === fixture.away_team?.id)
   const played = fixture.status === 'played'
 
   return (
@@ -168,10 +177,19 @@ export default function FixtureDetail() {
       </div>
 
       {played && (
-        <div style={{ display: 'flex', gap: 32 }}>
-          <ScorerColumn title={fixture.home_team?.name} scorers={homeScorers} />
-          <ScorerColumn title={fixture.away_team?.name} scorers={awayScorers} />
-        </div>
+        <>
+          <div style={{ display: 'flex', gap: 32, marginBottom: 28 }}>
+            <ScorerColumn title={fixture.home_team?.name} scorers={homeScorers} />
+            <ScorerColumn title={fixture.away_team?.name} scorers={awayScorers} />
+          </div>
+
+          {(homeCards.length > 0 || awayCards.length > 0) && (
+            <div style={{ display: 'flex', gap: 32 }}>
+              <DisciplineColumn title={fixture.home_team?.name} cards={homeCards} />
+              <DisciplineColumn title={fixture.away_team?.name} cards={awayCards} />
+            </div>
+          )}
+        </>
       )}
 
       {!played && (
@@ -210,6 +228,49 @@ function ScorerColumn({ title, scorers }) {
           ))}
         </ul>
       )}
+    </div>
+  )
+}
+
+function DisciplineColumn({ title, cards }) {
+  if (cards.length === 0) {
+    return <div style={{ flex: 1 }} />
+  }
+  return (
+    <div style={{ flex: 1 }}>
+      <h3 style={{ fontSize: 13, color: 'var(--muted)', marginBottom: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.4 }}>
+        {title} cards
+      </h3>
+      <ul style={{ listStyle: 'none', margin: 0, padding: 0 }}>
+        {cards.map((c, i) => (
+          <li
+            key={i}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 8,
+              padding: '6px 0',
+              borderBottom: '1px solid var(--line)',
+              fontSize: 14,
+            }}
+          >
+            <span
+              style={{
+                display: 'inline-block',
+                width: 10,
+                height: 14,
+                background: c.card_type === 'red' ? '#B3261E' : '#F2C230',
+                borderRadius: 2,
+                flexShrink: 0,
+              }}
+            />
+            <span>
+              {c.player?.first_name} {c.player?.last_name}
+              {c.card_count > 1 ? ` (${c.card_count}x)` : ''}
+            </span>
+          </li>
+        ))}
+      </ul>
     </div>
   )
 }
