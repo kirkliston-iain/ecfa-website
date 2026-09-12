@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { useParams, useNavigate } from 'react-router-dom'
+import { useParams, useNavigate, Link } from 'react-router-dom'
 import { supabase } from '../supabaseClient'
 
 function Badge({ logoUrl, name, size = 56 }) {
@@ -129,10 +129,13 @@ export default function FixtureDetail() {
           marginBottom: 24,
         }}
       >
-        <div style={{ textAlign: 'center', flex: 1 }}>
+        <Link
+          to={`/teams/${fixture.home_team?.id}`}
+          style={{ textAlign: 'center', flex: 1, color: 'inherit' }}
+        >
           <Badge logoUrl={fixture.home_team?.logo_url} name={fixture.home_team?.name} />
           <div style={{ marginTop: 8, fontWeight: 600, fontSize: 15 }}>{fixture.home_team?.name}</div>
-        </div>
+        </Link>
 
         <div style={{ textAlign: 'center', minWidth: 100 }}>
           {played ? (
@@ -155,10 +158,13 @@ export default function FixtureDetail() {
           {fixture.venue && <div style={{ fontSize: 12, color: '#8A8570' }}>{fixture.venue}</div>}
         </div>
 
-        <div style={{ textAlign: 'center', flex: 1 }}>
+        <Link
+          to={`/teams/${fixture.away_team?.id}`}
+          style={{ textAlign: 'center', flex: 1, color: 'inherit' }}
+        >
           <Badge logoUrl={fixture.away_team?.logo_url} name={fixture.away_team?.name} />
           <div style={{ marginTop: 8, fontWeight: 600, fontSize: 15 }}>{fixture.away_team?.name}</div>
-        </div>
+        </Link>
       </div>
 
       {played && (
