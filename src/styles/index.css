@@ -1,15 +1,17 @@
 :root {
-  --pitch: #1565C0;
-  --pitch-dark: #0B4A96;
-  --paper: #F2F6FB;
-  --ink: #16233A;
-  --brass: #1E88E5;
-  --brass-light: #FFFFFF;
-  --line: #D7E3F0;
-  --red-card: #C62828;
+  --pitch: #141414;
+  --pitch-dark: #000000;
+  --paper: #FFFFFF;
+  --ink: #141414;
+  --brass: #BB1919;
+  --brass-light: #E32222;
+  --line: #E2E2E2;
+  --red-card: #BB1919;
+  --muted: #6B6B6B;
+  --win: #1B8A4A;
 
-  --font-display: 'Fraunces', Georgia, serif;
-  --font-body: 'IBM Plex Sans', -apple-system, sans-serif;
+  --font-display: 'Inter', -apple-system, 'Segoe UI', Roboto, Arial, sans-serif;
+  --font-body: 'Inter', -apple-system, 'Segoe UI', Roboto, Arial, sans-serif;
 }
 
 * {
@@ -32,9 +34,10 @@ body {
 
 h1, h2, h3 {
   font-family: var(--font-display);
-  font-weight: 600;
+  font-weight: 800;
   margin: 0;
   line-height: 1.15;
+  letter-spacing: -0.01em;
 }
 
 a {
@@ -55,6 +58,19 @@ button {
   max-width: 960px;
   margin: 0 auto;
   padding: 0 20px;
+}
+
+.hscroll {
+  scrollbar-width: thin;
+}
+
+.hscroll::-webkit-scrollbar {
+  height: 6px;
+}
+
+.hscroll::-webkit-scrollbar-thumb {
+  background: var(--line);
+  border-radius: 3px;
 }
 
 @media (prefers-reduced-motion: reduce) {
