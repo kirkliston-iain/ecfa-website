@@ -80,6 +80,7 @@ export default function TeamDetail() {
   const [upcomingFixtures, setUpcomingFixtures] = useState([])
   const [scorers, setScorers] = useState([])
   const [squad, setSquad] = useState([])
+  const [honours, setHonours] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
 
@@ -141,12 +142,20 @@ export default function TeamDetail() {
         .eq('team_id', id)
         .order('last_name', { ascending: true })
 
+      const { data: honourRows } = await supabase
+        .from('honours')
+        .select('season, competition')
+        .eq('team_id', id)
+        .eq('status', 'winner')
+        .order('season', { ascending: true })
+
       if (!cancelled) {
         setTeam(t)
         setPlayedFixtures(played)
         setUpcomingFixtures(upcoming)
         setScorers(scorerList)
         setSquad(squadRows || [])
+        setHonours(honourRows || [])
         setLoading(false)
       }
     }
@@ -163,6 +172,13 @@ export default function TeamDetail() {
   const form = playedFixtures.slice(0, 5)
   const nextFive = upcomingFixtures.slice(0, 5)
   const topScorers = scorers.slice(0, 5)
+
+  const honoursByCompetition = {}
+  for (const h of honours) {
+    if (!honoursByCompetition[h.competition]) honoursByCompetition[h.competition] = []
+    honoursByCompetition[h.competition].push(h.season)
+  }
+  const competitionOrder = ['League', 'League Cup', 'Knockout Cup', 'Brian Latto Cup']
 
   return (
     <div className="container" style={{ padding: '40px 20px' }}>
@@ -186,6 +202,32 @@ export default function TeamDetail() {
         <Badge logoUrl={team.logo_url} name={team.name} size={64} />
         <h1 style={{ fontSize: 28, color: 'var(--pitch)' }}>{team.name}</h1>
       </div>
+
+      {honours.length > 0 && (
+        <div
+          style={{
+            marginBottom: 24,
+            padding: '14px 18px',
+            background: 'rgba(184, 149, 79, 0.08)',
+            border: '1px solid rgba(184, 149, 79, 0.3)',
+            borderRadius: 6,
+          }}
+        >
+          <div style={{ fontSize: 12, color: 'var(--brass)', textTransform: 'uppercase', letterSpacing: 0.5, fontWeight: 700, marginBottom: 8 }}>
+            Honours
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+            {competitionOrder
+              .filter((c) => honoursByCompetition[c])
+              .map((c) => (
+                <div key={c} style={{ fontSize: 14 }}>
+                  <span style={{ fontWeight: 600 }}>{c}</span>
+                  <span style={{ color: '#5A5646' }}> ({honoursByCompetition[c].length}): {honoursByCompetition[c].join(', ')}</span>
+                </div>
+              ))}
+          </div>
+        </div>
+      )}
 
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 40 }}>
         <span style={{ fontSize: 12, color: '#8A8570', textTransform: 'uppercase', letterSpacing: 0.5, marginRight: 4 }}>
