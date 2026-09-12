@@ -9,20 +9,30 @@ const COMPETITIONS = [
 
 export default function Header() {
   return (
-    <header style={{ background: 'var(--pitch)', color: 'var(--paper)' }}>
+    <header style={{ background: 'var(--pitch)', color: '#fff' }}>
       <div className="container" style={{ padding: '20px 20px 0' }}>
-        <Link to="/" style={{ display: 'flex', alignItems: 'baseline', gap: 12 }}>
+        <Link to="/" style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
           <span
             style={{
+              width: 44,
+              height: 44,
+              borderRadius: '50%',
+              background: '#fff',
+              color: 'var(--pitch)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
               fontFamily: 'var(--font-display)',
-              fontSize: 28,
-              fontWeight: 700,
-              color: 'var(--brass-light)',
+              fontWeight: 800,
+              fontSize: 13,
+              letterSpacing: 0.5,
+              flexShrink: 0,
+              border: '3px solid var(--pitch-dark)',
             }}
           >
             ECFA
           </span>
-          <span style={{ fontSize: 14, opacity: 0.85 }}>
+          <span style={{ fontSize: 14, opacity: 0.9 }}>
             Edinburgh Churches Football Association
           </span>
         </Link>
@@ -32,7 +42,7 @@ export default function Header() {
             display: 'flex',
             gap: 24,
             marginTop: 22,
-            borderBottom: '1px solid rgba(246,244,239,0.2)',
+            borderBottom: '1px solid rgba(255,255,255,0.25)',
             overflowX: 'auto',
           }}
         >
@@ -45,8 +55,9 @@ export default function Header() {
                 fontSize: 14,
                 fontWeight: 500,
                 whiteSpace: 'nowrap',
-                borderBottom: isActive ? '2px solid var(--brass-light)' : '2px solid transparent',
-                color: isActive ? 'var(--brass-light)' : 'var(--paper)',
+                borderBottom: isActive ? '2px solid #fff' : '2px solid transparent',
+                color: '#fff',
+                opacity: isActive ? 1 : 0.75,
               })}
             >
               {c.label}
