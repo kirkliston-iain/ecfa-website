@@ -6,6 +6,8 @@ export default function AdminDashboard() {
   const [competitionId, setCompetitionId] = useState('')
   const [stages, setStages] = useState([])
   const [stageId, setStageId] = useState('')
+  const [teamFilter, setTeamFilter] = useState('')
+  const [dateFilter, setDateFilter] = useState('')
   const [fixtures, setFixtures] = useState([])
   const [saving, setSaving] = useState(null)
   const [expandedFixture, setExpandedFixture] = useState(null)
@@ -15,7 +17,13 @@ export default function AdminDashboard() {
   const [scorerForm, setScorerForm] = useState({ side: 'home', playerId: '', goals: 1 })
 
   const [disciplineByFixture, setDisciplineByFixture] = useState({})
-  const [disciplineForm, setDisciplineForm] = useState({ side: 'home', playerId: '', cardType: 'yellow', count: 1 })
+  const [disciplineForm, setDisciplineForm] = useState({
+    side: 'home',
+    playerId: '',
+    cardType: 'yellow',
+    count: 1,
+    seriousOffence: '',
+  })
 
   const [postponedFixtures, setPostponedFixtures] = useState([])
   const [allTeams, setAllTeams] = useState([])
@@ -52,6 +60,8 @@ export default function AdminDashboard() {
   }, [competitionId])
 
   useEffect(() => {
+    setTeamFilter('')
+    setDateFilter('')
     if (!stageId) {
       setFixtures([])
       return
@@ -151,7 +161,7 @@ export default function AdminDashboard() {
     }
     setExpandedFixture(fixture.id)
     setScorerForm({ side: 'home', playerId: '', goals: 1 })
-    setDisciplineForm({ side: 'home', playerId: '', cardType: 'yellow', count: 1 })
+    setDisciplineForm({ side: 'home', playerId: '', cardType: 'yellow', count: 1, seriousOffence: '' })
 
     if (!squadsByFixture[fixture.id]) {
       const [{ data: homeSquad }, { data: awaySquad }] = await Promise.all([
@@ -176,7 +186,7 @@ export default function AdminDashboard() {
   async function refreshDiscipline(fixtureId) {
     const { data } = await supabase
       .from('discipline_records')
-      .select('id, card_type, card_count, player:player_id(first_name, last_name), team:team_id(name)')
+      .select('id, card_type, card_count, serious_offence, player:player_id(first_name, last_name), team:team_id(name)')
       .eq('fixture_id', fixtureId)
     setDisciplineByFixture((prev) => ({ ...prev, [fixtureId]: data || [] }))
   }
@@ -197,8 +207,18 @@ export default function AdminDashboard() {
     refreshScorers(fixture.id)
   }
 
+  async function removeScorer(fixtureId, scorerId) {
+    await supabase.from('fixture_scorers').delete().eq('id', scorerId)
+    refreshScorers(fixtureId)
+  }
+
+  async function updateScorerGoals(fixtureId, scorerId, goals) {
+    await supabase.from('fixture_scorers').update({ goals: Number(goals) }).eq('id', scorerId)
+    refreshScorers(fixtureId)
+  }
+
   async function addDiscipline(fixture) {
-    const { side, playerId, cardType, count } = disciplineForm
+    const { side, playerId, cardType, count, seriousOffence } = disciplineForm
     if (!playerId) return
     const teamId = side === 'home' ? fixture.home_team.id : fixture.away_team.id
 
@@ -208,10 +228,16 @@ export default function AdminDashboard() {
       team_id: teamId,
       card_type: cardType,
       card_count: Number(count),
+      serious_offence: seriousOffence || null,
     })
 
-    setDisciplineForm({ side: 'home', playerId: '', cardType: 'yellow', count: 1 })
+    setDisciplineForm({ side: 'home', playerId: '', cardType: 'yellow', count: 1, seriousOffence: '' })
     refreshDiscipline(fixture.id)
+  }
+
+  async function removeDiscipline(fixtureId, recordId) {
+    await supabase.from('discipline_records').delete().eq('id', recordId)
+    refreshDiscipline(fixtureId)
   }
 
   async function handleSignOut() {
@@ -255,15 +281,68 @@ export default function AdminDashboard() {
 
       {stageId && (
         <div style={{ marginBottom: 40 }}>
-          {fixtures.map((f) => {
+          {fixtures.length > 0 && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 16 }}>
+              <select value={teamFilter} onChange={(e) => setTeamFilter(e.target.value)} style={fullSelectStyle}>
+                <option value="">All teams</option>
+                {Array.from(
+                  new Map(
+                    fixtures.flatMap((f) => [
+                      [f.home_team.id, f.home_team.name],
+                      [f.away_team.id, f.away_team.name],
+                    ])
+                  ).entries()
+                )
+                  .sort((a, b) => a[1].localeCompare(b[1]))
+                  .map(([id, name]) => (
+                    <option key={id} value={id}>
+                      {name}
+                    </option>
+                  ))}
+              </select>
+              <select value={dateFilter} onChange={(e) => setDateFilter(e.target.value)} style={fullSelectStyle}>
+                <option value="">All dates</option>
+                {Array.from(new Set(fixtures.map((f) => (f.fixture_date ? f.fixture_date.slice(0, 10) : 'tbc'))))
+                  .sort()
+                  .map((d) => (
+                    <option key={d} value={d}>
+                      {d === 'tbc'
+                        ? 'Date TBC'
+                        : new Date(d + 'T00:00:00').toLocaleDateString('en-GB', {
+                            weekday: 'short',
+                            day: 'numeric',
+                            month: 'short',
+                          })}
+                    </option>
+                  ))}
+              </select>
+            </div>
+          )}
+          {fixtures
+            .filter((f) => !teamFilter || f.home_team.id === teamFilter || f.away_team.id === teamFilter)
+            .filter((f) => !dateFilter || (f.fixture_date ? f.fixture_date.slice(0, 10) : 'tbc') === dateFilter)
+            .map((f) => {
             const squads = squadsByFixture[f.id]
             const sideSquad = scorerForm.side === 'home' ? squads?.home : squads?.away
             const disciplineSideSquad = disciplineForm.side === 'home' ? squads?.home : squads?.away
 
             return (
               <div key={f.id} style={cardStyle}>
-                <div style={{ fontWeight: 600, marginBottom: 10 }}>
+                <div style={{ fontSize: 11, color: 'var(--brass)', fontWeight: 700, textTransform: 'uppercase', marginBottom: 4 }}>
+                  {competitions.find((c) => c.id === competitionId)?.name}
+                </div>
+                <div style={{ fontWeight: 600, marginBottom: 2 }}>
                   {f.home_team?.name} v {f.away_team?.name}
+                </div>
+                <div style={{ fontSize: 12, color: '#8A8570', marginBottom: 10 }}>
+                  {f.fixture_date
+                    ? new Date(f.fixture_date).toLocaleDateString('en-GB', {
+                        weekday: 'short',
+                        day: 'numeric',
+                        month: 'short',
+                        year: 'numeric',
+                      })
+                    : 'Date TBC'}
                 </div>
 
                 <div style={{ display: 'flex', gap: 8, marginBottom: 10 }}>
@@ -322,9 +401,34 @@ export default function AdminDashboard() {
                     <div style={{ fontWeight: 600, fontSize: 13, marginBottom: 6 }}>Scorers</div>
                     <div style={{ marginBottom: 10 }}>
                       {(scorersByFixture[f.id] || []).map((s) => (
-                        <div key={s.id} style={{ fontSize: 13, padding: '4px 0' }}>
-                          {s.player.first_name} {s.player.last_name} ({s.team.name}) — {s.goals} goal
-                          {s.goals === 1 ? '' : 's'}
+                        <div
+                          key={s.id}
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: 8,
+                            fontSize: 13,
+                            padding: '6px 0',
+                          }}
+                        >
+                          <span style={{ flex: 1 }}>
+                            {s.player.first_name} {s.player.last_name} ({s.team.name})
+                          </span>
+                          <input
+                            type="number"
+                            min="1"
+                            defaultValue={s.goals}
+                            onBlur={(e) => {
+                              if (Number(e.target.value) !== s.goals) updateScorerGoals(f.id, s.id, e.target.value)
+                            }}
+                            style={{ ...scoreInputStyle, width: 50, padding: '4px 6px' }}
+                          />
+                          <button
+                            onClick={() => removeScorer(f.id, s.id)}
+                            style={{ ...outlineButtonStyle, padding: '4px 10px', fontSize: 12 }}
+                          >
+                            Remove
+                          </button>
                         </div>
                       ))}
                       {(scorersByFixture[f.id] || []).length === 0 && (
@@ -369,20 +473,37 @@ export default function AdminDashboard() {
                     <div style={{ fontWeight: 600, fontSize: 13, marginBottom: 6 }}>Discipline</div>
                     <div style={{ marginBottom: 10 }}>
                       {(disciplineByFixture[f.id] || []).map((d) => (
-                        <div key={d.id} style={{ fontSize: 13, padding: '4px 0' }}>
+                        <div
+                          key={d.id}
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: 8,
+                            fontSize: 13,
+                            padding: '6px 0',
+                          }}
+                        >
                           <span
                             style={{
                               display: 'inline-block',
                               width: 10,
                               height: 14,
                               background: d.card_type === 'red' ? '#B3261E' : '#F2C230',
-                              marginRight: 6,
-                              verticalAlign: 'middle',
                               borderRadius: 2,
+                              flexShrink: 0,
                             }}
                           />
-                          {d.player.first_name} {d.player.last_name} ({d.team.name})
-                          {d.card_count > 1 ? ` — ${d.card_count}x` : ''}
+                          <span style={{ flex: 1 }}>
+                            {d.player.first_name} {d.player.last_name} ({d.team.name})
+                            {d.card_count > 1 ? ` — ${d.card_count}x` : ''}
+                            {d.serious_offence ? ` — ${seriousOffenceLabel(d.serious_offence)}` : ''}
+                          </span>
+                          <button
+                            onClick={() => removeDiscipline(f.id, d.id)}
+                            style={{ ...outlineButtonStyle, padding: '4px 10px', fontSize: 12 }}
+                          >
+                            Remove
+                          </button>
                         </div>
                       ))}
                       {(disciplineByFixture[f.id] || []).length === 0 && (
@@ -427,6 +548,17 @@ export default function AdminDashboard() {
                           style={{ ...scoreInputStyle, width: 60 }}
                         />
                       </div>
+                      <select
+                        value={disciplineForm.seriousOffence}
+                        onChange={(e) => setDisciplineForm((p) => ({ ...p, seriousOffence: e.target.value }))}
+                        style={fullSelectStyle}
+                      >
+                        <option value="">Not a serious offence (standard card)</option>
+                        <option value="opponent_abuse">Abusive language — towards opponent</option>
+                        <option value="official_abuse">Abusive language — towards official</option>
+                        <option value="discriminatory">Discriminatory language</option>
+                        <option value="violent_conduct">Violent conduct</option>
+                      </select>
                       <button onClick={() => addDiscipline(f)} style={saveButtonStyle}>
                         Add card
                       </button>
@@ -526,6 +658,16 @@ export default function AdminDashboard() {
       </div>
     </div>
   )
+}
+
+function seriousOffenceLabel(code) {
+  const labels = {
+    opponent_abuse: 'Abusive language (opponent)',
+    official_abuse: 'Abusive language (official)',
+    discriminatory: 'Discriminatory language',
+    violent_conduct: 'Violent conduct',
+  }
+  return labels[code] || code
 }
 
 const cardStyle = {
