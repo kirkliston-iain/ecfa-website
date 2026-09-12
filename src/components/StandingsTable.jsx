@@ -1,3 +1,47 @@
+function Badge({ logoUrl, name, size = 22 }) {
+  if (logoUrl) {
+    return (
+      <img
+        src={logoUrl}
+        alt=""
+        style={{
+          width: size,
+          height: size,
+          borderRadius: '50%',
+          objectFit: 'cover',
+          background: '#fff',
+          flexShrink: 0,
+        }}
+      />
+    )
+  }
+  const initials = (name || '?')
+    .split(' ')
+    .map((w) => w[0])
+    .slice(0, 2)
+    .join('')
+    .toUpperCase()
+  return (
+    <span
+      style={{
+        width: size,
+        height: size,
+        borderRadius: '50%',
+        background: 'rgba(255,255,255,0.25)',
+        color: '#fff',
+        display: 'inline-flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        fontSize: size * 0.4,
+        fontWeight: 700,
+        flexShrink: 0,
+      }}
+    >
+      {initials}
+    </span>
+  )
+}
+
 export function TopScorersTable({ rows }) {
   return (
     <div style={{ marginBottom: 40 }}>
@@ -38,11 +82,11 @@ export function TopScorersTable({ rows }) {
 
 export default function StandingsTable({ groupName, rows }) {
   return (
-    <div style={{ marginBottom: 40 }}>
+    <div style={{ marginBottom: 28 }}>
       {groupName && (
-        <h3 style={{ fontSize: 18, marginBottom: 10, color: 'var(--pitch)' }}>{groupName}</h3>
+        <h3 style={{ fontSize: 16, marginBottom: 8, color: 'var(--pitch)' }}>{groupName}</h3>
       )}
-      <table style={{ width: '100%', borderCollapse: 'separate', borderSpacing: '0 6px', fontSize: 14 }}>
+      <table style={{ width: '100%', borderCollapse: 'separate', borderSpacing: '0 4px', fontSize: 13 }}>
         <thead>
           <tr>
             <th style={headStyle('left')}>#</th>
@@ -61,7 +105,12 @@ export default function StandingsTable({ groupName, rows }) {
           {rows.map((row, i) => (
             <tr key={row.teamId}>
               <td style={rowStyle('left', 'first')}>{i + 1}</td>
-              <td style={{ ...rowStyle('left'), fontWeight: 600 }}>{row.teamName}</td>
+              <td style={{ ...rowStyle('left'), fontWeight: 600 }}>
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+                  <Badge logoUrl={row.teamLogo} name={row.teamName} />
+                  {row.teamName}
+                </span>
+              </td>
               <td style={rowStyle()}>{row.played}</td>
               <td style={rowStyle()}>{row.won}</td>
               <td style={rowStyle()}>{row.drawn}</td>
@@ -74,7 +123,7 @@ export default function StandingsTable({ groupName, rows }) {
           ))}
           {rows.length === 0 && (
             <tr>
-              <td colSpan={10} style={{ padding: '24px 8px', textAlign: 'center', color: '#8A8570' }}>
+              <td colSpan={10} style={{ padding: '20px 8px', textAlign: 'center', color: '#8A8570' }}>
                 No standings yet — check back once fixtures have been played.
               </td>
             </tr>
@@ -88,10 +137,10 @@ export default function StandingsTable({ groupName, rows }) {
 function headStyle(align = 'center') {
   return {
     textAlign: align,
-    padding: '4px 8px 8px',
+    padding: '4px 6px 6px',
     fontFamily: 'var(--font-body)',
     fontWeight: 600,
-    fontSize: 11,
+    fontSize: 10,
     color: '#5A6B85',
     textTransform: 'uppercase',
     letterSpacing: 0.5,
@@ -101,7 +150,7 @@ function headStyle(align = 'center') {
 function rowStyle(align = 'center', position, isPoints) {
   const style = {
     textAlign: align,
-    padding: '12px 8px',
+    padding: '7px 6px',
     fontWeight: isPoints ? 700 : 400,
     background: isPoints ? 'var(--pitch-dark)' : 'var(--pitch)',
     color: '#fff',
