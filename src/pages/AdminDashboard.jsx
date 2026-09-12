@@ -9,8 +9,13 @@ export default function AdminDashboard() {
   const [fixtures, setFixtures] = useState([])
   const [saving, setSaving] = useState(null)
   const [expandedFixture, setExpandedFixture] = useState(null)
+
+  const [squadsByFixture, setSquadsByFixture] = useState({})
   const [scorersByFixture, setScorersByFixture] = useState({})
-  const [scorerForm, setScorerForm] = useState({ firstName: '', lastName: '', side: 'home', goals: 1 })
+  const [scorerForm, setScorerForm] = useState({ side: 'home', playerId: '', goals: 1 })
+
+  const [disciplineByFixture, setDisciplineByFixture] = useState({})
+  const [disciplineForm, setDisciplineForm] = useState({ side: 'home', playerId: '', cardType: 'yellow', count: 1 })
 
   const [postponedFixtures, setPostponedFixtures] = useState([])
   const [allTeams, setAllTeams] = useState([])
@@ -82,7 +87,6 @@ export default function AdminDashboard() {
       prev.map((f) => {
         if (f.id !== id) return f
         const updated = { ...f, [field]: value }
-        // Marking a fixture postponed should hide it from the public site by default.
         if (field === 'status' && value === 'postponed') {
           updated.hidden_from_public = true
         }
@@ -115,8 +119,6 @@ export default function AdminDashboard() {
       prev.map((f) => {
         if (f.id !== id) return f
         const updated = { ...f, [field]: value }
-        // Moving it back to Scheduled/Played should un-hide it, unless they
-        // explicitly want it still hidden — they can re-tick the box.
         if (field === 'status' && value !== 'postponed') {
           updated.hidden_from_public = false
         }
@@ -142,12 +144,28 @@ export default function AdminDashboard() {
     if (stageId) loadFixtures()
   }
 
-  async function toggleScorers(fixtureId) {
-    if (expandedFixture === fixtureId) {
+  async function toggleExpanded(fixture) {
+    if (expandedFixture === fixture.id) {
       setExpandedFixture(null)
       return
     }
-    setExpandedFixture(fixtureId)
+    setExpandedFixture(fixture.id)
+    setScorerForm({ side: 'home', playerId: '', goals: 1 })
+    setDisciplineForm({ side: 'home', playerId: '', cardType: 'yellow', count: 1 })
+
+    if (!squadsByFixture[fixture.id]) {
+      const [{ data: homeSquad }, { data: awaySquad }] = await Promise.all([
+        supabase.from('players').select('id, first_name, last_name').eq('team_id', fixture.home_team.id).order('last_name'),
+        supabase.from('players').select('id, first_name, last_name').eq('team_id', fixture.away_team.id).order('last_name'),
+      ])
+      setSquadsByFixture((prev) => ({ ...prev, [fixture.id]: { home: homeSquad || [], away: awaySquad || [] } }))
+    }
+
+    await refreshScorers(fixture.id)
+    await refreshDiscipline(fixture.id)
+  }
+
+  async function refreshScorers(fixtureId) {
     const { data } = await supabase
       .from('fixture_scorers')
       .select('id, goals, player:player_id(first_name, last_name), team:team_id(name)')
@@ -155,29 +173,18 @@ export default function AdminDashboard() {
     setScorersByFixture((prev) => ({ ...prev, [fixtureId]: data || [] }))
   }
 
+  async function refreshDiscipline(fixtureId) {
+    const { data } = await supabase
+      .from('discipline_records')
+      .select('id, card_type, card_count, player:player_id(first_name, last_name), team:team_id(name)')
+      .eq('fixture_id', fixtureId)
+    setDisciplineByFixture((prev) => ({ ...prev, [fixtureId]: data || [] }))
+  }
+
   async function addScorer(fixture) {
-    const { firstName, lastName, side, goals } = scorerForm
-    if (!firstName.trim() || !lastName.trim()) return
-
-    const teamId = side === 'home' ? fixture.home_team?.id : fixture.away_team?.id
-
-    let { data: existing } = await supabase
-      .from('players')
-      .select('id')
-      .eq('first_name', firstName.trim())
-      .eq('last_name', lastName.trim())
-      .maybeSingle()
-
-    let playerId = existing?.id
-    if (!playerId) {
-      const { data: created, error: createErr } = await supabase
-        .from('players')
-        .insert({ first_name: firstName.trim(), last_name: lastName.trim() })
-        .select('id')
-        .single()
-      if (createErr) return
-      playerId = created.id
-    }
+    const { side, playerId, goals } = scorerForm
+    if (!playerId) return
+    const teamId = side === 'home' ? fixture.home_team.id : fixture.away_team.id
 
     await supabase
       .from('fixture_scorers')
@@ -186,13 +193,25 @@ export default function AdminDashboard() {
         { onConflict: 'fixture_id,player_id' }
       )
 
-    setScorerForm({ firstName: '', lastName: '', side: 'home', goals: 1 })
+    setScorerForm({ side: 'home', playerId: '', goals: 1 })
+    refreshScorers(fixture.id)
+  }
 
-    const { data } = await supabase
-      .from('fixture_scorers')
-      .select('id, goals, player:player_id(first_name, last_name), team:team_id(name)')
-      .eq('fixture_id', fixture.id)
-    setScorersByFixture((prev) => ({ ...prev, [fixture.id]: data || [] }))
+  async function addDiscipline(fixture) {
+    const { side, playerId, cardType, count } = disciplineForm
+    if (!playerId) return
+    const teamId = side === 'home' ? fixture.home_team.id : fixture.away_team.id
+
+    await supabase.from('discipline_records').insert({
+      fixture_id: fixture.id,
+      player_id: playerId,
+      team_id: teamId,
+      card_type: cardType,
+      card_count: Number(count),
+    })
+
+    setDisciplineForm({ side: 'home', playerId: '', cardType: 'yellow', count: 1 })
+    refreshDiscipline(fixture.id)
   }
 
   async function handleSignOut() {
@@ -236,119 +255,187 @@ export default function AdminDashboard() {
 
       {stageId && (
         <div style={{ marginBottom: 40 }}>
-          {fixtures.map((f) => (
-            <div key={f.id} style={cardStyle}>
-              <div style={{ fontWeight: 600, marginBottom: 10 }}>
-                {f.home_team?.name} v {f.away_team?.name}
-              </div>
+          {fixtures.map((f) => {
+            const squads = squadsByFixture[f.id]
+            const sideSquad = scorerForm.side === 'home' ? squads?.home : squads?.away
+            const disciplineSideSquad = disciplineForm.side === 'home' ? squads?.home : squads?.away
 
-              <div style={{ display: 'flex', gap: 8, marginBottom: 10 }}>
-                <input
-                  type="number"
-                  placeholder="Home"
-                  value={f.home_score ?? ''}
-                  onChange={(e) => updateLocal(f.id, 'home_score', e.target.value)}
-                  style={{ ...scoreInputStyle, flex: 1 }}
-                />
-                <span style={{ alignSelf: 'center', color: '#8A8570' }}>–</span>
-                <input
-                  type="number"
-                  placeholder="Away"
-                  value={f.away_score ?? ''}
-                  onChange={(e) => updateLocal(f.id, 'away_score', e.target.value)}
-                  style={{ ...scoreInputStyle, flex: 1 }}
-                />
-              </div>
+            return (
+              <div key={f.id} style={cardStyle}>
+                <div style={{ fontWeight: 600, marginBottom: 10 }}>
+                  {f.home_team?.name} v {f.away_team?.name}
+                </div>
 
-              <select
-                value={f.status}
-                onChange={(e) => updateLocal(f.id, 'status', e.target.value)}
-                style={{ ...fullSelectStyle, marginBottom: 10 }}
-              >
-                <option value="scheduled">Scheduled</option>
-                <option value="played">Played</option>
-                <option value="postponed">Postponed</option>
-                <option value="cancelled">Cancelled</option>
-              </select>
+                <div style={{ display: 'flex', gap: 8, marginBottom: 10 }}>
+                  <input
+                    type="number"
+                    placeholder="Home"
+                    value={f.home_score ?? ''}
+                    onChange={(e) => updateLocal(f.id, 'home_score', e.target.value)}
+                    style={{ ...scoreInputStyle, flex: 1 }}
+                  />
+                  <span style={{ alignSelf: 'center', color: '#8A8570' }}>–</span>
+                  <input
+                    type="number"
+                    placeholder="Away"
+                    value={f.away_score ?? ''}
+                    onChange={(e) => updateLocal(f.id, 'away_score', e.target.value)}
+                    style={{ ...scoreInputStyle, flex: 1 }}
+                  />
+                </div>
 
-              <label style={{ ...labelStyle, display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
-                <input
-                  type="checkbox"
-                  checked={!!f.hidden_from_public}
-                  onChange={(e) => updateLocal(f.id, 'hidden_from_public', e.target.checked)}
-                />
-                Hide from public site
-              </label>
-
-              <div style={{ display: 'flex', gap: 8 }}>
-                <button
-                  onClick={() => saveFixture(f)}
-                  disabled={saving === f.id}
-                  style={{ ...saveButtonStyle, flex: 1 }}
+                <select
+                  value={f.status}
+                  onChange={(e) => updateLocal(f.id, 'status', e.target.value)}
+                  style={{ ...fullSelectStyle, marginBottom: 10 }}
                 >
-                  {saving === f.id ? 'Saving…' : 'Save'}
-                </button>
-                <button
-                  onClick={() => toggleScorers(f.id)}
-                  style={{ ...outlineButtonStyle, flex: 1 }}
-                >
-                  {expandedFixture === f.id ? 'Hide scorers' : 'Scorers'}
-                </button>
-              </div>
+                  <option value="scheduled">Scheduled</option>
+                  <option value="played">Played</option>
+                  <option value="postponed">Postponed</option>
+                  <option value="cancelled">Cancelled</option>
+                </select>
 
-              {expandedFixture === f.id && (
-                <div style={{ marginTop: 14, paddingTop: 14, borderTop: '1px solid var(--line)' }}>
-                  <div style={{ marginBottom: 10 }}>
-                    {(scorersByFixture[f.id] || []).map((s) => (
-                      <div key={s.id} style={{ fontSize: 13, padding: '4px 0' }}>
-                        {s.player.first_name} {s.player.last_name} ({s.team.name}) — {s.goals} goal
-                        {s.goals === 1 ? '' : 's'}
-                      </div>
-                    ))}
-                    {(scorersByFixture[f.id] || []).length === 0 && (
-                      <div style={{ fontSize: 13, color: '#8A8570' }}>No scorers recorded yet.</div>
-                    )}
-                  </div>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                    <div style={{ display: 'flex', gap: 8 }}>
-                      <input
-                        placeholder="First name"
-                        value={scorerForm.firstName}
-                        onChange={(e) => setScorerForm((p) => ({ ...p, firstName: e.target.value }))}
-                        style={{ ...scoreInputStyle, flex: 1 }}
-                      />
-                      <input
-                        placeholder="Last name"
-                        value={scorerForm.lastName}
-                        onChange={(e) => setScorerForm((p) => ({ ...p, lastName: e.target.value }))}
-                        style={{ ...scoreInputStyle, flex: 1 }}
-                      />
+                <label style={{ ...labelStyle, display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
+                  <input
+                    type="checkbox"
+                    checked={!!f.hidden_from_public}
+                    onChange={(e) => updateLocal(f.id, 'hidden_from_public', e.target.checked)}
+                  />
+                  Hide from public site
+                </label>
+
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <button
+                    onClick={() => saveFixture(f)}
+                    disabled={saving === f.id}
+                    style={{ ...saveButtonStyle, flex: 1 }}
+                  >
+                    {saving === f.id ? 'Saving…' : 'Save'}
+                  </button>
+                  <button onClick={() => toggleExpanded(f)} style={{ ...outlineButtonStyle, flex: 1 }}>
+                    {expandedFixture === f.id ? 'Hide details' : 'Scorers & cards'}
+                  </button>
+                </div>
+
+                {expandedFixture === f.id && (
+                  <div style={{ marginTop: 14, paddingTop: 14, borderTop: '1px solid var(--line)' }}>
+                    <div style={{ fontWeight: 600, fontSize: 13, marginBottom: 6 }}>Scorers</div>
+                    <div style={{ marginBottom: 10 }}>
+                      {(scorersByFixture[f.id] || []).map((s) => (
+                        <div key={s.id} style={{ fontSize: 13, padding: '4px 0' }}>
+                          {s.player.first_name} {s.player.last_name} ({s.team.name}) — {s.goals} goal
+                          {s.goals === 1 ? '' : 's'}
+                        </div>
+                      ))}
+                      {(scorersByFixture[f.id] || []).length === 0 && (
+                        <div style={{ fontSize: 13, color: '#8A8570' }}>No scorers recorded yet.</div>
+                      )}
                     </div>
-                    <select
-                      value={scorerForm.side}
-                      onChange={(e) => setScorerForm((p) => ({ ...p, side: e.target.value }))}
-                      style={fullSelectStyle}
-                    >
-                      <option value="home">{f.home_team?.name} (home)</option>
-                      <option value="away">{f.away_team?.name} (away)</option>
-                    </select>
-                    <div style={{ display: 'flex', gap: 8 }}>
-                      <input
-                        type="number"
-                        min="1"
-                        value={scorerForm.goals}
-                        onChange={(e) => setScorerForm((p) => ({ ...p, goals: e.target.value }))}
-                        style={{ ...scoreInputStyle, width: 70 }}
-                      />
-                      <button onClick={() => addScorer(f)} style={{ ...saveButtonStyle, flex: 1 }}>
-                        Add scorer
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 20 }}>
+                      <select
+                        value={scorerForm.side}
+                        onChange={(e) => setScorerForm((p) => ({ ...p, side: e.target.value, playerId: '' }))}
+                        style={fullSelectStyle}
+                      >
+                        <option value="home">{f.home_team?.name} (home)</option>
+                        <option value="away">{f.away_team?.name} (away)</option>
+                      </select>
+                      <select
+                        value={scorerForm.playerId}
+                        onChange={(e) => setScorerForm((p) => ({ ...p, playerId: e.target.value }))}
+                        style={fullSelectStyle}
+                      >
+                        <option value="">Select player…</option>
+                        {(sideSquad || []).map((p) => (
+                          <option key={p.id} value={p.id}>
+                            {p.first_name} {p.last_name}
+                          </option>
+                        ))}
+                      </select>
+                      <div style={{ display: 'flex', gap: 8 }}>
+                        <input
+                          type="number"
+                          min="1"
+                          value={scorerForm.goals}
+                          onChange={(e) => setScorerForm((p) => ({ ...p, goals: e.target.value }))}
+                          style={{ ...scoreInputStyle, width: 70 }}
+                        />
+                        <button onClick={() => addScorer(f)} style={{ ...saveButtonStyle, flex: 1 }}>
+                          Add scorer
+                        </button>
+                      </div>
+                    </div>
+
+                    <div style={{ fontWeight: 600, fontSize: 13, marginBottom: 6 }}>Discipline</div>
+                    <div style={{ marginBottom: 10 }}>
+                      {(disciplineByFixture[f.id] || []).map((d) => (
+                        <div key={d.id} style={{ fontSize: 13, padding: '4px 0' }}>
+                          <span
+                            style={{
+                              display: 'inline-block',
+                              width: 10,
+                              height: 14,
+                              background: d.card_type === 'red' ? '#B3261E' : '#F2C230',
+                              marginRight: 6,
+                              verticalAlign: 'middle',
+                              borderRadius: 2,
+                            }}
+                          />
+                          {d.player.first_name} {d.player.last_name} ({d.team.name})
+                          {d.card_count > 1 ? ` — ${d.card_count}x` : ''}
+                        </div>
+                      ))}
+                      {(disciplineByFixture[f.id] || []).length === 0 && (
+                        <div style={{ fontSize: 13, color: '#8A8570' }}>No cards recorded yet.</div>
+                      )}
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                      <select
+                        value={disciplineForm.side}
+                        onChange={(e) => setDisciplineForm((p) => ({ ...p, side: e.target.value, playerId: '' }))}
+                        style={fullSelectStyle}
+                      >
+                        <option value="home">{f.home_team?.name} (home)</option>
+                        <option value="away">{f.away_team?.name} (away)</option>
+                      </select>
+                      <select
+                        value={disciplineForm.playerId}
+                        onChange={(e) => setDisciplineForm((p) => ({ ...p, playerId: e.target.value }))}
+                        style={fullSelectStyle}
+                      >
+                        <option value="">Select player…</option>
+                        {(disciplineSideSquad || []).map((p) => (
+                          <option key={p.id} value={p.id}>
+                            {p.first_name} {p.last_name}
+                          </option>
+                        ))}
+                      </select>
+                      <div style={{ display: 'flex', gap: 8 }}>
+                        <select
+                          value={disciplineForm.cardType}
+                          onChange={(e) => setDisciplineForm((p) => ({ ...p, cardType: e.target.value }))}
+                          style={{ ...fullSelectStyle, flex: 1 }}
+                        >
+                          <option value="yellow">Yellow</option>
+                          <option value="red">Red</option>
+                        </select>
+                        <input
+                          type="number"
+                          min="1"
+                          value={disciplineForm.count}
+                          onChange={(e) => setDisciplineForm((p) => ({ ...p, count: e.target.value }))}
+                          style={{ ...scoreInputStyle, width: 60 }}
+                        />
+                      </div>
+                      <button onClick={() => addDiscipline(f)} style={saveButtonStyle}>
+                        Add card
                       </button>
                     </div>
                   </div>
-                </div>
-              )}
-            </div>
-          ))}
+                )}
+              </div>
+            )
+          })}
           {fixtures.length === 0 && (
             <p style={{ color: '#8A8570', fontSize: 14 }}>No fixtures in this stage yet.</p>
           )}
