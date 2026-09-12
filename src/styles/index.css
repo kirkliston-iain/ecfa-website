@@ -1,12 +1,12 @@
 :root {
-  --pitch: #1B4332;
-  --pitch-dark: #10281F;
-  --paper: #F6F4EF;
-  --ink: #22262A;
-  --brass: #B8912B;
-  --brass-light: #E4C567;
-  --line: #D8D3C7;
-  --red-card: #A63A32;
+  --pitch: #1565C0;
+  --pitch-dark: #0B4A96;
+  --paper: #F2F6FB;
+  --ink: #16233A;
+  --brass: #1E88E5;
+  --brass-light: #FFFFFF;
+  --line: #D7E3F0;
+  --red-card: #C62828;
 
   --font-display: 'Fraunces', Georgia, serif;
   --font-body: 'IBM Plex Sans', -apple-system, sans-serif;
