@@ -1,3 +1,5 @@
+import { Link } from 'react-router-dom'
+
 function Badge({ logoUrl, name, size = 22 }) {
   if (logoUrl) {
     return (
@@ -106,10 +108,13 @@ export default function StandingsTable({ groupName, rows }) {
             <tr key={row.teamId}>
               <td style={rowStyle('left', 'first')}>{i + 1}</td>
               <td style={{ ...rowStyle('left'), fontWeight: 600 }}>
-                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+                <Link
+                  to={`/teams/${row.teamId}`}
+                  style={{ display: 'inline-flex', alignItems: 'center', gap: 8, color: '#fff' }}
+                >
                   <Badge logoUrl={row.teamLogo} name={row.teamName} />
                   {row.teamName}
-                </span>
+                </Link>
               </td>
               <td style={rowStyle()}>{row.played}</td>
               <td style={rowStyle()}>{row.won}</td>
