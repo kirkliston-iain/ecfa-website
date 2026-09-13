@@ -18,6 +18,7 @@ import TeamsAdmin from './pages/TeamsAdmin'
 import HistoricalSeason from './pages/HistoricalSeason'
 import ListsAdmin from './pages/ListsAdmin'
 import TeamsHub from './pages/TeamsHub'
+import SeasonAdmin from './pages/SeasonAdmin'
 
 export default function App() {
   return (
@@ -35,6 +36,14 @@ export default function App() {
           <Route path="/honours" element={<HonoursPage />} />
           <Route path="/history" element={<HistoricalSeason />} />
           <Route path="/teams" element={<TeamsHub />} />
+          <Route
+            path="/admin/season"
+            element={
+              <ProtectedRoute>
+                <SeasonAdmin />
+              </ProtectedRoute>
+            }
+          />
           <Route
             path="/admin/lists"
             element={
