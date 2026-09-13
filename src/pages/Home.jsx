@@ -123,7 +123,7 @@ async function loadCompetition(meta) {
   const { data: fixtures } = await supabase
     .from('fixtures')
     .select(
-      'id, fixture_date, home_score, away_score, status, group_id, stage_id, home_team:home_team_id(id, name, logo_url), away_team:away_team_id(id, name, logo_url)'
+      'id, fixture_date, venue, home_score, away_score, status, group_id, stage_id, home_team:home_team_id(id, name, logo_url), away_team:away_team_id(id, name, logo_url)'
     )
     .in('stage_id', stageIds.length ? stageIds : ['00000000-0000-0000-0000-000000000000'])
     .eq('hidden_from_public', false)
@@ -314,6 +314,13 @@ function MatchCard({ f }) {
           <span>{f.away_team?.name}</span>
         </div>
       </div>
+      {(f.venue || (f.fixture_date && f.fixture_date.slice(11, 16) !== '00:00')) && (
+        <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 6, textAlign: 'center' }}>
+          {f.fixture_date && f.fixture_date.slice(11, 16) !== '00:00' ? f.fixture_date.slice(11, 16) : ''}
+          {f.fixture_date && f.fixture_date.slice(11, 16) !== '00:00' && f.venue ? ' · ' : ''}
+          {f.venue || ''}
+        </div>
+      )}
     </Link>
   )
 }
