@@ -72,6 +72,13 @@ export default function FixtureList({ fixtures }) {
               <Badge logoUrl={f.away_team?.logo_url} name={f.away_team?.name} />
               <span>{f.away_team?.name}</span>
             </div>
+            {(f.venue || (f.fixture_date && f.fixture_date.slice(11, 16) !== '00:00')) && (
+              <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 3 }}>
+                {f.fixture_date && f.fixture_date.slice(11, 16) !== '00:00' ? f.fixture_date.slice(11, 16) : ''}
+                {f.fixture_date && f.fixture_date.slice(11, 16) !== '00:00' && f.venue ? ' · ' : ''}
+                {f.venue || ''}
+              </div>
+            )}
           </div>
           <div style={{ textAlign: 'right' }}>
             {f.status === 'played' ? (
