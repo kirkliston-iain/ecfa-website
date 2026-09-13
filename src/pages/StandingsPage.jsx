@@ -17,6 +17,7 @@ function computeStandings(teams, fixtures) {
     table[team.id] = {
       teamId: team.id,
       teamName: team.name,
+      teamLogo: team.logo_url,
       played: 0,
       won: 0,
       drawn: 0,
@@ -76,7 +77,7 @@ async function loadCompetitionTables(meta) {
     for (const group of groups) {
       const { data: stageTeams } = await supabase
         .from('stage_teams')
-        .select('team:team_id(id, name)')
+        .select('team:team_id(id, name, logo_url)')
         .eq('stage_id', stage.id)
         .eq('group_id', group.id)
 
