@@ -44,6 +44,8 @@ export default function Discipline() {
   const [editTeamOverrideValue, setEditTeamOverrideValue] = useState('')
   const [editingSuspensionTeam, setEditingSuspensionTeam] = useState(null)
   const [editSuspensionTeamValue, setEditSuspensionTeamValue] = useState('')
+  const [newOverrideTeamId, setNewOverrideTeamId] = useState('')
+  const [newOverridePoints, setNewOverridePoints] = useState('')
 
   const [form, setForm] = useState({
     teamId: '',
@@ -89,6 +91,16 @@ export default function Discipline() {
 
   async function clearTeamOverride(teamId) {
     await supabase.from('team_points_override').delete().eq('team_id', teamId)
+    loadTeamOverrides()
+  }
+
+  async function saveNewTeamOverride() {
+    if (!newOverrideTeamId || newOverridePoints === '') return
+    await supabase
+      .from('team_points_override')
+      .upsert({ team_id: newOverrideTeamId, points: Number(newOverridePoints) })
+    setNewOverrideTeamId('')
+    setNewOverridePoints('')
     loadTeamOverrides()
   }
 
@@ -558,6 +570,39 @@ export default function Discipline() {
       <h2 style={{ fontSize: 15, textTransform: 'uppercase', letterSpacing: 0.4, color: 'var(--brass)', marginBottom: 12 }}>
         Total Points by Team
       </h2>
+
+      {isAdmin && (
+        <div style={{ ...cardStyle, marginBottom: 20 }}>
+          <div style={{ fontWeight: 600, marginBottom: 10, fontSize: 14 }}>
+            Set points for a team (including ones with none yet)
+          </div>
+          <select
+            value={newOverrideTeamId}
+            onChange={(e) => setNewOverrideTeamId(e.target.value)}
+            style={{ ...fullSelectStyle, marginBottom: 8 }}
+          >
+            <option value="">Select team…</option>
+            {teams.map((t) => (
+              <option key={t.id} value={t.id}>
+                {t.name}
+              </option>
+            ))}
+          </select>
+          <div style={{ display: 'flex', gap: 8 }}>
+            <input
+              type="number"
+              placeholder="Points"
+              value={newOverridePoints}
+              onChange={(e) => setNewOverridePoints(e.target.value)}
+              style={{ ...fullSelectStyle, flex: 1 }}
+            />
+            <button onClick={saveNewTeamOverride} style={{ ...smallButtonStyle, flex: 1 }}>
+              Save
+            </button>
+          </div>
+        </div>
+      )}
+
       {displayTeamRows.length === 0 ? (
         <p style={{ color: 'var(--muted)', fontSize: 14, marginBottom: 32 }}>No cards recorded yet.</p>
       ) : (
