@@ -1,3 +1,47 @@
+function Badge({ logoUrl, name, size = 20 }) {
+  if (logoUrl) {
+    return (
+      <img
+        src={logoUrl}
+        alt=""
+        style={{
+          width: size,
+          height: size,
+          borderRadius: '50%',
+          objectFit: 'cover',
+          background: '#fff',
+          flexShrink: 0,
+        }}
+      />
+    )
+  }
+  const initials = (name || '?')
+    .split(' ')
+    .map((w) => w[0])
+    .slice(0, 2)
+    .join('')
+    .toUpperCase()
+  return (
+    <span
+      style={{
+        width: size,
+        height: size,
+        borderRadius: '50%',
+        background: 'var(--ink)',
+        color: '#fff',
+        display: 'inline-flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        fontSize: size * 0.4,
+        fontWeight: 700,
+        flexShrink: 0,
+      }}
+    >
+      {initials}
+    </span>
+  )
+}
+
 export default function FixtureList({ fixtures }) {
   if (fixtures.length === 0) {
     return <p style={{ color: 'var(--muted)' }}>No fixtures scheduled yet.</p>
@@ -21,8 +65,12 @@ export default function FixtureList({ fixtures }) {
             {f.round_name && (
               <div style={{ fontSize: 12, color: 'var(--brass)', marginBottom: 2, fontWeight: 600 }}>{f.round_name}</div>
             )}
-            <div style={{ fontWeight: 600 }}>
-              {f.home_team?.name} <span style={{ color: 'var(--muted)' }}>v</span> {f.away_team?.name}
+            <div style={{ fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+              <Badge logoUrl={f.home_team?.logo_url} name={f.home_team?.name} />
+              <span>{f.home_team?.name}</span>
+              <span style={{ color: 'var(--muted)' }}>v</span>
+              <Badge logoUrl={f.away_team?.logo_url} name={f.away_team?.name} />
+              <span>{f.away_team?.name}</span>
             </div>
           </div>
           <div style={{ textAlign: 'right' }}>
