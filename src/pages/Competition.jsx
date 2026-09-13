@@ -21,7 +21,7 @@ export default function Competition() {
 
       const { data: comp, error: compErr } = await supabase
         .from('competitions')
-        .select('id, name, season')
+        .select('id, name, season, slug')
         .eq('slug', slug)
         .single()
 
@@ -137,22 +137,24 @@ export default function Competition() {
 
       {stages.length === 0 && <p style={{ color: 'var(--muted)' }}>No stages set up for this competition yet.</p>}
 
-      <section>
-        <h2
-          style={{
-            fontSize: 13,
-            textTransform: 'uppercase',
-            letterSpacing: 0.5,
-            marginBottom: 18,
-            paddingBottom: 8,
-            borderBottom: '3px solid var(--brass)',
-            color: 'var(--ink)',
-          }}
-        >
-          Top Scorers
-        </h2>
-        <TopScorersTable rows={topScorers} />
-      </section>
+      {competition.slug === 'appin-league' && (
+        <section>
+          <h2
+            style={{
+              fontSize: 13,
+              textTransform: 'uppercase',
+              letterSpacing: 0.5,
+              marginBottom: 18,
+              paddingBottom: 8,
+              borderBottom: '3px solid var(--brass)',
+              color: 'var(--ink)',
+            }}
+          >
+            Top Scorers
+          </h2>
+          <TopScorersTable rows={topScorers} />
+        </section>
+      )}
     </div>
   )
 }
