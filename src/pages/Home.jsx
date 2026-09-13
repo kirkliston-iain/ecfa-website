@@ -2,6 +2,7 @@ import { Link } from 'react-router-dom'
 import { useEffect, useMemo, useState } from 'react'
 import { supabase } from '../supabaseClient'
 import MatchdayCarousel from '../components/MatchdayCarousel'
+import StandingsTable from '../components/StandingsTable'
 
 const APPIN_LOGO = 'https://appinsports.com/wp-content/uploads/logo/logo-footer.png'
 
@@ -65,6 +66,7 @@ function computeStandings(teams, fixtures) {
     table[team.id] = {
       teamId: team.id,
       teamName: team.name,
+      teamLogo: team.logo_url,
       played: 0,
       won: 0,
       drawn: 0,
@@ -132,7 +134,7 @@ async function loadCompetition(meta) {
     for (const group of stage.groups || []) {
       const { data: stageTeams } = await supabase
         .from('stage_teams')
-        .select('team:team_id(id, name)')
+        .select('team:team_id(id, name, logo_url)')
         .eq('stage_id', stage.id)
         .eq('group_id', group.id)
       groupTeams[group.id] = (stageTeams || []).map((st) => st.team)
@@ -395,6 +397,17 @@ export default function Home() {
 
   const hasResultsToday = matchesForDate.some((f) => f.status === 'played')
 
+  const appinStandings = useMemo(() => {
+    const appin = competitions.find((c) => c.slug === 'appin-league')
+    if (!appin) return []
+    const groupId = Object.keys(appin.groupTeams)[0]
+    if (!groupId) return []
+    return computeStandings(
+      appin.groupTeams[groupId],
+      appin.fixtures.filter((f) => f.group_id === groupId)
+    )
+  }, [competitions])
+
   if (loading) {
     return (
       <div className="container" style={{ padding: '48px 20px' }}>
@@ -435,6 +448,15 @@ export default function Home() {
           matchesForDate.map((f) => <MatchCard key={f.id} f={f} />)
         )}
       </section>
+
+      {appinStandings.length > 0 && (
+        <section style={{ marginBottom: 40 }}>
+          <h2 style={{ fontSize: 13, textTransform: 'uppercase', letterSpacing: 0.5, color: 'var(--muted)', marginBottom: 12 }}>
+            League Table
+          </h2>
+          <StandingsTable rows={appinStandings} />
+        </section>
+      )}
 
       <h2
         style={{
