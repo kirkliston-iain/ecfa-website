@@ -32,6 +32,8 @@ function Badge({ name, size = 20 }) {
 export default function HistoricalSeason() {
   const [seasons, setSeasons] = useState([])
   const [season, setSeason] = useState('')
+  const [teams, setTeams] = useState([])
+  const [teamId, setTeamId] = useState('')
   const [loading, setLoading] = useState(false)
   const [fixtures, setFixtures] = useState([])
 
@@ -42,6 +44,12 @@ export default function HistoricalSeason() {
       .then(({ data }) => {
         setSeasons((data || []).map((r) => r.season))
       })
+
+    supabase
+      .from('teams')
+      .select('id, name')
+      .order('name')
+      .then(({ data }) => setTeams(data || []))
   }, [])
 
   useEffect(() => {
@@ -50,16 +58,20 @@ export default function HistoricalSeason() {
       return
     }
     setLoading(true)
-    supabase
+    let query = supabase
       .from('historic_fixtures')
       .select('id, competition_name, fixture_date, home_team_name, home_goals, away_team_name, away_goals, comment')
       .eq('season', season)
-      .order('fixture_date')
-      .then(({ data }) => {
-        setFixtures(data || [])
-        setLoading(false)
-      })
-  }, [season])
+
+    if (teamId) {
+      query = query.or(`home_team_id.eq.${teamId},away_team_id.eq.${teamId}`)
+    }
+
+    query.order('fixture_date').then(({ data }) => {
+      setFixtures(data || [])
+      setLoading(false)
+    })
+  }, [season, teamId])
 
   const grouped = {}
   for (const f of fixtures) {
@@ -96,6 +108,31 @@ export default function HistoricalSeason() {
           </option>
         ))}
       </select>
+
+      {season && (
+        <select
+          value={teamId}
+          onChange={(e) => setTeamId(e.target.value)}
+          style={{
+            width: '100%',
+            boxSizing: 'border-box',
+            padding: '12px 14px',
+            fontSize: 15,
+            fontWeight: 600,
+            borderRadius: 6,
+            border: '1px solid var(--line)',
+            background: '#fff',
+            marginBottom: 24,
+          }}
+        >
+          <option value="">All teams</option>
+          {teams.map((t) => (
+            <option key={t.id} value={t.id}>
+              {t.name}
+            </option>
+          ))}
+        </select>
+      )}
 
       {loading && <p style={{ color: 'var(--muted)' }}>Loading…</p>}
 
