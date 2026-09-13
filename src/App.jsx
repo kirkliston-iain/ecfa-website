@@ -14,6 +14,7 @@ import HonoursPage from './pages/HonoursPage'
 import AdminLogin from './pages/AdminLogin'
 import AdminDashboard from './pages/AdminDashboard'
 import Discipline from './pages/Discipline'
+import TeamsAdmin from './pages/TeamsAdmin'
 
 export default function App() {
   return (
@@ -43,6 +44,14 @@ export default function App() {
             element={
               <ProtectedRoute>
                 <Discipline />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/teams"
+            element={
+              <ProtectedRoute>
+                <TeamsAdmin />
               </ProtectedRoute>
             }
           />
