@@ -39,6 +39,11 @@ export default function Discipline() {
   const [teamFilter, setTeamFilter] = useState('')
   const [squadByTeam, setSquadByTeam] = useState({})
   const [savingSuspension, setSavingSuspension] = useState(null)
+  const [teamOverrides, setTeamOverrides] = useState({})
+  const [editingTeamOverride, setEditingTeamOverride] = useState(null)
+  const [editTeamOverrideValue, setEditTeamOverrideValue] = useState('')
+  const [editingSuspensionTeam, setEditingSuspensionTeam] = useState(null)
+  const [editSuspensionTeamValue, setEditSuspensionTeamValue] = useState('')
 
   const [form, setForm] = useState({
     teamId: '',
@@ -58,6 +63,7 @@ export default function Discipline() {
   useEffect(() => {
     loadPointsOverview()
     loadSuspensions()
+    loadTeamOverrides()
     checkAdmin()
     supabase
       .from('teams')
@@ -65,6 +71,26 @@ export default function Discipline() {
       .order('name')
       .then(({ data }) => setTeams(data || []))
   }, [])
+
+  async function loadTeamOverrides() {
+    const { data } = await supabase.from('team_points_override').select('team_id, points')
+    const map = {}
+    for (const row of data || []) map[row.team_id] = row.points
+    setTeamOverrides(map)
+  }
+
+  async function saveTeamOverride(teamId) {
+    const points = Number(editTeamOverrideValue)
+    if (Number.isNaN(points)) return
+    await supabase.from('team_points_override').upsert({ team_id: teamId, points })
+    setEditingTeamOverride(null)
+    loadTeamOverrides()
+  }
+
+  async function clearTeamOverride(teamId) {
+    await supabase.from('team_points_override').delete().eq('team_id', teamId)
+    loadTeamOverrides()
+  }
 
   async function checkAdmin() {
     const { data: adminRow } = await supabase.from('admin_profiles').select('id').maybeSingle()
@@ -255,10 +281,29 @@ export default function Discipline() {
     loadSuspensions()
   }
 
+  async function updateSuspensionTeam(suspensionId, newTeamId) {
+    await supabase
+      .from('suspensions')
+      .update({ team_id: newTeamId || null })
+      .eq('id', suspensionId)
+    setEditingSuspensionTeam(null)
+    loadSuspensions()
+  }
+
   async function removeSuspension(id) {
     await supabase.from('suspensions').delete().eq('id', id)
     loadSuspensions()
   }
+
+  // Merge computed team totals with manual overrides. A team with an override
+  // but no cards logged this season yet still needs to show up.
+  const teamRowIds = new Set(teamRows.map((r) => r.team.id))
+  const overrideOnlyTeams = teams
+    .filter((t) => teamOverrides[t.id] !== undefined && !teamRowIds.has(t.id))
+    .map((t) => ({ team: t, points: teamOverrides[t.id] }))
+  const displayTeamRows = [...teamRows, ...overrideOnlyTeams].sort(
+    (a, b) => (teamOverrides[b.team.id] ?? b.points) - (teamOverrides[a.team.id] ?? a.points)
+  )
 
   const activeSuspensions = suspensions
     .filter((s) => s.status === 'active')
@@ -311,7 +356,43 @@ export default function Discipline() {
                 {s.player.first_name} {s.player.last_name}
               </div>
               <div style={{ fontSize: 13, color: 'var(--muted)', marginBottom: 6 }}>
-                {s.team?.name || 'No team'}
+                {editingSuspensionTeam === s.id ? (
+                  <div style={{ display: 'flex', gap: 8 }}>
+                    <select
+                      value={editSuspensionTeamValue}
+                      onChange={(e) => setEditSuspensionTeamValue(e.target.value)}
+                      style={{ ...fullSelectStyle, flex: 1 }}
+                    >
+                      <option value="">No team</option>
+                      {teams.map((t) => (
+                        <option key={t.id} value={t.id}>
+                          {t.name}
+                        </option>
+                      ))}
+                    </select>
+                    <button
+                      onClick={() => updateSuspensionTeam(s.id, editSuspensionTeamValue)}
+                      style={{ ...smallButtonStyle, flexShrink: 0 }}
+                    >
+                      Save
+                    </button>
+                  </div>
+                ) : (
+                  <span>
+                    {s.team?.name || 'No team'}
+                    {isAdmin && (
+                      <button
+                        onClick={() => {
+                          setEditingSuspensionTeam(s.id)
+                          setEditSuspensionTeamValue(s.team?.id || '')
+                        }}
+                        style={{ ...smallOutlineStyle, padding: '2px 8px', fontSize: 11, marginLeft: 8 }}
+                      >
+                        Change team
+                      </button>
+                    )}
+                  </span>
+                )}
               </div>
               <div style={{ fontSize: 14, marginBottom: 4 }}>{s.reason}</div>
               <div style={{ fontSize: 14, fontWeight: 700, color: '#B3261E', marginBottom: 8 }}>
@@ -477,19 +558,65 @@ export default function Discipline() {
       <h2 style={{ fontSize: 15, textTransform: 'uppercase', letterSpacing: 0.4, color: 'var(--brass)', marginBottom: 12 }}>
         Total Points by Team
       </h2>
-      {teamRows.length === 0 ? (
+      {displayTeamRows.length === 0 ? (
         <p style={{ color: 'var(--muted)', fontSize: 14, marginBottom: 32 }}>No cards recorded yet.</p>
       ) : (
         <div style={{ marginBottom: 32 }}>
-          {teamRows.map((row) => (
-            <div
-              key={row.team.id}
-              style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: '1px solid var(--line)', fontSize: 14 }}
-            >
-              <span>{row.team.name}</span>
-              <strong>{row.points}</strong>
-            </div>
-          ))}
+          {displayTeamRows.map((row) => {
+            const hasOverride = teamOverrides[row.team.id] !== undefined
+            const displayPoints = hasOverride ? teamOverrides[row.team.id] : row.points
+            const isEditing = editingTeamOverride === row.team.id
+            return (
+              <div key={row.team.id} style={{ padding: '8px 0', borderBottom: '1px solid var(--line)' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 14 }}>
+                  <span>
+                    {row.team.name}
+                    {hasOverride && (
+                      <span style={{ fontSize: 11, color: 'var(--muted)' }}> (manually set)</span>
+                    )}
+                  </span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <strong>{displayPoints}</strong>
+                    {isAdmin && !isEditing && (
+                      <button
+                        onClick={() => {
+                          setEditingTeamOverride(row.team.id)
+                          setEditTeamOverrideValue(String(displayPoints))
+                        }}
+                        style={{ ...smallOutlineStyle, padding: '4px 8px', fontSize: 12 }}
+                      >
+                        Edit
+                      </button>
+                    )}
+                  </div>
+                </div>
+                {isAdmin && isEditing && (
+                  <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
+                    <input
+                      type="number"
+                      value={editTeamOverrideValue}
+                      onChange={(e) => setEditTeamOverrideValue(e.target.value)}
+                      style={{ ...fullSelectStyle, flex: 1 }}
+                    />
+                    <button onClick={() => saveTeamOverride(row.team.id)} style={{ ...smallButtonStyle, flex: 1 }}>
+                      Save
+                    </button>
+                    {hasOverride && (
+                      <button
+                        onClick={() => clearTeamOverride(row.team.id)}
+                        style={{ ...smallOutlineStyle, flex: 1 }}
+                      >
+                        Reset to calculated
+                      </button>
+                    )}
+                    <button onClick={() => setEditingTeamOverride(null)} style={{ ...smallOutlineStyle, flex: 1 }}>
+                      Cancel
+                    </button>
+                  </div>
+                )}
+              </div>
+            )
+          })}
         </div>
       )}
 
