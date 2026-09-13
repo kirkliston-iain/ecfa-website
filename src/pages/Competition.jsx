@@ -152,7 +152,7 @@ export default function Competition() {
           >
             Top Scorers
           </h2>
-          <TopScorersTable rows={topScorers} />
+          <TopScorersTable rows={topScorers.slice(0, 20)} />
         </section>
       )}
     </div>
