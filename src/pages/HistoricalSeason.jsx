@@ -39,6 +39,7 @@ export default function HistoricalSeason() {
     supabase
       .from('historic_fixtures')
       .select('season')
+      .limit(5000)
       .then(({ data }) => {
         const unique = Array.from(new Set((data || []).map((r) => r.season))).sort().reverse()
         setSeasons(unique)
