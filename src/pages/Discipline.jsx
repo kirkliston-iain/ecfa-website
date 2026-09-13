@@ -36,6 +36,7 @@ export default function Discipline() {
 
   const [suspensions, setSuspensions] = useState([])
   const [teams, setTeams] = useState([])
+  const [teamFilter, setTeamFilter] = useState('')
   const [squadByTeam, setSquadByTeam] = useState({})
   const [savingSuspension, setSavingSuspension] = useState(null)
 
@@ -51,6 +52,8 @@ export default function Discipline() {
     availableFrom: '',
     notes: '',
   })
+
+  const [pointForm, setPointForm] = useState({ teamId: '', playerId: '', points: '', reason: '' })
 
   useEffect(() => {
     loadPointsOverview()
@@ -97,6 +100,17 @@ export default function Discipline() {
         totals.set(player.id, { player, team, points: 0 })
       }
       totals.get(player.id).points += matchPoints
+    }
+
+    const { data: adjustments } = await supabase
+      .from('point_adjustments')
+      .select('points, player:player_id(id, first_name, last_name), team:team_id(id, name)')
+
+    for (const adj of adjustments || []) {
+      if (!totals.has(adj.player.id)) {
+        totals.set(adj.player.id, { player: adj.player, team: adj.team, points: 0 })
+      }
+      totals.get(adj.player.id).points += adj.points
     }
 
     const playerList = Array.from(totals.values())
@@ -155,6 +169,18 @@ export default function Discipline() {
     setSquadByTeam((prev) => ({ ...prev, [teamId]: data || [] }))
   }
 
+  async function addPointAdjustment() {
+    if (!pointForm.playerId || !pointForm.points) return
+    await supabase.from('point_adjustments').insert({
+      player_id: pointForm.playerId,
+      team_id: pointForm.teamId,
+      points: Number(pointForm.points),
+      reason: pointForm.reason.trim() || null,
+    })
+    setPointForm({ teamId: '', playerId: '', points: '', reason: '' })
+    loadPointsOverview()
+  }
+
   async function addSuspension() {
     if (!form.reason.trim()) return
 
@@ -210,9 +236,9 @@ export default function Discipline() {
     loadSuspensions()
   }
 
-  async function markServed(suspension) {
+  async function markServed(suspension, delta) {
     setSavingSuspension(suspension.id)
-    const newServed = suspension.games_served + 1
+    const newServed = Math.max(0, suspension.games_served + delta)
     const isNowServed = !suspension.is_lifetime && suspension.games_banned && newServed >= suspension.games_banned
     await supabase
       .from('suspensions')
@@ -234,7 +260,10 @@ export default function Discipline() {
     loadSuspensions()
   }
 
-  const activeSuspensions = suspensions.filter((s) => s.status === 'active')
+  const activeSuspensions = suspensions
+    .filter((s) => s.status === 'active')
+    .filter((s) => !teamFilter || s.team?.id === teamFilter)
+  const filteredPlayerRows = playerRows.filter((row) => !teamFilter || row.team.id === teamFilter)
 
   if (loading) {
     return (
@@ -247,9 +276,22 @@ export default function Discipline() {
   return (
     <div className="container" style={{ padding: '32px 20px 48px', maxWidth: 480 }}>
       <h1 style={{ fontSize: 24, marginBottom: 4 }}>Discipline Overview</h1>
-      <p style={{ color: 'var(--muted)', fontSize: 13, marginBottom: 28 }}>
+      <p style={{ color: 'var(--muted)', fontSize: 13, marginBottom: 20 }}>
         Private — not shown on the public site.
       </p>
+
+      <select
+        value={teamFilter}
+        onChange={(e) => setTeamFilter(e.target.value)}
+        style={{ ...fullSelectStyle, marginBottom: 28 }}
+      >
+        <option value="">All teams</option>
+        {teams.map((t) => (
+          <option key={t.id} value={t.id}>
+            {t.name}
+          </option>
+        ))}
+      </select>
 
       <h2 style={{ fontSize: 15, textTransform: 'uppercase', letterSpacing: 0.4, color: 'var(--brass)', marginBottom: 12 }}>
         Current Bans
@@ -281,15 +323,24 @@ export default function Discipline() {
               </div>
               {s.notes && <div style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 8 }}>{s.notes}</div>}
               {isAdmin && (
-                <div style={{ display: 'flex', gap: 8 }}>
+                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                   {!s.is_lifetime && !s.available_from && (
-                    <button
-                      onClick={() => markServed(s)}
-                      disabled={savingSuspension === s.id}
-                      style={{ ...smallButtonStyle, flex: 1 }}
-                    >
-                      +1 game served
-                    </button>
+                    <>
+                      <button
+                        onClick={() => markServed(s, 1)}
+                        disabled={savingSuspension === s.id}
+                        style={{ ...smallButtonStyle, flex: 1 }}
+                      >
+                        +1 game served
+                      </button>
+                      <button
+                        onClick={() => markServed(s, -1)}
+                        disabled={savingSuspension === s.id || s.games_served === 0}
+                        style={{ ...smallOutlineStyle, flex: 1 }}
+                      >
+                        -1 game served
+                      </button>
+                    </>
                   )}
                   <button onClick={() => markFullyServed(s)} style={{ ...smallOutlineStyle, flex: 1 }}>
                     Mark fully served
@@ -447,13 +498,78 @@ export default function Discipline() {
       </h2>
       <p style={{ fontSize: 13, color: 'var(--muted)', marginBottom: 12 }}>
         Calculated automatically from recorded cards this season. Crossing a threshold is a
-        prompt to add a ban above — it isn't a ban by itself.
+        prompt to add a ban above — it isn't a ban by itself. Yellow = 2 pts, red = 4 pts (two
+        yellows in the same match that make a red only count as 4, not 8).
       </p>
-      {playerRows.length === 0 ? (
+
+      <div style={{ ...cardStyle, marginBottom: 20 }}>
+        <div style={{ fontWeight: 600, fontSize: 13, marginBottom: 8 }}>Ban thresholds</div>
+        {THRESHOLDS.map((t) => (
+          <div
+            key={t.points}
+            style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, padding: '3px 0' }}
+          >
+            <span>{t.points}+ points</span>
+            <span style={{ fontWeight: 600 }}>{t.ban}</span>
+          </div>
+        ))}
+      </div>
+
+      {isAdmin && (
+        <div style={{ ...cardStyle, marginBottom: 20 }}>
+          <div style={{ fontWeight: 600, marginBottom: 10, fontSize: 14 }}>Add/adjust points</div>
+          <select
+            value={pointForm.teamId}
+            onChange={(e) => {
+              setPointForm((p) => ({ ...p, teamId: e.target.value, playerId: '' }))
+              if (e.target.value) loadSquad(e.target.value)
+            }}
+            style={{ ...fullSelectStyle, marginBottom: 8 }}
+          >
+            <option value="">Select team…</option>
+            {teams.map((t) => (
+              <option key={t.id} value={t.id}>
+                {t.name}
+              </option>
+            ))}
+          </select>
+          <select
+            value={pointForm.playerId}
+            onChange={(e) => setPointForm((p) => ({ ...p, playerId: e.target.value }))}
+            disabled={!pointForm.teamId}
+            style={{ ...fullSelectStyle, marginBottom: 8 }}
+          >
+            <option value="">Select player…</option>
+            {(squadByTeam[pointForm.teamId] || []).map((p) => (
+              <option key={p.id} value={p.id}>
+                {p.first_name} {p.last_name}
+              </option>
+            ))}
+          </select>
+          <input
+            type="number"
+            placeholder="Points (e.g. 2, or -2 to remove)"
+            value={pointForm.points}
+            onChange={(e) => setPointForm((p) => ({ ...p, points: e.target.value }))}
+            style={{ ...fullSelectStyle, marginBottom: 8 }}
+          />
+          <input
+            placeholder="Reason (optional)"
+            value={pointForm.reason}
+            onChange={(e) => setPointForm((p) => ({ ...p, reason: e.target.value }))}
+            style={{ ...fullSelectStyle, marginBottom: 10 }}
+          />
+          <button onClick={addPointAdjustment} style={{ ...smallButtonStyle, width: '100%' }}>
+            Add points
+          </button>
+        </div>
+      )}
+
+      {filteredPlayerRows.length === 0 ? (
         <p style={{ color: 'var(--muted)', fontSize: 14, marginBottom: 32 }}>No cards recorded yet.</p>
       ) : (
         <div style={{ marginBottom: 32 }}>
-          {playerRows.map((row) => (
+          {filteredPlayerRows.map((row) => (
             <div key={row.player.id} style={cardStyle}>
               <div style={{ fontWeight: 600 }}>
                 {row.player.first_name} {row.player.last_name}
