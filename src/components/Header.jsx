@@ -73,3 +73,15 @@ export default function Header() {
                 textTransform: 'uppercase',
                 letterSpacing: 0.5,
                 whiteSpace: 'nowrap',
+                borderBottom: isActive ? '3px solid var(--brass)' : '3px solid transparent',
+                color: isActive ? 'var(--ink)' : 'var(--muted)',
+              })}
+            >
+              {t.label}
+            </NavLink>
+          ))}
+        </nav>
+      </div>
+    </header>
+  )
+}
