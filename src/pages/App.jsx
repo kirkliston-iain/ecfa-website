@@ -1,6 +1,7 @@
 import { Routes, Route } from 'react-router-dom'
 import Header from './components/Header'
 import Footer from './components/Footer'
+import ManagerGate from './components/ManagerGate'
 import ProtectedRoute from './components/ProtectedRoute'
 import Home from './pages/Home'
 import CompetitionsIndex from './pages/CompetitionsIndex'
@@ -48,6 +49,7 @@ export default function App() {
         </Routes>
       </main>
       <Footer />
+      <ManagerGate />
     </div>
   )
 }
