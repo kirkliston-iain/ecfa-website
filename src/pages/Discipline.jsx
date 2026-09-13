@@ -803,16 +803,15 @@ export default function Discipline() {
       )}
 
       <h2 style={{ fontSize: 15, textTransform: 'uppercase', letterSpacing: 0.4, color: 'var(--brass)', marginBottom: 6 }}>
-        Points Tracker
+        Ban Thresholds
       </h2>
       <p style={{ fontSize: 13, color: 'var(--muted)', marginBottom: 12 }}>
-        Calculated automatically from recorded cards this season. Crossing a threshold is a
-        prompt to add a ban above — it isn't a ban by itself. Yellow = 2 pts, red = 4 pts (two
-        yellows in the same match that make a red only count as 4, not 8).
+        Reference guide only. Crossing a threshold is a prompt to add a ban above — it isn't a
+        ban by itself. Yellow = 2 pts, red = 4 pts (two yellows in the same match that make a red
+        only count as 4, not 8).
       </p>
 
-      <div style={{ ...cardStyle, marginBottom: 20 }}>
-        <div style={{ fontWeight: 600, fontSize: 13, marginBottom: 8 }}>Ban thresholds</div>
+      <div style={{ ...cardStyle, marginBottom: 32 }}>
         {THRESHOLDS.map((t) => (
           <div
             key={t.points}
@@ -823,79 +822,6 @@ export default function Discipline() {
           </div>
         ))}
       </div>
-
-      {isAdmin && (
-        <div style={{ ...cardStyle, marginBottom: 20 }}>
-          <div style={{ fontWeight: 600, marginBottom: 10, fontSize: 14 }}>Add/adjust points</div>
-          <select
-            value={pointForm.teamId}
-            onChange={(e) => {
-              setPointForm((p) => ({ ...p, teamId: e.target.value, playerId: '' }))
-              if (e.target.value) loadSquad(e.target.value)
-            }}
-            style={{ ...fullSelectStyle, marginBottom: 8 }}
-          >
-            <option value="">Select team…</option>
-            {teams.map((t) => (
-              <option key={t.id} value={t.id}>
-                {t.name}
-              </option>
-            ))}
-          </select>
-          <select
-            value={pointForm.playerId}
-            onChange={(e) => setPointForm((p) => ({ ...p, playerId: e.target.value }))}
-            disabled={!pointForm.teamId}
-            style={{ ...fullSelectStyle, marginBottom: 8 }}
-          >
-            <option value="">Select player…</option>
-            {(squadByTeam[pointForm.teamId] || []).map((p) => (
-              <option key={p.id} value={p.id}>
-                {p.first_name} {p.last_name}
-              </option>
-            ))}
-          </select>
-          <input
-            type="number"
-            placeholder="Points (e.g. 2, or -2 to remove)"
-            value={pointForm.points}
-            onChange={(e) => setPointForm((p) => ({ ...p, points: e.target.value }))}
-            style={{ ...fullSelectStyle, marginBottom: 8 }}
-          />
-          <input
-            placeholder="Reason (optional)"
-            value={pointForm.reason}
-            onChange={(e) => setPointForm((p) => ({ ...p, reason: e.target.value }))}
-            style={{ ...fullSelectStyle, marginBottom: 10 }}
-          />
-          <button onClick={addPointAdjustment} style={{ ...smallButtonStyle, width: '100%' }}>
-            Add points
-          </button>
-        </div>
-      )}
-
-      {filteredPlayerRows.length === 0 ? (
-        <p style={{ color: 'var(--muted)', fontSize: 14, marginBottom: 32 }}>No cards recorded yet.</p>
-      ) : (
-        <div style={{ marginBottom: 32 }}>
-          {filteredPlayerRows.map((row) => (
-            <div key={row.player.id} style={cardStyle}>
-              <div style={{ fontWeight: 600 }}>
-                {row.player.first_name} {row.player.last_name}
-              </div>
-              <div style={{ fontSize: 13, color: 'var(--muted)', marginBottom: 6 }}>{row.team.name}</div>
-              <div style={{ fontSize: 14 }}>
-                <strong>{row.points}</strong> points
-              </div>
-              {row.ban && (
-                <div style={{ fontSize: 13, color: '#B3261E', fontWeight: 600, marginTop: 4 }}>
-                  Threshold reached: {row.ban.ban} ({row.ban.points}+ pts)
-                </div>
-              )}
-            </div>
-          ))}
-        </div>
-      )}
 
       <h2 style={{ fontSize: 15, textTransform: 'uppercase', letterSpacing: 0.4, color: 'var(--brass)', marginBottom: 12 }}>
         Serious Offences
