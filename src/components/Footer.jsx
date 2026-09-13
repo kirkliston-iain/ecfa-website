@@ -32,11 +32,28 @@ export default function Footer() {
           alignItems: 'center',
           fontSize: 13,
           color: 'var(--muted)',
+          gap: 12,
         }}
       >
         <span>Edinburgh Churches Football Association</span>
         {views != null && <span>{views.toLocaleString()} site visits</span>}
-        <Link to="/admin">Admin</Link>
+        <div style={{ display: 'flex', gap: 12 }}>
+          <button
+            onClick={() => window.dispatchEvent(new Event('open-manager-gate'))}
+            style={{
+              background: 'none',
+              border: 'none',
+              padding: 0,
+              font: 'inherit',
+              color: 'var(--muted)',
+              cursor: 'pointer',
+              textDecoration: 'underline',
+            }}
+          >
+            Manager sign in
+          </button>
+          <Link to="/admin">Admin</Link>
+        </div>
       </div>
     </footer>
   )
