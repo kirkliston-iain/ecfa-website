@@ -1,6 +1,7 @@
 import { Routes, Route } from 'react-router-dom'
 import Header from './components/Header'
 import Footer from './components/Footer'
+import ManagerGate from './components/ManagerGate'
 import ProtectedRoute from './components/ProtectedRoute'
 import Home from './pages/Home'
 import CompetitionsIndex from './pages/CompetitionsIndex'
@@ -12,6 +13,7 @@ import ScorersPage from './pages/ScorersPage'
 import HonoursPage from './pages/HonoursPage'
 import AdminLogin from './pages/AdminLogin'
 import AdminDashboard from './pages/AdminDashboard'
+import Discipline from './pages/Discipline'
 
 export default function App() {
   return (
@@ -36,9 +38,18 @@ export default function App() {
               </ProtectedRoute>
             }
           />
+          <Route
+            path="/discipline"
+            element={
+              <ProtectedRoute>
+                <Discipline />
+              </ProtectedRoute>
+            }
+          />
         </Routes>
       </main>
       <Footer />
+      <ManagerGate />
     </div>
   )
 }
