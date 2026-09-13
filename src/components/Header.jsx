@@ -8,6 +8,7 @@ const TABS = [
   { to: '/scorers', label: 'Scorers' },
   { to: '/honours', label: 'Honours' },
   { to: '/history', label: 'History' },
+  { to: '/teams', label: 'Teams' },
 ]
 
 export default function Header() {
