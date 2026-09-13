@@ -31,24 +31,11 @@ export default function Header() {
           style={{ padding: '14px 20px', display: 'flex', alignItems: 'center', gap: 14 }}
         >
           <Link to="/" style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-            <span
-              style={{
-                width: 40,
-                height: 40,
-                borderRadius: 6,
-                background: '#fff',
-                color: 'var(--brass)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                fontWeight: 800,
-                fontSize: 12,
-                letterSpacing: 0.5,
-                flexShrink: 0,
-              }}
-            >
-              ECFA
-            </span>
+            <img
+              src="/ecfa-logo.png"
+              alt="ECFA"
+              style={{ width: 44, height: 44, objectFit: 'contain', flexShrink: 0 }}
+            />
             <span style={{ color: '#fff', fontWeight: 700, fontSize: 16 }}>
               Edinburgh Churches Football Association
             </span>
