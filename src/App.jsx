@@ -16,6 +16,7 @@ import AdminDashboard from './pages/AdminDashboard'
 import Discipline from './pages/Discipline'
 import TeamsAdmin from './pages/TeamsAdmin'
 import HistoricalSeason from './pages/HistoricalSeason'
+import ListsAdmin from './pages/ListsAdmin'
 
 export default function App() {
   return (
@@ -32,6 +33,14 @@ export default function App() {
           <Route path="/scorers" element={<ScorersPage />} />
           <Route path="/honours" element={<HonoursPage />} />
           <Route path="/history" element={<HistoricalSeason />} />
+          <Route
+            path="/admin/lists"
+            element={
+              <ProtectedRoute>
+                <ListsAdmin />
+              </ProtectedRoute>
+            }
+          />
           <Route path="/admin" element={<AdminLogin />} />
           <Route
             path="/admin/dashboard"
