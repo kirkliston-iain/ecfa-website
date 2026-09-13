@@ -37,6 +37,7 @@ export default function HistoricalSeason() {
   const [loading, setLoading] = useState(false)
   const [fixtures, setFixtures] = useState([])
   const [seasonFixtures, setSeasonFixtures] = useState([]) // unfiltered by team, for table/honours
+  const [storedLeagueTable, setStoredLeagueTable] = useState([])
 
   useEffect(() => {
     supabase
@@ -57,6 +58,7 @@ export default function HistoricalSeason() {
     if (!season) {
       setFixtures([])
       setSeasonFixtures([])
+      setStoredLeagueTable([])
       return
     }
     setLoading(true)
@@ -66,6 +68,13 @@ export default function HistoricalSeason() {
       .select('id, competition_name, fixture_date, home_team_name, home_goals, away_team_name, away_goals, comment')
       .eq('season', season)
       .then(({ data }) => setSeasonFixtures(data || []))
+
+    supabase
+      .from('historic_league_tables')
+      .select('position, team_name, played, won, drawn, lost, goal_difference, points')
+      .eq('season', season)
+      .order('position')
+      .then(({ data }) => setStoredLeagueTable(data || []))
 
     let query = supabase
       .from('historic_fixtures')
@@ -161,6 +170,12 @@ export default function HistoricalSeason() {
   const leagueTable = Object.values(table).sort(
     (a, b) => b.pts - a.pts || b.gf - b.ga - (a.gf - a.ga) || b.gf - a.gf
   )
+
+  // Prefer the officially-recorded final table when we have one on file — computing
+  // from match data alone can't reflect points deductions or fill in missing fixtures.
+  const displayTable = storedLeagueTable.length > 0
+    ? storedLeagueTable.map((t) => ({ name: t.team_name, p: t.played, w: t.won, d: t.drawn, l: t.lost, gd: t.goal_difference, pts: t.points }))
+    : leagueTable.map((t) => ({ name: t.name, p: t.p, w: t.w, d: t.d, l: t.l, gd: t.gf - t.ga, pts: t.pts }))
 
   return (
     <div className="container" style={{ padding: '32px 20px 48px' }}>
@@ -258,7 +273,7 @@ export default function HistoricalSeason() {
         </section>
       )}
 
-      {!loading && season && leagueTable.length > 0 && (
+      {!loading && season && displayTable.length > 0 && (
         <section style={{ marginBottom: 32 }}>
           <h2
             style={{
@@ -271,7 +286,7 @@ export default function HistoricalSeason() {
               borderBottom: '2px solid var(--line)',
             }}
           >
-            League Table
+            League Table {storedLeagueTable.length === 0 && <span style={{ fontWeight: 400, textTransform: 'none', letterSpacing: 0, fontSize: 11 }}>(computed from recorded results — may be incomplete)</span>}
           </h2>
           <div style={{ display: 'flex', fontSize: 11, color: 'var(--muted)', padding: '4px 0', fontWeight: 700 }}>
             <div style={{ flex: 1 }}>Team</div>
@@ -282,7 +297,7 @@ export default function HistoricalSeason() {
             <div style={{ width: 36, textAlign: 'center' }}>GD</div>
             <div style={{ width: 32, textAlign: 'center' }}>Pts</div>
           </div>
-          {leagueTable.map((t, i) => (
+          {displayTable.map((t, i) => (
             <div
               key={t.name}
               style={{
@@ -300,7 +315,7 @@ export default function HistoricalSeason() {
               <div style={{ width: 28, textAlign: 'center' }}>{t.w}</div>
               <div style={{ width: 28, textAlign: 'center' }}>{t.d}</div>
               <div style={{ width: 28, textAlign: 'center' }}>{t.l}</div>
-              <div style={{ width: 36, textAlign: 'center' }}>{t.gf - t.ga}</div>
+              <div style={{ width: 36, textAlign: 'center' }}>{t.gd}</div>
               <div style={{ width: 32, textAlign: 'center', fontWeight: 700 }}>{t.pts}</div>
             </div>
           ))}
