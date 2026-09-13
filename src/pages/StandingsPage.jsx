@@ -3,6 +3,8 @@ import { useEffect, useState } from 'react'
 import { supabase } from '../supabaseClient'
 import StandingsTable from '../components/StandingsTable'
 
+const APPIN_LOGO = 'https://appinsports.com/wp-content/uploads/logo/logo-footer.png'
+
 const COMPETITIONS = [
   { slug: 'appin-league', name: 'Appin Sports League' },
   { slug: 'knockout-cup', name: 'ECFA Knockout Cup' },
@@ -143,7 +145,12 @@ export default function StandingsPage() {
               marginBottom: 16,
             }}
           >
-            <h2 style={{ fontSize: 19 }}>{comp.name}</h2>
+            <h2 style={{ fontSize: 19, display: 'flex', alignItems: 'center', gap: 8 }}>
+              {comp.slug === 'appin-league' && (
+                <img src={APPIN_LOGO} alt="" style={{ height: 20, width: 'auto', objectFit: 'contain' }} />
+              )}
+              {comp.name}
+            </h2>
             <Link to={`/competitions/${comp.slug}`} style={{ fontSize: 13, color: 'var(--brass)', fontWeight: 600 }}>
               Full competition &rarr;
             </Link>
