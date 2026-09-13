@@ -50,7 +50,9 @@ export default function SeasonAdmin() {
   // League / group generator
   const [genStageId, setGenStageId] = useState('')
   const [genGroupId, setGenGroupId] = useState('')
-  const [genStartDate, setGenStartDate] = useState('')
+  const [genDates, setGenDates] = useState([])
+  const [genDateInput, setGenDateInput] = useState('')
+  const [genTeamCount, setGenTeamCount] = useState(null)
   const [genDoubleRound, setGenDoubleRound] = useState(true)
   const [generating, setGenerating] = useState(false)
   const [genMsg, setGenMsg] = useState('')
@@ -125,19 +127,44 @@ export default function SeasonAdmin() {
   // ---- League / group fixture generator ----
   const genStage = structure.find((s) => s.id === genStageId)
   const genGroups = genStage?.groups || []
+  const genGroupIdResolved = genGroupId || (genGroups.length === 1 ? genGroups[0].id : '')
+
+  useEffect(() => {
+    setGenTeamCount(null)
+    setGenDates([])
+    if (!genStageId || !genGroupIdResolved) return
+    supabase
+      .from('stage_teams')
+      .select('team_id', { count: 'exact' })
+      .eq('stage_id', genStageId)
+      .eq('group_id', genGroupIdResolved)
+      .then(({ data }) => setGenTeamCount((data || []).length))
+  }, [genStageId, genGroupIdResolved])
+
+  const genRoundsNeeded =
+    genTeamCount && genTeamCount >= 2
+      ? (genTeamCount % 2 === 0 ? genTeamCount - 1 : genTeamCount) * (genDoubleRound ? 2 : 1)
+      : null
+
+  function addGenDate() {
+    if (!genDateInput) return
+    setGenDates((prev) => (prev.includes(genDateInput) ? prev : [...prev, genDateInput].sort()))
+    setGenDateInput('')
+  }
+  function removeGenDate(d) {
+    setGenDates((prev) => prev.filter((x) => x !== d))
+  }
 
   async function generateFixtures() {
-    if (!genStageId || !genStartDate) return
+    if (!genStageId || !genGroupIdResolved || genDates.length === 0) return
     setGenerating(true)
     setGenMsg('')
-
-    const groupId = genGroupId || genGroups[0]?.id || null
 
     const { data: stageTeams } = await supabase
       .from('stage_teams')
       .select('team_id')
       .eq('stage_id', genStageId)
-      .eq('group_id', groupId)
+      .eq('group_id', genGroupIdResolved)
 
     const teamIds = (stageTeams || []).map((r) => r.team_id)
     if (teamIds.length < 2) {
@@ -151,18 +178,21 @@ export default function SeasonAdmin() {
       ? [...firstLeg, ...firstLeg.map((round) => round.map(([h, a]) => [a, h]))]
       : firstLeg
 
+    if (genDates.length < rounds.length) {
+      setGenMsg(`This needs ${rounds.length} match dates for ${teamIds.length} teams — you've added ${genDates.length}. Add ${rounds.length - genDates.length} more.`)
+      setGenerating(false)
+      return
+    }
+
     const rows = []
     rounds.forEach((round, i) => {
-      const date = new Date(genStartDate + 'T00:00:00')
-      date.setDate(date.getDate() + i * 7)
-      const iso = date.toISOString().slice(0, 10)
       round.forEach(([homeId, awayId]) => {
         rows.push({
           stage_id: genStageId,
-          group_id: groupId,
+          group_id: genGroupIdResolved,
           home_team_id: homeId,
           away_team_id: awayId,
-          fixture_date: iso,
+          fixture_date: genDates[i],
           status: 'scheduled',
         })
       })
@@ -170,7 +200,13 @@ export default function SeasonAdmin() {
 
     const { error } = await supabase.from('fixtures').insert(rows)
     setGenerating(false)
-    setGenMsg(error ? 'Something went wrong: ' + error.message : `Created ${rows.length} fixtures across ${rounds.length} match days.`)
+    setGenMsg(
+      error
+        ? 'Something went wrong: ' + error.message
+        : `Created ${rows.length} fixtures across ${rounds.length} match days.${
+            genDates.length > rounds.length ? ` ${genDates.length - rounds.length} extra date(s) you added weren't needed.` : ''
+          }`
+    )
   }
 
   // ---- Group draw ----
@@ -335,19 +371,57 @@ export default function SeasonAdmin() {
                 ))}
               </select>
             )}
-            <input
-              type="date"
-              value={genStartDate}
-              onChange={(e) => setGenStartDate(e.target.value)}
-              style={{ ...fullSelectStyle, marginBottom: 8 }}
-            />
+
             <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, marginBottom: 10 }}>
               <input type="checkbox" checked={genDoubleRound} onChange={(e) => setGenDoubleRound(e.target.checked)} />
               Home and away (double round robin)
             </label>
+
+            {genRoundsNeeded && (
+              <p style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 8 }}>
+                {genTeamCount} teams assigned — needs {genRoundsNeeded} match dates. You've added {genDates.length}.
+              </p>
+            )}
+
+            <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
+              <input
+                type="date"
+                value={genDateInput}
+                onChange={(e) => setGenDateInput(e.target.value)}
+                style={{ ...fullSelectStyle, flex: 1 }}
+              />
+              <button onClick={addGenDate} style={{ ...outlineButtonStyle, flexShrink: 0 }}>
+                Add date
+              </button>
+            </div>
+
+            {genDates.length > 0 && (
+              <div style={{ maxHeight: 180, overflowY: 'auto', border: '1px solid var(--line)', borderRadius: 6, padding: 8, marginBottom: 10 }}>
+                {genDates.map((d, i) => (
+                  <div
+                    key={d}
+                    style={{
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                      fontSize: 13,
+                      padding: '4px 0',
+                    }}
+                  >
+                    <span>
+                      Match day {i + 1}: {new Date(d + 'T00:00:00').toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' })}
+                    </span>
+                    <button onClick={() => removeGenDate(d)} style={{ ...outlineButtonStyle, padding: '2px 8px', fontSize: 12 }}>
+                      Remove
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+
             <button
               onClick={generateFixtures}
-              disabled={generating || !genStageId || !genStartDate}
+              disabled={generating || !genStageId || !genGroupIdResolved || genDates.length === 0}
               style={{ ...saveButtonStyle, width: '100%' }}
             >
               {generating ? 'Generating…' : 'Generate fixtures'}
