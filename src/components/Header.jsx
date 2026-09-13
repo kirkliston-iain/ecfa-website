@@ -1,4 +1,6 @@
+import { useEffect, useState } from 'react'
 import { Link, NavLink } from 'react-router-dom'
+import { supabase } from '../supabaseClient'
 
 const TABS = [
   { to: '/', label: 'Match Hub', end: true },
@@ -9,6 +11,18 @@ const TABS = [
 ]
 
 export default function Header() {
+  const [signedIn, setSignedIn] = useState(false)
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data }) => setSignedIn(!!data.session))
+    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
+      setSignedIn(!!session)
+    })
+    return () => listener.subscription.unsubscribe()
+  }, [])
+
+  const tabs = signedIn ? [...TABS, { to: '/discipline', label: 'Discipline' }] : TABS
+
   return (
     <header>
       <div style={{ background: 'var(--brass)' }}>
@@ -47,7 +61,7 @@ export default function Header() {
           className="container hscroll"
           style={{ display: 'flex', gap: 28, overflowX: 'auto' }}
         >
-          {TABS.map((t) => (
+          {tabs.map((t) => (
             <NavLink
               key={t.to}
               to={t.to}
@@ -59,15 +73,3 @@ export default function Header() {
                 textTransform: 'uppercase',
                 letterSpacing: 0.5,
                 whiteSpace: 'nowrap',
-                borderBottom: isActive ? '3px solid var(--brass)' : '3px solid transparent',
-                color: isActive ? 'var(--ink)' : 'var(--muted)',
-              })}
-            >
-              {t.label}
-            </NavLink>
-          ))}
-        </nav>
-      </div>
-    </header>
-  )
-}
