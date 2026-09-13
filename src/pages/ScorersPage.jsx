@@ -16,6 +16,50 @@ const SEASON_OPTIONS = [
   { value: '2015/16', label: '2015/16' },
 ]
 
+function Badge({ logoUrl, name, size = 20 }) {
+  if (logoUrl) {
+    return (
+      <img
+        src={logoUrl}
+        alt=""
+        style={{
+          width: size,
+          height: size,
+          borderRadius: '50%',
+          objectFit: 'cover',
+          background: '#fff',
+          flexShrink: 0,
+        }}
+      />
+    )
+  }
+  const initials = (name || '?')
+    .split(' ')
+    .map((w) => w[0])
+    .slice(0, 2)
+    .join('')
+    .toUpperCase()
+  return (
+    <span
+      style={{
+        width: size,
+        height: size,
+        borderRadius: '50%',
+        background: 'var(--ink)',
+        color: '#fff',
+        display: 'inline-flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        fontSize: size * 0.4,
+        fontWeight: 700,
+        flexShrink: 0,
+      }}
+    >
+      {initials}
+    </span>
+  )
+}
+
 // Supabase/PostgREST caps a plain select at 1000 rows by default. historic_scorers
 // has more rows than that, so a single query silently truncates the tail end of the
 // table. Page through it in batches of 1000 so every row is loaded.
@@ -42,6 +86,7 @@ export default function ScorersPage() {
   const [loading, setLoading] = useState(true)
   const [historic, setHistoric] = useState([])
   const [current, setCurrent] = useState([])
+  const [teamLogos, setTeamLogos] = useState({})
 
   useEffect(() => {
     let cancelled = false
@@ -55,6 +100,8 @@ export default function ScorersPage() {
         .from('fixture_scorers')
         .select('goals, player:player_id(first_name, last_name), team:team_id(name)')
 
+      const { data: teams } = await supabase.from('teams').select('name, logo_url')
+
       if (!cancelled) {
         setHistoric(hist || [])
         setCurrent(
@@ -64,6 +111,9 @@ export default function ScorersPage() {
             goals: Number(s.goals),
           }))
         )
+        const logoMap = {}
+        for (const t of teams || []) logoMap[t.name] = t.logo_url
+        setTeamLogos(logoMap)
         setLoading(false)
       }
     }
@@ -160,7 +210,12 @@ export default function ScorersPage() {
               <td style={{ padding: '10px 8px' }}>{i + 1}</td>
               <td style={{ padding: '10px 8px', fontWeight: 600 }}>{row.player_name}</td>
               {season !== 'overall' && (
-                <td style={{ padding: '10px 8px', color: 'var(--muted)' }}>{row.team_name}</td>
+                <td style={{ padding: '10px 8px', color: 'var(--muted)' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <Badge logoUrl={teamLogos[row.team_name]} name={row.team_name} />
+                    <span>{row.team_name}</span>
+                  </div>
+                </td>
               )}
               <td style={{ padding: '10px 8px', textAlign: 'center', fontWeight: 800, color: 'var(--ink)' }}>
                 {row.goals}
