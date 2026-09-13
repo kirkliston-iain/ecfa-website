@@ -32,7 +32,7 @@ export default function Header() {
         >
           <Link to="/" style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
             <img
-              src="/ecfa-logo.png"
+              src="/badges/ecfa-logo.png"
               alt="ECFA"
               style={{ width: 44, height: 44, objectFit: 'contain', flexShrink: 0 }}
             />
