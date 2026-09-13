@@ -44,6 +44,7 @@ export default function FixtureDetail() {
   const [fixture, setFixture] = useState(null)
   const [scorers, setScorers] = useState([])
   const [discipline, setDiscipline] = useState([])
+  const [previousMeetings, setPreviousMeetings] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
 
@@ -57,7 +58,7 @@ export default function FixtureDetail() {
       const { data: f, error: fErr } = await supabase
         .from('fixtures')
         .select(
-          'id, round_name, fixture_date, venue, home_score, away_score, status, home_team:home_team_id(id, name, logo_url), away_team:away_team_id(id, name, logo_url)'
+          'id, round_name, fixture_date, venue, referee_name, home_score, away_score, status, home_team:home_team_id(id, name, logo_url), away_team:away_team_id(id, name, logo_url)'
         )
         .eq('id', id)
         .single()
@@ -80,10 +81,37 @@ export default function FixtureDetail() {
         .select('card_type, card_count, team_id, player:player_id(first_name, last_name)')
         .eq('fixture_id', id)
 
+      let meetings = []
+      if (f.home_team?.id && f.away_team?.id) {
+        const { data: hf } = await supabase
+          .from('historic_fixtures')
+          .select('id, competition_name, season, fixture_date, home_team_name, home_goals, away_team_name, away_goals, comment')
+          .or(
+            `and(home_team_id.eq.${f.home_team.id},away_team_id.eq.${f.away_team.id}),and(home_team_id.eq.${f.away_team.id},away_team_id.eq.${f.home_team.id})`
+          )
+          .order('fixture_date', { ascending: false })
+          .limit(5)
+
+        const fixtureIds = (hf || []).map((m) => m.id)
+        let scorersByFixture = {}
+        if (fixtureIds.length > 0) {
+          const { data: hs } = await supabase
+            .from('historic_scorers')
+            .select('historic_fixture_id, player_name, goals')
+            .in('historic_fixture_id', fixtureIds)
+          for (const row of hs || []) {
+            if (!scorersByFixture[row.historic_fixture_id]) scorersByFixture[row.historic_fixture_id] = []
+            scorersByFixture[row.historic_fixture_id].push(row)
+          }
+        }
+        meetings = (hf || []).map((m) => ({ ...m, scorers: scorersByFixture[m.id] || [] }))
+      }
+
       if (!cancelled) {
         setFixture(f)
         setScorers(s || [])
         setDiscipline(d || [])
+        setPreviousMeetings(meetings)
         setLoading(false)
       }
     }
@@ -165,6 +193,9 @@ export default function FixtureDetail() {
               : 'Date TBC'}
           </div>
           {fixture.venue && <div style={{ fontSize: 12, color: 'var(--muted)' }}>{fixture.venue}</div>}
+          {fixture.referee_name && (
+            <div style={{ fontSize: 12, color: 'var(--muted)' }}>Referee: {fixture.referee_name}</div>
+          )}
         </div>
 
         <Link
@@ -194,6 +225,54 @@ export default function FixtureDetail() {
 
       {!played && (
         <p style={{ color: 'var(--muted)', textAlign: 'center' }}>This fixture hasn't been played yet.</p>
+      )}
+
+      {previousMeetings.length > 0 && (
+        <section style={{ marginTop: 40 }}>
+          <h2
+            style={{
+              fontSize: 13,
+              textTransform: 'uppercase',
+              letterSpacing: 0.5,
+              color: 'var(--brass)',
+              marginBottom: 14,
+              paddingBottom: 8,
+              borderBottom: '2px solid var(--line)',
+            }}
+          >
+            Previous Meetings
+          </h2>
+          {previousMeetings.map((m) => (
+            <div key={m.id} style={{ padding: '12px 0', borderBottom: '1px solid var(--line)' }}>
+              <div style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 4 }}>
+                {m.competition_name} — {m.season} —{' '}
+                {new Date(m.fixture_date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 14, marginBottom: m.scorers.length ? 6 : 0 }}>
+                <span style={{ flex: 1, textAlign: 'right', fontWeight: 600 }}>{m.home_team_name}</span>
+                <span style={{ fontWeight: 800, minWidth: 60, textAlign: 'center' }}>
+                  {m.home_goals != null && m.away_goals != null ? `${m.home_goals} - ${m.away_goals}` : 'v'}
+                </span>
+                <span style={{ flex: 1, fontWeight: 600 }}>{m.away_team_name}</span>
+              </div>
+              {m.comment && (
+                <div style={{ fontSize: 12, color: 'var(--muted)', textAlign: 'center', marginBottom: 6 }}>
+                  {m.comment}
+                </div>
+              )}
+              {m.scorers.length > 0 && (
+                <div style={{ fontSize: 12, color: 'var(--muted)', textAlign: 'center' }}>
+                  Scorers:{' '}
+                  {m.scorers.map((s, i) => (
+                    <span key={i}>
+                      {s.player_name} ({s.goals}){i < m.scorers.length - 1 ? ', ' : ''}
+                    </span>
+                  ))}
+                </div>
+              )}
+            </div>
+          ))}
+        </section>
       )}
     </div>
   )
