@@ -37,12 +37,10 @@ export default function HistoricalSeason() {
 
   useEffect(() => {
     supabase
-      .from('historic_fixtures')
+      .from('historic_fixture_seasons')
       .select('season')
-      .limit(5000)
       .then(({ data }) => {
-        const unique = Array.from(new Set((data || []).map((r) => r.season))).sort().reverse()
-        setSeasons(unique)
+        setSeasons((data || []).map((r) => r.season))
       })
   }, [])
 
