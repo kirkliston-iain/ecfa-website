@@ -29,6 +29,21 @@ export default function AdminDashboard() {
   const [postponedFixtures, setPostponedFixtures] = useState([])
   const [allTeams, setAllTeams] = useState([])
   const [savingPostponed, setSavingPostponed] = useState(null)
+  const [referees, setReferees] = useState([])
+  const [venues, setVenues] = useState([])
+  const [groups, setGroups] = useState([])
+  const [showAddFixture, setShowAddFixture] = useState(false)
+  const [newFixture, setNewFixture] = useState({
+    homeTeamId: '',
+    awayTeamId: '',
+    groupId: '',
+    date: '',
+    time: '',
+    venue: '',
+    refereeName: '',
+    roundName: '',
+  })
+  const [addingFixture, setAddingFixture] = useState(false)
 
   useEffect(() => {
     supabase
@@ -43,8 +58,68 @@ export default function AdminDashboard() {
       .order('name')
       .then(({ data }) => setAllTeams(data || []))
 
+    supabase
+      .from('referees')
+      .select('id, name')
+      .order('name')
+      .then(({ data }) => setReferees(data || []))
+
+    supabase
+      .from('venues')
+      .select('id, name')
+      .order('name')
+      .then(({ data }) => setVenues(data || []))
+
     loadPostponed()
   }, [])
+
+  useEffect(() => {
+    if (!stageId) {
+      setGroups([])
+      return
+    }
+    supabase
+      .from('groups')
+      .select('id, name')
+      .eq('stage_id', stageId)
+      .order('sort_order')
+      .then(({ data }) => {
+        setGroups(data || [])
+        setNewFixture((f) => ({ ...f, groupId: data && data.length === 1 ? data[0].id : '' }))
+      })
+  }, [stageId])
+
+  async function addFixture() {
+    if (!newFixture.homeTeamId || !newFixture.awayTeamId || !newFixture.date) return
+    setAddingFixture(true)
+    const fixture_date = newFixture.time
+      ? `${newFixture.date}T${newFixture.time}:00`
+      : `${newFixture.date}T00:00:00`
+    await supabase.from('fixtures').insert({
+      stage_id: stageId,
+      group_id: newFixture.groupId || null,
+      home_team_id: newFixture.homeTeamId,
+      away_team_id: newFixture.awayTeamId,
+      fixture_date,
+      venue: newFixture.venue || null,
+      referee_name: newFixture.refereeName || null,
+      round_name: newFixture.roundName || null,
+      status: 'scheduled',
+    })
+    setAddingFixture(false)
+    setShowAddFixture(false)
+    setNewFixture({
+      homeTeamId: '',
+      awayTeamId: '',
+      groupId: groups.length === 1 ? groups[0].id : '',
+      date: '',
+      time: '',
+      venue: '',
+      refereeName: '',
+      roundName: '',
+    })
+    loadFixtures()
+  }
 
   useEffect(() => {
     if (!competitionId) {
@@ -93,6 +168,25 @@ export default function AdminDashboard() {
     setPostponedFixtures(data || [])
   }
 
+  function dateOnly(iso) {
+    if (!iso) return ''
+    return iso.slice(0, 10)
+  }
+  function timeOnly(iso) {
+    if (!iso) return ''
+    return iso.slice(11, 16)
+  }
+  function updateFixtureDatePart(id, part, value) {
+    setFixtures((prev) =>
+      prev.map((f) => {
+        if (f.id !== id) return f
+        const d = part === 'date' ? value : dateOnly(f.fixture_date)
+        const t = part === 'time' ? value : timeOnly(f.fixture_date) || '00:00'
+        return { ...f, fixture_date: `${d}T${t}:00` }
+      })
+    )
+  }
+
   function updateLocal(id, field, value) {
     setFixtures((prev) =>
       prev.map((f) => {
@@ -117,6 +211,7 @@ export default function AdminDashboard() {
         hidden_from_public: fixture.hidden_from_public,
         venue: fixture.venue || null,
         referee_name: fixture.referee_name || null,
+        fixture_date: fixture.fixture_date,
       })
       .eq('id', fixture.id)
     setSaving(null)
@@ -257,8 +352,12 @@ export default function AdminDashboard() {
         </button>
       </div>
 
-      <Link to="/admin/teams" style={{ ...linkButtonStyle, display: 'block', marginBottom: 20 }}>
+      <Link to="/admin/teams" style={{ ...linkButtonStyle, display: 'block', marginBottom: 8 }}>
         Manage squads &rarr;
+      </Link>
+
+      <Link to="/admin/lists" style={{ ...linkButtonStyle, display: 'block', marginBottom: 20 }}>
+        Manage referees &amp; venues &rarr;
       </Link>
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 24 }}>
@@ -325,6 +424,108 @@ export default function AdminDashboard() {
               </select>
             </div>
           )}
+
+          <button
+            onClick={() => setShowAddFixture((v) => !v)}
+            style={{ ...outlineButtonStyle, width: '100%', marginBottom: showAddFixture ? 12 : 20, padding: '10px' }}
+          >
+            {showAddFixture ? 'Cancel' : '+ Add fixture to this stage'}
+          </button>
+
+          {showAddFixture && (
+            <div style={{ ...cardStyle, marginBottom: 20 }}>
+              <select
+                value={newFixture.homeTeamId}
+                onChange={(e) => setNewFixture((f) => ({ ...f, homeTeamId: e.target.value }))}
+                style={{ ...fullSelectStyle, marginBottom: 8 }}
+              >
+                <option value="">Home team…</option>
+                {allTeams.map((t) => (
+                  <option key={t.id} value={t.id}>
+                    {t.name}
+                  </option>
+                ))}
+              </select>
+              <select
+                value={newFixture.awayTeamId}
+                onChange={(e) => setNewFixture((f) => ({ ...f, awayTeamId: e.target.value }))}
+                style={{ ...fullSelectStyle, marginBottom: 8 }}
+              >
+                <option value="">Away team…</option>
+                {allTeams.map((t) => (
+                  <option key={t.id} value={t.id}>
+                    {t.name}
+                  </option>
+                ))}
+              </select>
+              {groups.length > 1 && (
+                <select
+                  value={newFixture.groupId}
+                  onChange={(e) => setNewFixture((f) => ({ ...f, groupId: e.target.value }))}
+                  style={{ ...fullSelectStyle, marginBottom: 8 }}
+                >
+                  <option value="">Group…</option>
+                  {groups.map((g) => (
+                    <option key={g.id} value={g.id}>
+                      {g.name}
+                    </option>
+                  ))}
+                </select>
+              )}
+              <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
+                <input
+                  type="date"
+                  value={newFixture.date}
+                  onChange={(e) => setNewFixture((f) => ({ ...f, date: e.target.value }))}
+                  style={{ ...fullSelectStyle, flex: 1 }}
+                />
+                <input
+                  type="time"
+                  value={newFixture.time}
+                  onChange={(e) => setNewFixture((f) => ({ ...f, time: e.target.value }))}
+                  style={{ ...fullSelectStyle, flex: 1 }}
+                />
+              </div>
+              <select
+                value={newFixture.venue}
+                onChange={(e) => setNewFixture((f) => ({ ...f, venue: e.target.value }))}
+                style={{ ...fullSelectStyle, marginBottom: 8 }}
+              >
+                <option value="">Venue…</option>
+                {venues.map((v) => (
+                  <option key={v.id} value={v.name}>
+                    {v.name}
+                  </option>
+                ))}
+              </select>
+              <select
+                value={newFixture.refereeName}
+                onChange={(e) => setNewFixture((f) => ({ ...f, refereeName: e.target.value }))}
+                style={{ ...fullSelectStyle, marginBottom: 8 }}
+              >
+                <option value="">Referee…</option>
+                {referees.map((r) => (
+                  <option key={r.id} value={r.name}>
+                    {r.name}
+                  </option>
+                ))}
+              </select>
+              <input
+                placeholder="Round name (optional, e.g. Quarter Final)"
+                value={newFixture.roundName}
+                onChange={(e) => setNewFixture((f) => ({ ...f, roundName: e.target.value }))}
+                style={{ ...fullSelectStyle, marginBottom: 12 }}
+              />
+              <button
+                onClick={addFixture}
+                disabled={addingFixture}
+                style={{ ...saveButtonStyle, width: '100%' }}
+              >
+                {addingFixture ? 'Adding…' : 'Add fixture'}
+              </button>
+            </div>
+          )}
+
           {fixtures
             .filter((f) => !teamFilter || f.home_team.id === teamFilter || f.away_team.id === teamFilter)
             .filter((f) => !dateFilter || (f.fixture_date ? f.fixture_date.slice(0, 10) : 'tbc') === dateFilter)
@@ -381,19 +582,46 @@ export default function AdminDashboard() {
                   <option value="cancelled">Cancelled</option>
                 </select>
 
-                <input
-                  placeholder="Venue"
+                <div style={{ display: 'flex', gap: 8, marginBottom: 10 }}>
+                  <input
+                    type="date"
+                    value={dateOnly(f.fixture_date)}
+                    onChange={(e) => updateFixtureDatePart(f.id, 'date', e.target.value)}
+                    style={{ ...fullSelectStyle, flex: 1 }}
+                  />
+                  <input
+                    type="time"
+                    value={timeOnly(f.fixture_date)}
+                    onChange={(e) => updateFixtureDatePart(f.id, 'time', e.target.value)}
+                    style={{ ...fullSelectStyle, flex: 1 }}
+                  />
+                </div>
+
+                <select
                   value={f.venue || ''}
                   onChange={(e) => updateLocal(f.id, 'venue', e.target.value)}
                   style={{ ...fullSelectStyle, marginBottom: 10 }}
-                />
+                >
+                  <option value="">Venue…</option>
+                  {venues.map((v) => (
+                    <option key={v.id} value={v.name}>
+                      {v.name}
+                    </option>
+                  ))}
+                </select>
 
-                <input
-                  placeholder="Referee"
+                <select
                   value={f.referee_name || ''}
                   onChange={(e) => updateLocal(f.id, 'referee_name', e.target.value)}
                   style={{ ...fullSelectStyle, marginBottom: 10 }}
-                />
+                >
+                  <option value="">Referee…</option>
+                  {referees.map((r) => (
+                    <option key={r.id} value={r.name}>
+                      {r.name}
+                    </option>
+                  ))}
+                </select>
 
                 <label style={{ ...labelStyle, display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
                   <input
