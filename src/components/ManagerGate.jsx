@@ -1,36 +1,25 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../supabaseClient'
 
-const DISMISSED_KEY = 'ecfa_manager_gate_dismissed'
 const MANAGER_EMAIL = 'managers@ecfa-website.org'
 
 export default function ManagerGate() {
   const [visible, setVisible] = useState(false)
-  const [stage, setStage] = useState('ask') // 'ask' | 'code'
   const [code, setCode] = useState('')
   const [error, setError] = useState(false)
   const [checking, setChecking] = useState(false)
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => {
-      // Already signed in (manager or admin) — nothing to ask.
-      if (data.session) return
-      const dismissed = localStorage.getItem(DISMISSED_KEY)
-      if (!dismissed) setVisible(true)
-    })
-
-    function handleReopen() {
-      setStage('ask')
+    function handleOpen() {
       setCode('')
       setError(false)
       setVisible(true)
     }
-    window.addEventListener('open-manager-gate', handleReopen)
-    return () => window.removeEventListener('open-manager-gate', handleReopen)
+    window.addEventListener('open-manager-gate', handleOpen)
+    return () => window.removeEventListener('open-manager-gate', handleOpen)
   }, [])
 
   function dismiss() {
-    localStorage.setItem(DISMISSED_KEY, 'true')
     setVisible(false)
   }
 
@@ -47,7 +36,6 @@ export default function ManagerGate() {
       setError(true)
       return
     }
-    localStorage.setItem(DISMISSED_KEY, 'true')
     setVisible(false)
   }
 
@@ -75,56 +63,36 @@ export default function ManagerGate() {
           boxSizing: 'border-box',
         }}
       >
-        {stage === 'ask' && (
-          <>
-            <div style={{ fontSize: 16, fontWeight: 700, marginBottom: 16 }}>
-              Are you a league manager or admin?
-            </div>
-            <div style={{ display: 'flex', gap: 10 }}>
-              <button onClick={() => setStage('code')} style={primaryButtonStyle}>
-                Yes
-              </button>
-              <button onClick={dismiss} style={secondaryButtonStyle}>
-                No
-              </button>
-            </div>
-          </>
+        <div style={{ fontSize: 16, fontWeight: 700, marginBottom: 12 }}>Enter manager code</div>
+        <input
+          type="password"
+          inputMode="numeric"
+          value={code}
+          onChange={(e) => setCode(e.target.value)}
+          autoFocus
+          style={{
+            width: '100%',
+            boxSizing: 'border-box',
+            padding: '12px 14px',
+            fontSize: 16,
+            border: '1px solid var(--line)',
+            borderRadius: 8,
+            marginBottom: 10,
+          }}
+        />
+        {error && (
+          <div style={{ color: '#B3261E', fontSize: 13, marginBottom: 10 }}>
+            That code wasn't recognised.
+          </div>
         )}
-
-        {stage === 'code' && (
-          <>
-            <div style={{ fontSize: 16, fontWeight: 700, marginBottom: 12 }}>Enter manager code</div>
-            <input
-              type="password"
-              inputMode="numeric"
-              value={code}
-              onChange={(e) => setCode(e.target.value)}
-              autoFocus
-              style={{
-                width: '100%',
-                boxSizing: 'border-box',
-                padding: '12px 14px',
-                fontSize: 16,
-                border: '1px solid var(--line)',
-                borderRadius: 8,
-                marginBottom: 10,
-              }}
-            />
-            {error && (
-              <div style={{ color: '#B3261E', fontSize: 13, marginBottom: 10 }}>
-                That code wasn't recognised.
-              </div>
-            )}
-            <div style={{ display: 'flex', gap: 10 }}>
-              <button onClick={submitCode} disabled={checking} style={primaryButtonStyle}>
-                {checking ? 'Checking…' : 'Submit'}
-              </button>
-              <button onClick={dismiss} style={secondaryButtonStyle}>
-                Cancel
-              </button>
-            </div>
-          </>
-        )}
+        <div style={{ display: 'flex', gap: 10 }}>
+          <button onClick={submitCode} disabled={checking} style={primaryButtonStyle}>
+            {checking ? 'Checking…' : 'Submit'}
+          </button>
+          <button onClick={dismiss} style={secondaryButtonStyle}>
+            Cancel
+          </button>
+        </div>
       </div>
     </div>
   )
