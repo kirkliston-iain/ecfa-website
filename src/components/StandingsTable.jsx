@@ -100,6 +100,8 @@ export default function StandingsTable({ groupName, rows }) {
             <th style={thStyle('left')}>Team</th>
             <th style={{ ...thStyle(), width: 34 }}>Pl</th>
             <th style={{ ...thStyle(), width: 34 }}>W</th>
+            <th style={{ ...thStyle(), width: 36 }}>GF</th>
+            <th style={{ ...thStyle(), width: 36 }}>GA</th>
             <th style={{ ...thStyle(), width: 40 }}>GD</th>
             <th style={{ ...thStyle(), width: 40 }}>Pts</th>
           </tr>
@@ -107,7 +109,7 @@ export default function StandingsTable({ groupName, rows }) {
         <tbody>
           {rows.map((row, i) => (
             <tr key={row.teamId} style={{ borderTop: '1px solid var(--line)' }}>
-              <td style={{ padding: '14px 8px 14px 12px', borderLeft: '4px solid var(--brass)', fontWeight: 700, color: 'var(--muted)' }}>
+              <td style={{ padding: '14px 8px 14px 12px', fontWeight: 700, color: 'var(--muted)' }}>
                 {i + 1}
               </td>
               <td style={{ padding: '14px 8px' }}>
@@ -118,13 +120,15 @@ export default function StandingsTable({ groupName, rows }) {
               </td>
               <td style={tdStyle()}>{row.played}</td>
               <td style={tdStyle()}>{row.won}</td>
+              <td style={tdStyle()}>{row.goalsFor}</td>
+              <td style={tdStyle()}>{row.goalsAgainst}</td>
               <td style={tdStyle()}>{row.goalDifference}</td>
               <td style={{ ...tdStyle(), fontWeight: 800, color: 'var(--ink)' }}>{row.points}</td>
             </tr>
           ))}
           {rows.length === 0 && (
             <tr>
-              <td colSpan={6} style={{ padding: '24px 8px', textAlign: 'center', color: 'var(--muted)' }}>
+              <td colSpan={8} style={{ padding: '24px 8px', textAlign: 'center', color: 'var(--muted)' }}>
                 No standings yet — check back once fixtures have been played.
               </td>
             </tr>
