@@ -30,6 +30,7 @@ function banForPoints(points) {
 export default function Discipline() {
   const [loading, setLoading] = useState(true)
   const [playerRows, setPlayerRows] = useState([])
+  const [teamRows, setTeamRows] = useState([])
   const [seriousRows, setSeriousRows] = useState([])
 
   const [suspensions, setSuspensions] = useState([])
@@ -40,9 +41,13 @@ export default function Discipline() {
   const [form, setForm] = useState({
     teamId: '',
     playerId: '',
+    noTeam: false,
+    firstName: '',
+    lastName: '',
     reason: '',
+    banType: 'games',
     gamesBanned: 1,
-    isLifetime: false,
+    availableFrom: '',
     notes: '',
   })
 
@@ -92,6 +97,15 @@ export default function Discipline() {
       .filter((row) => row.points > 0)
       .sort((a, b) => b.points - a.points)
 
+    const teamTotals = new Map()
+    for (const row of totals.values()) {
+      if (!teamTotals.has(row.team.id)) {
+        teamTotals.set(row.team.id, { team: row.team, points: 0 })
+      }
+      teamTotals.get(row.team.id).points += row.points
+    }
+    const teamList = Array.from(teamTotals.values()).sort((a, b) => b.points - a.points)
+
     const seriousCounts = new Map()
     for (const r of rows) {
       if (!r.serious_offence) continue
@@ -111,6 +125,7 @@ export default function Discipline() {
       .sort((a, b) => b.count - a.count)
 
     setPlayerRows(playerList)
+    setTeamRows(teamList)
     setSeriousRows(seriousList)
     setLoading(false)
   }
@@ -134,16 +149,57 @@ export default function Discipline() {
   }
 
   async function addSuspension() {
-    if (!form.playerId || !form.reason.trim()) return
+    if (!form.reason.trim()) return
+
+    let playerId = form.playerId
+    let teamId = form.teamId || null
+
+    if (form.noTeam) {
+      if (!form.firstName.trim() || !form.lastName.trim()) return
+      let { data: existing } = await supabase
+        .from('players')
+        .select('id')
+        .eq('first_name', form.firstName.trim())
+        .eq('last_name', form.lastName.trim())
+        .maybeSingle()
+
+      if (existing) {
+        playerId = existing.id
+      } else {
+        const { data: created, error } = await supabase
+          .from('players')
+          .insert({ first_name: form.firstName.trim(), last_name: form.lastName.trim() })
+          .select('id')
+          .single()
+        if (error) return
+        playerId = created.id
+      }
+      teamId = null
+    }
+
+    if (!playerId) return
+
     await supabase.from('suspensions').insert({
-      player_id: form.playerId,
-      team_id: form.teamId,
+      player_id: playerId,
+      team_id: teamId,
       reason: form.reason.trim(),
-      games_banned: form.isLifetime ? null : Number(form.gamesBanned),
-      is_lifetime: form.isLifetime,
+      games_banned: form.banType === 'games' ? Number(form.gamesBanned) : null,
+      is_lifetime: form.banType === 'indefinite',
+      available_from: form.banType === 'date' ? form.availableFrom || null : null,
       notes: form.notes.trim() || null,
     })
-    setForm({ teamId: '', playerId: '', reason: '', gamesBanned: 1, isLifetime: false, notes: '' })
+    setForm({
+      teamId: '',
+      playerId: '',
+      noTeam: false,
+      firstName: '',
+      lastName: '',
+      reason: '',
+      banType: 'games',
+      gamesBanned: 1,
+      availableFrom: '',
+      notes: '',
+    })
     loadSuspensions()
   }
 
@@ -205,14 +261,20 @@ export default function Discipline() {
               <div style={{ fontWeight: 600 }}>
                 {s.player.first_name} {s.player.last_name}
               </div>
-              <div style={{ fontSize: 13, color: 'var(--muted)', marginBottom: 6 }}>{s.team.name}</div>
+              <div style={{ fontSize: 13, color: 'var(--muted)', marginBottom: 6 }}>
+                {s.team?.name || 'No team'}
+              </div>
               <div style={{ fontSize: 14, marginBottom: 4 }}>{s.reason}</div>
               <div style={{ fontSize: 14, fontWeight: 700, color: '#B3261E', marginBottom: 8 }}>
-                {s.is_lifetime ? 'Lifetime ban' : `${s.games_served} of ${s.games_banned} games served`}
+                {s.is_lifetime
+                  ? 'Indefinite / lifetime ban'
+                  : s.available_from
+                    ? `Available from ${new Date(s.available_from + 'T00:00:00').toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}`
+                    : `${s.games_served} of ${s.games_banned} games served`}
               </div>
               {s.notes && <div style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 8 }}>{s.notes}</div>}
               <div style={{ display: 'flex', gap: 8 }}>
-                {!s.is_lifetime && (
+                {!s.is_lifetime && !s.available_from && (
                   <button
                     onClick={() => markServed(s)}
                     disabled={savingSuspension === s.id}
@@ -236,35 +298,63 @@ export default function Discipline() {
       <div style={{ ...cardStyle, marginBottom: 40 }}>
         <div style={{ fontWeight: 600, marginBottom: 10, fontSize: 14 }}>Add a ban</div>
 
-        <select
-          value={form.teamId}
-          onChange={(e) => {
-            setForm((p) => ({ ...p, teamId: e.target.value, playerId: '' }))
-            if (e.target.value) loadSquad(e.target.value)
-          }}
-          style={{ ...fullSelectStyle, marginBottom: 8 }}
-        >
-          <option value="">Select team…</option>
-          {teams.map((t) => (
-            <option key={t.id} value={t.id}>
-              {t.name}
-            </option>
-          ))}
-        </select>
+        <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, marginBottom: 8 }}>
+          <input
+            type="checkbox"
+            checked={form.noTeam}
+            onChange={(e) => setForm((p) => ({ ...p, noTeam: e.target.checked, teamId: '', playerId: '' }))}
+          />
+          Player has no current team (or isn't in a squad)
+        </label>
 
-        <select
-          value={form.playerId}
-          onChange={(e) => setForm((p) => ({ ...p, playerId: e.target.value }))}
-          disabled={!form.teamId}
-          style={{ ...fullSelectStyle, marginBottom: 8 }}
-        >
-          <option value="">Select player…</option>
-          {(squadByTeam[form.teamId] || []).map((p) => (
-            <option key={p.id} value={p.id}>
-              {p.first_name} {p.last_name}
-            </option>
-          ))}
-        </select>
+        {form.noTeam ? (
+          <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
+            <input
+              placeholder="First name"
+              value={form.firstName}
+              onChange={(e) => setForm((p) => ({ ...p, firstName: e.target.value }))}
+              style={{ ...fullSelectStyle, flex: 1 }}
+            />
+            <input
+              placeholder="Last name"
+              value={form.lastName}
+              onChange={(e) => setForm((p) => ({ ...p, lastName: e.target.value }))}
+              style={{ ...fullSelectStyle, flex: 1 }}
+            />
+          </div>
+        ) : (
+          <>
+            <select
+              value={form.teamId}
+              onChange={(e) => {
+                setForm((p) => ({ ...p, teamId: e.target.value, playerId: '' }))
+                if (e.target.value) loadSquad(e.target.value)
+              }}
+              style={{ ...fullSelectStyle, marginBottom: 8 }}
+            >
+              <option value="">Select team…</option>
+              {teams.map((t) => (
+                <option key={t.id} value={t.id}>
+                  {t.name}
+                </option>
+              ))}
+            </select>
+
+            <select
+              value={form.playerId}
+              onChange={(e) => setForm((p) => ({ ...p, playerId: e.target.value }))}
+              disabled={!form.teamId}
+              style={{ ...fullSelectStyle, marginBottom: 8 }}
+            >
+              <option value="">Select player…</option>
+              {(squadByTeam[form.teamId] || []).map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.first_name} {p.last_name}
+                </option>
+              ))}
+            </select>
+          </>
+        )}
 
         <input
           placeholder="Reason (e.g. Points threshold — 18 pts, Violent conduct)"
@@ -273,22 +363,32 @@ export default function Discipline() {
           style={{ ...fullSelectStyle, marginBottom: 8 }}
         />
 
-        <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, marginBottom: 8 }}>
-          <input
-            type="checkbox"
-            checked={form.isLifetime}
-            onChange={(e) => setForm((p) => ({ ...p, isLifetime: e.target.checked }))}
-          />
-          Lifetime ban
-        </label>
+        <select
+          value={form.banType}
+          onChange={(e) => setForm((p) => ({ ...p, banType: e.target.value }))}
+          style={{ ...fullSelectStyle, marginBottom: 8 }}
+        >
+          <option value="games">Fixed number of games</option>
+          <option value="date">Available again from a date</option>
+          <option value="indefinite">Indefinite / lifetime</option>
+        </select>
 
-        {!form.isLifetime && (
+        {form.banType === 'games' && (
           <input
             type="number"
             min="1"
             placeholder="Games banned"
             value={form.gamesBanned}
             onChange={(e) => setForm((p) => ({ ...p, gamesBanned: e.target.value }))}
+            style={{ ...fullSelectStyle, marginBottom: 8 }}
+          />
+        )}
+
+        {form.banType === 'date' && (
+          <input
+            type="date"
+            value={form.availableFrom}
+            onChange={(e) => setForm((p) => ({ ...p, availableFrom: e.target.value }))}
             style={{ ...fullSelectStyle, marginBottom: 8 }}
           />
         )}
@@ -304,6 +404,25 @@ export default function Discipline() {
           Add ban
         </button>
       </div>
+
+      <h2 style={{ fontSize: 15, textTransform: 'uppercase', letterSpacing: 0.4, color: 'var(--brass)', marginBottom: 12 }}>
+        Total Points by Team
+      </h2>
+      {teamRows.length === 0 ? (
+        <p style={{ color: 'var(--muted)', fontSize: 14, marginBottom: 32 }}>No cards recorded yet.</p>
+      ) : (
+        <div style={{ marginBottom: 32 }}>
+          {teamRows.map((row) => (
+            <div
+              key={row.team.id}
+              style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: '1px solid var(--line)', fontSize: 14 }}
+            >
+              <span>{row.team.name}</span>
+              <strong>{row.points}</strong>
+            </div>
+          ))}
+        </div>
+      )}
 
       <h2 style={{ fontSize: 15, textTransform: 'uppercase', letterSpacing: 0.4, color: 'var(--brass)', marginBottom: 6 }}>
         Points Tracker
