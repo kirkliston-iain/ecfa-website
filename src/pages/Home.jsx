@@ -3,6 +3,8 @@ import { useEffect, useMemo, useState } from 'react'
 import { supabase } from '../supabaseClient'
 import MatchdayCarousel from '../components/MatchdayCarousel'
 
+const APPIN_LOGO = 'https://appinsports.com/wp-content/uploads/logo/logo-footer.png'
+
 const COMPETITIONS = [
   { slug: 'appin-league', name: 'Appin Sports League' },
   { slug: 'knockout-cup', name: 'ECFA Knockout Cup' },
@@ -280,7 +282,10 @@ function MatchCard({ f }) {
         background: '#fff',
       }}
     >
-      <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--brass)', textTransform: 'uppercase', letterSpacing: 0.4, marginBottom: 6 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11, fontWeight: 700, color: 'var(--brass)', textTransform: 'uppercase', letterSpacing: 0.4, marginBottom: 6 }}>
+        {f.compSlug === 'appin-league' && (
+          <img src={APPIN_LOGO} alt="" style={{ height: 14, width: 'auto', objectFit: 'contain' }} />
+        )}
         {f.compName}
       </div>
       <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
