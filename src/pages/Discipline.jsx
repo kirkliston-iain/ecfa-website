@@ -29,6 +29,7 @@ function banForPoints(points) {
 
 export default function Discipline() {
   const [loading, setLoading] = useState(true)
+  const [isAdmin, setIsAdmin] = useState(false)
   const [playerRows, setPlayerRows] = useState([])
   const [teamRows, setTeamRows] = useState([])
   const [seriousRows, setSeriousRows] = useState([])
@@ -54,12 +55,18 @@ export default function Discipline() {
   useEffect(() => {
     loadPointsOverview()
     loadSuspensions()
+    checkAdmin()
     supabase
       .from('teams')
       .select('id, name')
       .order('name')
       .then(({ data }) => setTeams(data || []))
   }, [])
+
+  async function checkAdmin() {
+    const { data: adminRow } = await supabase.from('admin_profiles').select('id').maybeSingle()
+    setIsAdmin(!!adminRow)
+  }
 
   async function loadPointsOverview() {
     const { data } = await supabase
@@ -273,31 +280,36 @@ export default function Discipline() {
                     : `${s.games_served} of ${s.games_banned} games served`}
               </div>
               {s.notes && <div style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 8 }}>{s.notes}</div>}
-              <div style={{ display: 'flex', gap: 8 }}>
-                {!s.is_lifetime && !s.available_from && (
-                  <button
-                    onClick={() => markServed(s)}
-                    disabled={savingSuspension === s.id}
-                    style={{ ...smallButtonStyle, flex: 1 }}
-                  >
-                    +1 game served
+              {isAdmin && (
+                <div style={{ display: 'flex', gap: 8 }}>
+                  {!s.is_lifetime && !s.available_from && (
+                    <button
+                      onClick={() => markServed(s)}
+                      disabled={savingSuspension === s.id}
+                      style={{ ...smallButtonStyle, flex: 1 }}
+                    >
+                      +1 game served
+                    </button>
+                  )}
+                  <button onClick={() => markFullyServed(s)} style={{ ...smallOutlineStyle, flex: 1 }}>
+                    Mark fully served
                   </button>
-                )}
-                <button onClick={() => markFullyServed(s)} style={{ ...smallOutlineStyle, flex: 1 }}>
-                  Mark fully served
-                </button>
-                <button onClick={() => removeSuspension(s.id)} style={{ ...smallOutlineStyle, flex: 1 }}>
-                  Remove
-                </button>
-              </div>
+                  <button onClick={() => removeSuspension(s.id)} style={{ ...smallOutlineStyle, flex: 1 }}>
+                    Remove
+                  </button>
+                </div>
+              )}
             </div>
           ))}
         </div>
       )}
 
       <div style={{ ...cardStyle, marginBottom: 40 }}>
-        <div style={{ fontWeight: 600, marginBottom: 10, fontSize: 14 }}>Add a ban</div>
-
+        <div style={{ fontWeight: 600, marginBottom: 10, fontSize: 14 }}>
+          {isAdmin ? 'Add a ban' : 'Bans'}
+        </div>
+        {isAdmin ? (
+          <>
         <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, marginBottom: 8 }}>
           <input
             type="checkbox"
@@ -403,6 +415,12 @@ export default function Discipline() {
         <button onClick={addSuspension} style={{ ...smallButtonStyle, width: '100%' }}>
           Add ban
         </button>
+          </>
+        ) : (
+          <p style={{ fontSize: 13, color: 'var(--muted)', margin: 0 }}>
+            Only admins can add or change bans. Contact Iain if one needs updating.
+          </p>
+        )}
       </div>
 
       <h2 style={{ fontSize: 15, textTransform: 'uppercase', letterSpacing: 0.4, color: 'var(--brass)', marginBottom: 12 }}>
