@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { supabase } from '../supabaseClient'
 
 export default function AdminDashboard() {
@@ -73,7 +74,7 @@ export default function AdminDashboard() {
     const { data } = await supabase
       .from('fixtures')
       .select(
-        'id, round_name, fixture_date, home_score, away_score, status, hidden_from_public, home_team:home_team_id(id, name), away_team:away_team_id(id, name)'
+        'id, round_name, fixture_date, home_score, away_score, status, hidden_from_public, venue, referee_name, home_team:home_team_id(id, name), away_team:away_team_id(id, name)'
       )
       .eq('stage_id', stageId)
       .neq('status', 'postponed')
@@ -114,6 +115,8 @@ export default function AdminDashboard() {
         away_score: fixture.away_score === '' ? null : Number(fixture.away_score),
         status: fixture.status,
         hidden_from_public: fixture.hidden_from_public,
+        venue: fixture.venue || null,
+        referee_name: fixture.referee_name || null,
       })
       .eq('id', fixture.id)
     setSaving(null)
@@ -254,6 +257,10 @@ export default function AdminDashboard() {
         </button>
       </div>
 
+      <Link to="/admin/teams" style={{ ...linkButtonStyle, display: 'block', marginBottom: 20 }}>
+        Manage squads &rarr;
+      </Link>
+
       <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 24 }}>
         <select value={competitionId} onChange={(e) => setCompetitionId(e.target.value)} style={fullSelectStyle}>
           <option value="">Select competition…</option>
@@ -373,6 +380,20 @@ export default function AdminDashboard() {
                   <option value="postponed">Postponed</option>
                   <option value="cancelled">Cancelled</option>
                 </select>
+
+                <input
+                  placeholder="Venue"
+                  value={f.venue || ''}
+                  onChange={(e) => updateLocal(f.id, 'venue', e.target.value)}
+                  style={{ ...fullSelectStyle, marginBottom: 10 }}
+                />
+
+                <input
+                  placeholder="Referee"
+                  value={f.referee_name || ''}
+                  onChange={(e) => updateLocal(f.id, 'referee_name', e.target.value)}
+                  style={{ ...fullSelectStyle, marginBottom: 10 }}
+                />
 
                 <label style={{ ...labelStyle, display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
                   <input
