@@ -97,7 +97,7 @@ export default function FixtureDetail() {
         if (fixtureIds.length > 0) {
           const { data: hs } = await supabase
             .from('historic_scorers')
-            .select('historic_fixture_id, player_name, goals')
+            .select('historic_fixture_id, player_name, team_name, goals')
             .in('historic_fixture_id', fixtureIds)
           for (const row of hs || []) {
             if (!scorersByFixture[row.historic_fixture_id]) scorersByFixture[row.historic_fixture_id] = []
@@ -189,7 +189,10 @@ export default function FixtureDetail() {
                   day: 'numeric',
                   month: 'short',
                   year: 'numeric',
-                })
+                }) +
+                (fixture.fixture_date.slice(11, 16) !== '00:00'
+                  ? `, ${fixture.fixture_date.slice(11, 16)}`
+                  : '')
               : 'Date TBC'}
           </div>
           {fixture.venue && <div style={{ fontSize: 12, color: 'var(--muted)' }}>{fixture.venue}</div>}
@@ -262,12 +265,30 @@ export default function FixtureDetail() {
               )}
               {m.scorers.length > 0 && (
                 <div style={{ fontSize: 12, color: 'var(--muted)', textAlign: 'center' }}>
-                  Scorers:{' '}
-                  {m.scorers.map((s, i) => (
-                    <span key={i}>
-                      {s.player_name} ({s.goals}){i < m.scorers.length - 1 ? ', ' : ''}
-                    </span>
-                  ))}
+                  {m.scorers.filter((s) => s.team_name === m.home_team_name).length > 0 && (
+                    <div>
+                      <strong>{m.home_team_name}:</strong>{' '}
+                      {m.scorers
+                        .filter((s) => s.team_name === m.home_team_name)
+                        .map((s, i, arr) => (
+                          <span key={i}>
+                            {s.player_name} ({s.goals}){i < arr.length - 1 ? ', ' : ''}
+                          </span>
+                        ))}
+                    </div>
+                  )}
+                  {m.scorers.filter((s) => s.team_name === m.away_team_name).length > 0 && (
+                    <div>
+                      <strong>{m.away_team_name}:</strong>{' '}
+                      {m.scorers
+                        .filter((s) => s.team_name === m.away_team_name)
+                        .map((s, i, arr) => (
+                          <span key={i}>
+                            {s.player_name} ({s.goals}){i < arr.length - 1 ? ', ' : ''}
+                          </span>
+                        ))}
+                    </div>
+                  )}
                 </div>
               )}
             </div>
