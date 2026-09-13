@@ -356,8 +356,12 @@ export default function AdminDashboard() {
         Manage squads &rarr;
       </Link>
 
-      <Link to="/admin/lists" style={{ ...linkButtonStyle, display: 'block', marginBottom: 20 }}>
+      <Link to="/admin/lists" style={{ ...linkButtonStyle, display: 'block', marginBottom: 8 }}>
         Manage referees &amp; venues &rarr;
+      </Link>
+
+      <Link to="/admin/season" style={{ ...linkButtonStyle, display: 'block', marginBottom: 20 }}>
+        Season management &rarr;
       </Link>
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 24 }}>
