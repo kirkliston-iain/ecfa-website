@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom'
 
-function Badge({ logoUrl, name, size = 20 }) {
+function Badge({ logoUrl, name, size = 26 }) {
   if (logoUrl) {
     return (
       <img
@@ -49,7 +49,7 @@ export function TopScorersTable({ rows }) {
     <div style={{ marginBottom: 40 }}>
       <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 14 }}>
         <thead>
-          <tr style={{ borderBottom: '3px solid var(--brass)' }}>
+          <tr style={{ borderBottom: '2px solid var(--line)' }}>
             <th style={thStyle('left')}>#</th>
             <th style={thStyle('left')}>Player</th>
             <th style={thStyle('left')}>Team</th>
@@ -59,13 +59,13 @@ export function TopScorersTable({ rows }) {
         <tbody>
           {rows.map((row, i) => (
             <tr key={row.player_id} style={{ borderBottom: '1px solid var(--line)' }}>
-              <td style={{ padding: '10px 8px' }}>{i + 1}</td>
+              <td style={{ padding: '10px 8px', color: 'var(--muted)' }}>{i + 1}</td>
               <td style={{ padding: '10px 8px', fontWeight: 600 }}>
                 {row.first_name} {row.last_name}
               </td>
               <td style={{ padding: '10px 8px', color: 'var(--muted)' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <Badge logoUrl={row.team_logo} name={row.team_name} />
+                  <Badge logoUrl={row.team_logo} name={row.team_name} size={20} />
                   <span>{row.team_name}</span>
                 </div>
               </td>
@@ -95,47 +95,36 @@ export default function StandingsTable({ groupName, rows }) {
       )}
       <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 14 }}>
         <thead>
-          <tr style={{ borderBottom: '3px solid var(--brass)' }}>
-            <th style={thStyle('left')}>#</th>
+          <tr style={{ color: 'var(--muted)' }}>
+            <th style={{ ...thStyle('left'), width: 30 }}>Pos</th>
             <th style={thStyle('left')}>Team</th>
-            <th style={thStyle()}>P</th>
-            <th style={thStyle()}>W</th>
-            <th style={thStyle()}>D</th>
-            <th style={thStyle()}>L</th>
-            <th style={thStyle()}>GD</th>
-            <th style={thStyle()}>Pts</th>
+            <th style={{ ...thStyle(), width: 34 }}>Pl</th>
+            <th style={{ ...thStyle(), width: 34 }}>W</th>
+            <th style={{ ...thStyle(), width: 40 }}>GD</th>
+            <th style={{ ...thStyle(), width: 40 }}>Pts</th>
           </tr>
         </thead>
         <tbody>
           {rows.map((row, i) => (
-            <tr key={row.teamId} style={{ borderBottom: '1px solid var(--line)' }}>
-              <td style={tdStyle('left')}>{i + 1}</td>
-              <td style={{ ...tdStyle('left'), fontWeight: 600 }}>
-                <Link
-                  to={`/teams/${row.teamId}`}
-                  style={{
-                    color: 'var(--brass)',
-                    textDecoration: 'underline',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 8,
-                  }}
-                >
+            <tr key={row.teamId} style={{ borderTop: '1px solid var(--line)' }}>
+              <td style={{ padding: '14px 8px 14px 12px', borderLeft: '4px solid var(--brass)', fontWeight: 700, color: 'var(--muted)' }}>
+                {i + 1}
+              </td>
+              <td style={{ padding: '14px 8px' }}>
+                <Link to={`/teams/${row.teamId}`} style={{ display: 'flex', alignItems: 'center', gap: 10, fontWeight: 700, color: 'var(--ink)' }}>
                   <Badge logoUrl={row.teamLogo} name={row.teamName} />
                   <span>{row.teamName}</span>
                 </Link>
               </td>
               <td style={tdStyle()}>{row.played}</td>
               <td style={tdStyle()}>{row.won}</td>
-              <td style={tdStyle()}>{row.drawn}</td>
-              <td style={tdStyle()}>{row.lost}</td>
               <td style={tdStyle()}>{row.goalDifference}</td>
               <td style={{ ...tdStyle(), fontWeight: 800, color: 'var(--ink)' }}>{row.points}</td>
             </tr>
           ))}
           {rows.length === 0 && (
             <tr>
-              <td colSpan={8} style={{ padding: '24px 8px', textAlign: 'center', color: 'var(--muted)' }}>
+              <td colSpan={6} style={{ padding: '24px 8px', textAlign: 'center', color: 'var(--muted)' }}>
                 No standings yet — check back once fixtures have been played.
               </td>
             </tr>
@@ -149,15 +138,14 @@ export default function StandingsTable({ groupName, rows }) {
 function thStyle(align = 'center') {
   return {
     textAlign: align,
-    padding: '8px',
-    fontWeight: 700,
-    color: 'var(--ink)',
+    padding: '6px 8px',
+    fontWeight: 600,
     textTransform: 'uppercase',
-    fontSize: 12,
+    fontSize: 11,
     letterSpacing: 0.4,
   }
 }
 
-function tdStyle(align = 'center') {
-  return { textAlign: align, padding: '10px 8px' }
+function tdStyle() {
+  return { textAlign: 'center', padding: '14px 8px' }
 }
