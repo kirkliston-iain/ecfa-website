@@ -98,7 +98,16 @@ export default function Competition() {
 
   return (
     <div className="container" style={{ padding: '32px 20px 48px' }}>
-      <h1 style={{ fontSize: 30, marginBottom: 4 }}>{competition.name}</h1>
+      <h1 style={{ fontSize: 30, marginBottom: 4, display: 'flex', alignItems: 'center', gap: 12 }}>
+        {competition.slug === 'appin-league' && (
+          <img
+            src="https://appinsports.com/wp-content/uploads/logo/logo-footer.png"
+            alt=""
+            style={{ height: 30, width: 'auto', objectFit: 'contain' }}
+          />
+        )}
+        {competition.name}
+      </h1>
       <p style={{ color: 'var(--muted)', marginBottom: 32 }}>{competition.season} season</p>
 
       {stages.map((stage) => (
