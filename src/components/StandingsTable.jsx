@@ -1,5 +1,49 @@
 import { Link } from 'react-router-dom'
 
+function Badge({ logoUrl, name, size = 20 }) {
+  if (logoUrl) {
+    return (
+      <img
+        src={logoUrl}
+        alt=""
+        style={{
+          width: size,
+          height: size,
+          borderRadius: '50%',
+          objectFit: 'cover',
+          background: '#fff',
+          flexShrink: 0,
+        }}
+      />
+    )
+  }
+  const initials = (name || '?')
+    .split(' ')
+    .map((w) => w[0])
+    .slice(0, 2)
+    .join('')
+    .toUpperCase()
+  return (
+    <span
+      style={{
+        width: size,
+        height: size,
+        borderRadius: '50%',
+        background: 'var(--ink)',
+        color: '#fff',
+        display: 'inline-flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        fontSize: size * 0.4,
+        fontWeight: 700,
+        flexShrink: 0,
+      }}
+    >
+      {initials}
+    </span>
+  )
+}
+
 export function TopScorersTable({ rows }) {
   return (
     <div style={{ marginBottom: 40 }}>
@@ -19,7 +63,12 @@ export function TopScorersTable({ rows }) {
               <td style={{ padding: '10px 8px', fontWeight: 600 }}>
                 {row.first_name} {row.last_name}
               </td>
-              <td style={{ padding: '10px 8px', color: 'var(--muted)' }}>{row.team_name}</td>
+              <td style={{ padding: '10px 8px', color: 'var(--muted)' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <Badge logoUrl={row.team_logo} name={row.team_name} />
+                  <span>{row.team_name}</span>
+                </div>
+              </td>
               <td style={{ padding: '10px 8px', textAlign: 'center', fontWeight: 800, color: 'var(--ink)' }}>
                 {row.total_goals}
               </td>
@@ -64,9 +113,16 @@ export default function StandingsTable({ groupName, rows }) {
               <td style={{ ...tdStyle('left'), fontWeight: 600 }}>
                 <Link
                   to={`/teams/${row.teamId}`}
-                  style={{ color: 'var(--brass)', textDecoration: 'underline' }}
+                  style={{
+                    color: 'var(--brass)',
+                    textDecoration: 'underline',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 8,
+                  }}
                 >
-                  {row.teamName}
+                  <Badge logoUrl={row.teamLogo} name={row.teamName} />
+                  <span>{row.teamName}</span>
                 </Link>
               </td>
               <td style={tdStyle()}>{row.played}</td>
