@@ -44,6 +44,10 @@ export default function Discipline() {
   const [editTeamOverrideValue, setEditTeamOverrideValue] = useState('')
   const [editingSuspensionTeam, setEditingSuspensionTeam] = useState(null)
   const [editSuspensionTeamValue, setEditSuspensionTeamValue] = useState('')
+  const [playerPoints, setPlayerPoints] = useState([])
+  const [editingPlayerPoint, setEditingPlayerPoint] = useState(null)
+  const [editPlayerPointValue, setEditPlayerPointValue] = useState('')
+  const [newPlayerPoint, setNewPlayerPoint] = useState({ teamId: '', playerName: '', points: '' })
   const [newOverrideTeamId, setNewOverrideTeamId] = useState('')
   const [newOverridePoints, setNewOverridePoints] = useState('')
 
@@ -66,6 +70,7 @@ export default function Discipline() {
     loadPointsOverview()
     loadSuspensions()
     loadTeamOverrides()
+    loadPlayerPoints()
     checkAdmin()
     supabase
       .from('teams')
@@ -102,6 +107,42 @@ export default function Discipline() {
     setNewOverrideTeamId('')
     setNewOverridePoints('')
     loadTeamOverrides()
+  }
+
+  async function loadPlayerPoints() {
+    const { data } = await supabase
+      .from('player_discipline_points')
+      .select('id, team_id, team_name_raw, player_name, points, team:team_id(id, name)')
+      .eq('season', '2026/27')
+      .order('points', { ascending: false })
+    setPlayerPoints(data || [])
+  }
+
+  async function savePlayerPoint(id) {
+    const points = Number(editPlayerPointValue)
+    if (Number.isNaN(points)) return
+    await supabase.from('player_discipline_points').update({ points }).eq('id', id)
+    setEditingPlayerPoint(null)
+    loadPlayerPoints()
+  }
+
+  async function removePlayerPoint(id) {
+    await supabase.from('player_discipline_points').delete().eq('id', id)
+    loadPlayerPoints()
+  }
+
+  async function addPlayerPoint() {
+    if (!newPlayerPoint.teamId || !newPlayerPoint.playerName.trim() || newPlayerPoint.points === '') return
+    const team = teams.find((t) => t.id === newPlayerPoint.teamId)
+    await supabase.from('player_discipline_points').insert({
+      team_id: newPlayerPoint.teamId,
+      team_name_raw: team?.name || '',
+      player_name: newPlayerPoint.playerName.trim(),
+      points: Number(newPlayerPoint.points),
+      season: '2026/27',
+    })
+    setNewPlayerPoint({ teamId: '', playerName: '', points: '' })
+    loadPlayerPoints()
   }
 
   async function checkAdmin() {
@@ -662,6 +703,102 @@ export default function Discipline() {
               </div>
             )
           })}
+        </div>
+      )}
+
+      <h2 style={{ fontSize: 15, textTransform: 'uppercase', letterSpacing: 0.4, color: 'var(--brass)', marginBottom: 6 }}>
+        Individual Player Points (2026/27)
+      </h2>
+      <p style={{ fontSize: 13, color: 'var(--muted)', marginBottom: 12 }}>
+        Sourced from the club's disciplinary records. Feeds into the team totals above.
+      </p>
+      {isAdmin && (
+        <div style={{ ...cardStyle, marginBottom: 16 }}>
+          <div style={{ fontWeight: 600, marginBottom: 10, fontSize: 14 }}>Add / correct a player</div>
+          <select
+            value={newPlayerPoint.teamId}
+            onChange={(e) => setNewPlayerPoint((p) => ({ ...p, teamId: e.target.value }))}
+            style={{ ...fullSelectStyle, marginBottom: 8 }}
+          >
+            <option value="">Select team…</option>
+            {teams.map((t) => (
+              <option key={t.id} value={t.id}>
+                {t.name}
+              </option>
+            ))}
+          </select>
+          <input
+            placeholder="Player name"
+            value={newPlayerPoint.playerName}
+            onChange={(e) => setNewPlayerPoint((p) => ({ ...p, playerName: e.target.value }))}
+            style={{ ...fullSelectStyle, marginBottom: 8 }}
+          />
+          <div style={{ display: 'flex', gap: 8 }}>
+            <input
+              type="number"
+              placeholder="Points"
+              value={newPlayerPoint.points}
+              onChange={(e) => setNewPlayerPoint((p) => ({ ...p, points: e.target.value }))}
+              style={{ ...fullSelectStyle, flex: 1 }}
+            />
+            <button onClick={addPlayerPoint} style={{ ...smallButtonStyle, flex: 1 }}>
+              Add
+            </button>
+          </div>
+        </div>
+      )}
+      {playerPoints.filter((p) => !teamFilter || p.team_id === teamFilter).length === 0 ? (
+        <p style={{ color: 'var(--muted)', fontSize: 14, marginBottom: 32 }}>No player points recorded yet.</p>
+      ) : (
+        <div style={{ marginBottom: 32 }}>
+          {playerPoints
+            .filter((p) => !teamFilter || p.team_id === teamFilter)
+            .map((p) => {
+              const isEditing = editingPlayerPoint === p.id
+              return (
+                <div key={p.id} style={{ padding: '8px 0', borderBottom: '1px solid var(--line)' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 14 }}>
+                    <span>
+                      {p.player_name}
+                      <span style={{ fontSize: 11, color: 'var(--muted)' }}> — {p.team?.name || p.team_name_raw}</span>
+                    </span>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <strong>{p.points}</strong>
+                      {isAdmin && !isEditing && (
+                        <button
+                          onClick={() => {
+                            setEditingPlayerPoint(p.id)
+                            setEditPlayerPointValue(String(p.points))
+                          }}
+                          style={{ ...smallOutlineStyle, padding: '4px 8px', fontSize: 12 }}
+                        >
+                          Edit
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                  {isAdmin && isEditing && (
+                    <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
+                      <input
+                        type="number"
+                        value={editPlayerPointValue}
+                        onChange={(e) => setEditPlayerPointValue(e.target.value)}
+                        style={{ ...fullSelectStyle, flex: 1 }}
+                      />
+                      <button onClick={() => savePlayerPoint(p.id)} style={{ ...smallButtonStyle, flex: 1 }}>
+                        Save
+                      </button>
+                      <button onClick={() => removePlayerPoint(p.id)} style={{ ...smallOutlineStyle, flex: 1 }}>
+                        Remove
+                      </button>
+                      <button onClick={() => setEditingPlayerPoint(null)} style={{ ...smallOutlineStyle, flex: 1 }}>
+                        Cancel
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )
+            })}
         </div>
       )}
 
