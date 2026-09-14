@@ -271,7 +271,7 @@ export default function Discipline() {
   async function loadSuspensions() {
     const { data } = await supabase
       .from('suspensions')
-      .select('id, reason, games_banned, is_lifetime, games_served, status, notes, available_from, created_at, player:player_id(id, first_name, last_name), team:team_id(id, name)')
+      .select('id, reason, games_banned, is_lifetime, games_served, status, notes, available_from, start_date, created_at, player:player_id(id, first_name, last_name), team:team_id(id, name)')
       .order('created_at', { ascending: false })
     setSuspensions(data || [])
   }
@@ -418,7 +418,7 @@ export default function Discipline() {
   const manualSuspensions = suspensions.map((s) => ({
     ...s,
     automaticGamesServed: s.team?.id
-      ? gamesPlayedSince(s.team.id, s.created_at)
+      ? gamesPlayedSince(s.team.id, s.start_date || s.created_at)
       : Number(s.games_served || 0),
   }))
   const manuallyCoveredPlayers = new Set(
