@@ -61,6 +61,10 @@ function Badge({ logoUrl, name, size = 20 }) {
   )
 }
 
+function normalisePlayerName(name) {
+  return String(name || '').trim().replace(/\s+/g, ' ').toLocaleLowerCase('en-GB')
+}
+
 // Supabase/PostgREST caps a plain select at 1000 rows by default. historic_scorers
 // has more rows than that, so a single query silently truncates the tail end of the
 // table. Page through it in batches of 1000 so every row is loaded.
@@ -129,49 +133,43 @@ export default function ScorersPage() {
   }, [])
 
   const rows = useMemo(() => {
-    if (season === 'overall') {
-      const totals = {}
-      const playerIds = {}
-      for (const r of historic) {
-        totals[r.player_name] = (totals[r.player_name] || 0) + Number(r.goals)
-      }
-      for (const r of current) {
-        totals[r.player_name] = (totals[r.player_name] || 0) + r.goals
-        if (r.player_id) playerIds[r.player_name] = r.player_id
-      }
-      return Object.entries(totals)
-        .map(([player_name, goals]) => ({ player_name, goals, player_id: playerIds[player_name] || null }))
-        .sort((a, b) => b.goals - a.goals)
+    const rosterNames = {}
+    const rosterIds = {}
+    for (const row of current) {
+      const key = normalisePlayerName(row.player_name)
+      rosterNames[key] = row.player_name
+      if (row.player_id) rosterIds[key] = row.player_id
     }
 
-    if (season === '2026/27') {
-      const totals = {}
-      const teamOf = {}
-      const playerIds = {}
-      for (const r of current) {
-        totals[r.player_name] = (totals[r.player_name] || 0) + r.goals
-        teamOf[r.player_name] = r.team_name
-        if (r.player_id) playerIds[r.player_name] = r.player_id
-      }
-      return Object.entries(totals)
-        .map(([player_name, goals]) => ({ player_name, team_name: teamOf[player_name], goals, player_id: playerIds[player_name] || null }))
-        .sort((a, b) => b.goals - a.goals)
-    }
+    const sourceRows = season === 'overall'
+      ? [...historic, ...current]
+      : season === '2026/27'
+        ? current
+        : historic.filter((row) => row.season === season)
 
     const totals = {}
+    const displayNames = {}
     const teamOf = {}
-    for (const r of historic) {
-      if (r.season !== season) continue
-      totals[r.player_name] = (totals[r.player_name] || 0) + Number(r.goals)
-      teamOf[r.player_name] = r.team_name
+    for (const row of sourceRows) {
+      const key = normalisePlayerName(row.player_name)
+      if (!key) continue
+      totals[key] = (totals[key] || 0) + Number(row.goals || 0)
+      displayNames[key] = rosterNames[key] || displayNames[key] || String(row.player_name).trim()
+      if (row.team_name) teamOf[key] = row.team_name
     }
+
     return Object.entries(totals)
-      .map(([player_name, goals]) => ({ player_name, team_name: teamOf[player_name], goals }))
+      .map(([key, goals]) => ({
+        player_name: displayNames[key],
+        player_id: rosterIds[key] || null,
+        team_name: teamOf[key] || '',
+        goals,
+      }))
       .sort((a, b) => b.goals - a.goals)
   }, [season, historic, current])
 
   const visibleRows = playerSearch
-    ? rows.filter((row) => row.player_name.toLowerCase() === playerSearch.toLowerCase())
+    ? rows.filter((row) => normalisePlayerName(row.player_name) === normalisePlayerName(playerSearch))
     : rows
 
   if (loading) return <div className="container" style={{ padding: 48 }}>Loading…</div>
