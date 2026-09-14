@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { supabase } from '../supabaseClient'
 
 const YELLOW_POINTS = 2
@@ -521,6 +522,23 @@ export default function Discipline() {
       <p style={{ color: 'var(--muted)', fontSize: 13, marginBottom: 20 }}>
         Private — not shown on the public site.
       </p>
+
+      <Link
+        to="/discipline/weekly"
+        style={{
+          display: 'block',
+          padding: '12px 14px',
+          marginBottom: 22,
+          borderRadius: 7,
+          background: 'var(--ink)',
+          color: '#fff',
+          textAlign: 'center',
+          fontSize: 14,
+          fontWeight: 800,
+        }}
+      >
+        Generate weekly discipline report
+      </Link>
 
       <select
         value={teamFilter}
