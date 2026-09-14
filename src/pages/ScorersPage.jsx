@@ -101,7 +101,7 @@ export default function ScorersPage() {
 
       const { data: scorers } = await supabase
         .from('fixture_scorers')
-        .select('goals, player:player_id(first_name, last_name), team:team_id(name)')
+        .select('goals, player:player_id(id, first_name, last_name), team:team_id(name)')
 
       const { data: teams } = await supabase.from('teams').select('name, logo_url')
 
@@ -109,6 +109,7 @@ export default function ScorersPage() {
         setHistoric(hist || [])
         setCurrent(
           (scorers || []).map((s) => ({
+            player_id: s.player?.id || null,
             player_name: `${s.player?.first_name || ''} ${s.player?.last_name || ''}`.trim(),
             team_name: s.team?.name || '',
             goals: Number(s.goals),
@@ -130,26 +131,30 @@ export default function ScorersPage() {
   const rows = useMemo(() => {
     if (season === 'overall') {
       const totals = {}
+      const playerIds = {}
       for (const r of historic) {
         totals[r.player_name] = (totals[r.player_name] || 0) + Number(r.goals)
       }
       for (const r of current) {
         totals[r.player_name] = (totals[r.player_name] || 0) + r.goals
+        if (r.player_id) playerIds[r.player_name] = r.player_id
       }
       return Object.entries(totals)
-        .map(([player_name, goals]) => ({ player_name, goals }))
+        .map(([player_name, goals]) => ({ player_name, goals, player_id: playerIds[player_name] || null }))
         .sort((a, b) => b.goals - a.goals)
     }
 
     if (season === '2026/27') {
       const totals = {}
       const teamOf = {}
+      const playerIds = {}
       for (const r of current) {
         totals[r.player_name] = (totals[r.player_name] || 0) + r.goals
         teamOf[r.player_name] = r.team_name
+        if (r.player_id) playerIds[r.player_name] = r.player_id
       }
       return Object.entries(totals)
-        .map(([player_name, goals]) => ({ player_name, team_name: teamOf[player_name], goals }))
+        .map(([player_name, goals]) => ({ player_name, team_name: teamOf[player_name], goals, player_id: playerIds[player_name] || null }))
         .sort((a, b) => b.goals - a.goals)
     }
 
@@ -221,7 +226,9 @@ export default function ScorersPage() {
           {visibleRows.slice(0, 100).map((row, i) => (
             <tr key={row.player_name} style={{ borderBottom: '1px solid var(--line)' }}>
               <td style={{ padding: '10px 8px' }}>{i + 1}</td>
-              <td style={{ padding: '10px 8px', fontWeight: 600 }}>{row.player_name}</td>
+              <td style={{ padding: '10px 8px', fontWeight: 600 }}>
+                {row.player_id ? <Link to={`/players/${row.player_id}`} style={{ color: 'var(--ink)' }}>{row.player_name}</Link> : row.player_name}
+              </td>
               {season !== 'overall' && (
                 <td style={{ padding: '10px 8px', color: 'var(--muted)' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
