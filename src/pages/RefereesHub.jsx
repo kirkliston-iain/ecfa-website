@@ -3,6 +3,24 @@ import { supabase } from '../supabaseClient'
 
 const CURRENT_SEASON_FALLBACK = ''
 
+const TEAM_CODES = {
+  'Barclay Viewforth Church': 'BAR',
+  'Carrubbers Church': 'CAR',
+  'Gorgie United Salvation Army': 'GOR',
+  'Kirkliston Community Church': 'KCC',
+  'Ladywell Baptist Church': 'LAD',
+  'Liberton Church': 'LIB',
+  'Murrayburn Church': 'MUR',
+  'North Berwick Abbey Church': 'NBK',
+  'South East Saints': 'SES',
+  'St Marys Metropolitan Church': 'STM',
+  'The Mission': 'MIS',
+  'White Lightning Bruntsfield Church': 'WLB',
+}
+function teamCode(name) {
+  return TEAM_CODES[name] || (name ? name.slice(0, 3).toUpperCase() : '???')
+}
+
 function GameRow({ f, showResult }) {
   return (
     <div style={cardStyle}>
@@ -79,9 +97,13 @@ export default function RefereesHub() {
       const teamsByRef = {}
       for (const f of playedFixtures || []) {
         gamesByRef[f.referee_name] = (gamesByRef[f.referee_name] || 0) + 1
-        teamsByRef[f.referee_name] = teamsByRef[f.referee_name] || new Set()
-        if (f.home_team?.name) teamsByRef[f.referee_name].add(f.home_team.name)
-        if (f.away_team?.name) teamsByRef[f.referee_name].add(f.away_team.name)
+        teamsByRef[f.referee_name] = teamsByRef[f.referee_name] || {}
+        if (f.home_team?.name) {
+          teamsByRef[f.referee_name][f.home_team.name] = (teamsByRef[f.referee_name][f.home_team.name] || 0) + 1
+        }
+        if (f.away_team?.name) {
+          teamsByRef[f.referee_name][f.away_team.name] = (teamsByRef[f.referee_name][f.away_team.name] || 0) + 1
+        }
       }
 
       const fixtureIds = (playedFixtures || []).map((f) => f.id)
@@ -104,7 +126,9 @@ export default function RefereesHub() {
         .map((r) => {
           const games = gamesByRef[r.name] || 0
           const cards = cardsByRef[r.name] || 0
-          const teams = Array.from(teamsByRef[r.name] || []).sort()
+          const teams = Object.entries(teamsByRef[r.name] || {})
+            .sort((a, b) => b[1] - a[1])
+            .map(([name, count]) => `${teamCode(name)}:${count}`)
           return { name: r.name, games, cards, rate: games ? cards / games : 0, teams }
         })
         .filter((r) => r.games > 0)
