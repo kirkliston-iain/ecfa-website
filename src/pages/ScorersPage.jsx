@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { Link, useSearchParams } from 'react-router-dom'
 import { supabase } from '../supabaseClient'
 
 const SEASON_OPTIONS = [
@@ -82,6 +83,8 @@ async function fetchAllHistoricScorers() {
 }
 
 export default function ScorersPage() {
+  const [searchParams] = useSearchParams()
+  const playerSearch = (searchParams.get('player') || '').trim()
   const [season, setSeason] = useState('overall')
   const [loading, setLoading] = useState(true)
   const [historic, setHistoric] = useState([])
@@ -162,6 +165,10 @@ export default function ScorersPage() {
       .sort((a, b) => b.goals - a.goals)
   }, [season, historic, current])
 
+  const visibleRows = playerSearch
+    ? rows.filter((row) => row.player_name.toLowerCase() === playerSearch.toLowerCase())
+    : rows
+
   if (loading) return <div className="container" style={{ padding: 48 }}>Loading…</div>
 
   const seasonLabel =
@@ -195,6 +202,12 @@ export default function ScorersPage() {
         ))}
       </select>
 
+      {playerSearch && (
+        <div style={{ marginBottom: 18, padding: '10px 12px', background: '#f5f8fa', border: '1px solid var(--line)', borderRadius: 6, fontSize: 14 }}>
+          Showing scorer history for <strong>{playerSearch}</strong>. <Link to="/scorers" style={{ color: 'var(--brass)', fontWeight: 700 }}>Show all</Link>
+        </div>
+      )}
+
       <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 14 }}>
         <thead>
           <tr style={{ borderBottom: '3px solid var(--brass)' }}>
@@ -205,7 +218,7 @@ export default function ScorersPage() {
           </tr>
         </thead>
         <tbody>
-          {rows.slice(0, 100).map((row, i) => (
+          {visibleRows.slice(0, 100).map((row, i) => (
             <tr key={row.player_name} style={{ borderBottom: '1px solid var(--line)' }}>
               <td style={{ padding: '10px 8px' }}>{i + 1}</td>
               <td style={{ padding: '10px 8px', fontWeight: 600 }}>{row.player_name}</td>
@@ -222,7 +235,7 @@ export default function ScorersPage() {
               </td>
             </tr>
           ))}
-          {rows.length === 0 && (
+          {visibleRows.length === 0 && (
             <tr>
               <td colSpan={season === 'overall' ? 3 : 4} style={{ padding: '24px 8px', textAlign: 'center', color: 'var(--muted)' }}>
                 No scorers recorded for this season.
