@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { supabase } from '../supabaseClient'
 
 const CURRENT_SEASON_FALLBACK = ''
@@ -42,8 +43,9 @@ function GameRow({ f, showResult }) {
 }
 
 export default function RefereesHub() {
+  const [searchParams] = useSearchParams()
   const [referees, setReferees] = useState([])
-  const [refName, setRefName] = useState('')
+  const [refName, setRefName] = useState(searchParams.get('ref') || '')
   const [loading, setLoading] = useState(false)
   const [currentSeason, setCurrentSeason] = useState(CURRENT_SEASON_FALLBACK)
   const [isAdmin, setIsAdmin] = useState(false)
