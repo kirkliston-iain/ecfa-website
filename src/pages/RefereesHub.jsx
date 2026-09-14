@@ -71,13 +71,17 @@ export default function RefereesHub() {
     async function load() {
       const { data: playedFixtures } = await supabase
         .from('fixtures')
-        .select('id, referee_name')
+        .select('id, referee_name, home_team:home_team_id(name), away_team:away_team_id(name)')
         .eq('status', 'played')
         .not('referee_name', 'is', null)
 
       const gamesByRef = {}
+      const teamsByRef = {}
       for (const f of playedFixtures || []) {
         gamesByRef[f.referee_name] = (gamesByRef[f.referee_name] || 0) + 1
+        teamsByRef[f.referee_name] = teamsByRef[f.referee_name] || new Set()
+        if (f.home_team?.name) teamsByRef[f.referee_name].add(f.home_team.name)
+        if (f.away_team?.name) teamsByRef[f.referee_name].add(f.away_team.name)
       }
 
       const fixtureIds = (playedFixtures || []).map((f) => f.id)
@@ -100,7 +104,8 @@ export default function RefereesHub() {
         .map((r) => {
           const games = gamesByRef[r.name] || 0
           const cards = cardsByRef[r.name] || 0
-          return { name: r.name, games, cards, rate: games ? cards / games : 0 }
+          const teams = Array.from(teamsByRef[r.name] || []).sort()
+          return { name: r.name, games, cards, rate: games ? cards / games : 0, teams }
         })
         .filter((r) => r.games > 0)
         .sort((a, b) => b.rate - a.rate)
@@ -212,6 +217,15 @@ export default function RefereesHub() {
   }
   const teamCountsList = Object.entries(teamCounts).sort((a, b) => b[1] - a[1])
 
+  const venueCounts = {}
+  for (const g of gamesForSeason) {
+    if (!g.venue) continue
+    const v = g.venue.trim()
+    if (['n/a', 'league decide', ''].includes(v.toLowerCase())) continue
+    venueCounts[v] = (venueCounts[v] || 0) + 1
+  }
+  const venueCountsList = Object.entries(venueCounts).sort((a, b) => b[1] - a[1])
+
   return (
     <div className="container" style={{ padding: '32px 20px 48px' }}>
       <h1 style={{ fontSize: 30, marginBottom: 4 }}>Referees</h1>
@@ -222,31 +236,32 @@ export default function RefereesHub() {
       {isAdmin && leagueTable.length > 0 && (
         <section style={{ marginBottom: 32 }}>
           <h2 style={sectionHeaderStyle}>Cards League Table — {currentSeason} (Admin only)</h2>
-          <div style={{ display: 'flex', fontSize: 11, color: 'var(--muted)', padding: '4px 0', fontWeight: 700 }}>
-            <div style={{ flex: 1 }}>Referee</div>
-            <div style={{ width: 50, textAlign: 'center' }}>Games</div>
-            <div style={{ width: 50, textAlign: 'center' }}>Cards</div>
-            <div style={{ width: 50, textAlign: 'center' }}>Rate</div>
+          <div style={{ overflowX: 'auto' }}>
+            <table style={tableStyle}>
+              <thead>
+                <tr>
+                  <th style={thStyle}>Referee</th>
+                  <th style={{ ...thStyle, textAlign: 'center' }}>Games</th>
+                  <th style={{ ...thStyle, textAlign: 'center' }}>Cards</th>
+                  <th style={{ ...thStyle, textAlign: 'center' }}>Rate</th>
+                  <th style={thStyle}>Teams</th>
+                </tr>
+              </thead>
+              <tbody>
+                {leagueTable.map((r, i) => (
+                  <tr key={r.name}>
+                    <td style={tdStyle}>
+                      {i + 1}. {r.name}
+                    </td>
+                    <td style={{ ...tdStyle, textAlign: 'center' }}>{r.games}</td>
+                    <td style={{ ...tdStyle, textAlign: 'center' }}>{r.cards}</td>
+                    <td style={{ ...tdStyle, textAlign: 'center', fontWeight: 700 }}>{r.rate.toFixed(2)}</td>
+                    <td style={{ ...tdStyle, color: 'var(--muted)' }}>{r.teams.join(', ')}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
-          {leagueTable.map((r, i) => (
-            <div
-              key={r.name}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                fontSize: 13,
-                padding: '6px 0',
-                borderBottom: '1px solid var(--line)',
-              }}
-            >
-              <div style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                {i + 1}. {r.name}
-              </div>
-              <div style={{ width: 50, textAlign: 'center' }}>{r.games}</div>
-              <div style={{ width: 50, textAlign: 'center' }}>{r.cards}</div>
-              <div style={{ width: 50, textAlign: 'center', fontWeight: 700 }}>{r.rate.toFixed(2)}</div>
-            </div>
-          ))}
         </section>
       )}
 
@@ -331,6 +346,23 @@ export default function RefereesHub() {
             </>
           )}
 
+          {venueCountsList.length > 0 && (
+            <>
+              <h2 style={sectionHeaderStyle}>Venues — {seasonFilter}</h2>
+              <p style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 10 }}>
+                How many times this referee has been at each venue this season.
+              </p>
+              <div style={{ marginBottom: 28 }}>
+                {venueCountsList.map(([venue, count]) => (
+                  <div key={venue} style={{ display: 'flex', justifyContent: 'space-between', padding: '5px 0', borderBottom: '1px solid var(--line)', fontSize: 13 }}>
+                    <span>{venue}</span>
+                    <strong>{count}</strong>
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
+
           <h2 style={sectionHeaderStyle}>All Games</h2>
           {gamesForSeason.length === 0 ? (
             <p style={{ color: 'var(--muted)', fontSize: 14 }}>No games recorded for this season.</p>
@@ -388,4 +420,25 @@ const statLabelStyle = {
 const statValueStyle = {
   fontSize: 22,
   fontWeight: 800,
+}
+const tableStyle = {
+  width: '100%',
+  borderCollapse: 'collapse',
+  fontSize: 12,
+  minWidth: 480,
+}
+const thStyle = {
+  textAlign: 'left',
+  fontSize: 11,
+  textTransform: 'uppercase',
+  letterSpacing: 0.3,
+  color: 'var(--muted)',
+  padding: '6px 8px',
+  borderBottom: '1px solid var(--line)',
+  whiteSpace: 'nowrap',
+}
+const tdStyle = {
+  padding: '6px 8px',
+  borderBottom: '1px solid var(--line)',
+  verticalAlign: 'top',
 }
