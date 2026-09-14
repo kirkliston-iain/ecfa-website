@@ -443,6 +443,12 @@ export default function Discipline() {
       return !s.games_banned || s.automaticGamesServed < s.games_banned
     })
     .filter((s) => !teamFilter || s.team?.id === teamFilter)
+    .sort((a, b) => {
+      if (!!a.isAutomatic !== !!b.isAutomatic) return a.isAutomatic ? -1 : 1
+      const aName = `${a.player?.last_name || ''} ${a.player?.first_name || ''}`
+      const bName = `${b.player?.last_name || ''} ${b.player?.first_name || ''}`
+      return aName.localeCompare(bName)
+    })
   const filteredPlayerRows = playerRows.filter((row) => !teamFilter || row.team.id === teamFilter)
 
   const completedSeriousBans = seriousRows
@@ -529,72 +535,92 @@ export default function Discipline() {
       {activeSuspensions.length === 0 ? (
         <p style={{ color: 'var(--muted)', fontSize: 14, marginBottom: 24 }}>No active bans right now.</p>
       ) : (
-        <div style={{ marginBottom: 24 }}>
-          {activeSuspensions.map((s) => (
-            <div key={s.id} style={cardStyle}>
-              <div style={{ fontWeight: 600 }}>
-                {s.player.first_name} {s.player.last_name}
-              </div>
-              <div style={{ fontSize: 13, color: 'var(--muted)', marginBottom: 6 }}>
-                {editingSuspensionTeam === s.id ? (
-                  <div style={{ display: 'flex', gap: 8 }}>
-                    <select
-                      value={editSuspensionTeamValue}
-                      onChange={(e) => setEditSuspensionTeamValue(e.target.value)}
-                      style={{ ...fullSelectStyle, flex: 1 }}
-                    >
-                      <option value="">No team</option>
-                      {teams.map((t) => (
-                        <option key={t.id} value={t.id}>
-                          {t.name}
-                        </option>
-                      ))}
-                    </select>
-                    <button
-                      onClick={() => updateSuspensionTeam(s.id, editSuspensionTeamValue)}
-                      style={{ ...smallButtonStyle, flexShrink: 0 }}
-                    >
-                      Save
-                    </button>
-                  </div>
-                ) : (
-                  <span>
-                    {s.team?.name || 'No team'}
-                    {isAdmin && (
-                      <button
-                        onClick={() => {
-                          setEditingSuspensionTeam(s.id)
-                          setEditSuspensionTeamValue(s.team?.id || '')
-                        }}
-                        style={{ ...smallOutlineStyle, padding: '2px 8px', fontSize: 11, marginLeft: 8 }}
-                      >
-                        Change team
-                      </button>
+        <div style={{ overflowX: 'auto', marginBottom: 28 }}>
+          <table style={{ width: '100%', minWidth: 760, borderCollapse: 'collapse', fontSize: 13 }}>
+            <thead>
+              <tr>
+                <th style={tableHeaderStyle}>Player</th>
+                <th style={tableHeaderStyle}>Team</th>
+                <th style={tableHeaderStyle}>Reason</th>
+                <th style={tableHeaderStyle}>Ban status</th>
+                <th style={tableHeaderStyle}>Notes</th>
+                {isAdmin && <th style={tableHeaderStyle}>Actions</th>}
+              </tr>
+            </thead>
+            <tbody>
+              {activeSuspensions.map((s) => (
+                <tr key={s.id}>
+                  <td style={{ ...tableCellStyle, fontWeight: 700, whiteSpace: 'nowrap' }}>
+                    {s.player.first_name} {s.player.last_name}
+                  </td>
+                  <td style={{ ...tableCellStyle, minWidth: 150 }}>
+                    {editingSuspensionTeam === s.id ? (
+                      <div style={{ display: 'flex', gap: 6 }}>
+                        <select
+                          value={editSuspensionTeamValue}
+                          onChange={(e) => setEditSuspensionTeamValue(e.target.value)}
+                          style={{ ...fullSelectStyle, minWidth: 135, padding: '6px 8px' }}
+                        >
+                          <option value="">No team</option>
+                          {teams.map((t) => (
+                            <option key={t.id} value={t.id}>
+                              {t.name}
+                            </option>
+                          ))}
+                        </select>
+                        <button
+                          onClick={() => updateSuspensionTeam(s.id, editSuspensionTeamValue)}
+                          style={smallButtonStyle}
+                        >
+                          Save
+                        </button>
+                      </div>
+                    ) : (
+                      <span>
+                        {s.team?.name || 'No team'}
+                        {isAdmin && !s.isAutomatic && (
+                          <button
+                            onClick={() => {
+                              setEditingSuspensionTeam(s.id)
+                              setEditSuspensionTeamValue(s.team?.id || '')
+                            }}
+                            style={{ ...smallOutlineStyle, padding: '3px 7px', fontSize: 11, marginLeft: 6 }}
+                          >
+                            Change
+                          </button>
+                        )}
+                      </span>
                     )}
-                  </span>
-                )}
-              </div>
-              <div style={{ fontSize: 14, marginBottom: 4 }}>{s.reason}</div>
-              <div style={{ fontSize: 14, fontWeight: 700, color: '#B3261E', marginBottom: 8 }}>
-                {s.is_lifetime
-                  ? 'Indefinite / lifetime ban'
-                  : s.available_from
-                    ? `Available from ${new Date(s.available_from + 'T00:00:00').toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}`
-                    : `${s.automaticGamesServed} of ${s.games_banned} games served — ${Math.max(0, s.games_banned - s.automaticGamesServed)} remaining`}
-              </div>
-              {s.notes && <div style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 8 }}>{s.notes}</div>}
-              {isAdmin && !s.isAutomatic && (
-                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                  <button onClick={() => markFullyServed(s)} style={{ ...smallOutlineStyle, flex: 1 }}>
-                    Mark fully served
-                  </button>
-                  <button onClick={() => removeSuspension(s.id)} style={{ ...smallOutlineStyle, flex: 1 }}>
-                    Remove
-                  </button>
-                </div>
-              )}
-            </div>
-          ))}
+                  </td>
+                  <td style={tableCellStyle}>{s.reason}</td>
+                  <td style={{ ...tableCellStyle, color: '#B3261E', fontWeight: 700, minWidth: 170 }}>
+                    {s.is_lifetime
+                      ? 'Indefinite / lifetime'
+                      : s.available_from
+                        ? `Available ${new Date(s.available_from + 'T00:00:00').toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}`
+                        : `${s.automaticGamesServed} of ${s.games_banned} served — ${Math.max(0, s.games_banned - s.automaticGamesServed)} remaining`}
+                  </td>
+                  <td style={{ ...tableCellStyle, color: 'var(--muted)' }}>{s.notes || '—'}</td>
+                  {isAdmin && (
+                    <td style={tableCellStyle}>
+                      {!s.isAutomatic ? (
+                        <div style={{ display: 'flex', gap: 6, whiteSpace: 'nowrap' }}>
+                          <button onClick={() => markFullyServed(s)} style={smallOutlineStyle}>
+                            Mark served
+                          </button>
+                          <button onClick={() => removeSuspension(s.id)} style={smallOutlineStyle}>
+                            Remove
+                          </button>
+                        </div>
+                      ) : (
+                        <span style={{ color: 'var(--muted)', fontSize: 12 }}>Automatic</span>
+                      )}
+                    </td>
+                  )}
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
       )}
 
