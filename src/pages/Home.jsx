@@ -165,6 +165,91 @@ function pickDefaultDate(days, todayStr, mode) {
   return days[days.length - 1].date
 }
 
+function previousSeasonLabel(season) {
+  if (!season) return null
+  const m = season.match(/(\d{4})[/-](\d{2,4})/)
+  if (!m) return null
+  const startYear = parseInt(m[1], 10) - 1
+  const endYearShort = String(startYear + 1).slice(-2)
+  return `${startYear}/${endYearShort}`
+}
+
+const CUP_NAME_KEYWORDS = {
+  'knockout-cup': 'knockout cup',
+  'league-cup': 'league cup',
+  'brian-latto-cup': 'brian latto',
+}
+
+function roundLabelFromCompName(name) {
+  const n = name.toLowerCase()
+  if (n.endsWith('final') && !n.includes('semi') && !n.includes('quarter')) return 'the Final'
+  if (n.includes('semi')) return 'the Semi Final'
+  if (n.includes('quarter')) return 'the Quarter Final'
+  if (n.includes('preliminary')) return 'the Preliminary Round'
+  return null
+}
+
+function previewSentenceForFixture(f, comp, groupTeams, info) {
+  const homeName = f.home_team?.name
+  const awayName = f.away_team?.name
+  const parts = []
+
+  if (info?.lastMeeting) {
+    const m = info.lastMeeting
+    const mHomeName = m.isCurrentSeason ? m.home_team?.name : m.home_team_name
+    const mAwayName = m.isCurrentSeason ? m.away_team?.name : m.away_team_name
+    const hs = m.isCurrentSeason ? m.home_score : m.home_goals
+    const as = m.isCurrentSeason ? m.away_score : m.away_goals
+    if (hs != null && as != null) {
+      const dateStr = new Date(m.fixture_date).toLocaleDateString('en-GB', { month: 'short', year: 'numeric' })
+      if (hs === as) {
+        parts.push(`They last met in ${dateStr}, drawing ${hs}-${as}.`)
+      } else {
+        const winner = hs > as ? mHomeName : mAwayName
+        const ws = Math.max(hs, as)
+        const ls = Math.min(hs, as)
+        parts.push(`They last met in ${dateStr}, with ${winner} winning ${ws}-${ls}.`)
+      }
+    }
+  }
+
+  if (f.isGroupStage && f.group_id && groupTeams[f.group_id]) {
+    const teams = groupTeams[f.group_id]
+    const played = comp.fixtures.filter((x) => x.group_id === f.group_id && x.status === 'played')
+    const table = computeStandings(teams, played)
+
+    function projectedRank(winnerId) {
+      if (!winnerId) return null
+      const bumped = table.map((r) =>
+        r.teamId === winnerId ? { ...r, points: r.points + 3, played: r.played + 1 } : r
+      )
+      bumped.sort((a, b) => b.points - a.points || b.goalDifference - a.goalDifference || b.goalsFor - a.goalsFor)
+      return bumped.findIndex((r) => r.teamId === winnerId) + 1
+    }
+
+    const homeRank = projectedRank(f.home_team?.id)
+    const awayRank = projectedRank(f.away_team?.id)
+    const bits = []
+    if (homeRank) bits.push(`a win would put ${homeName} ${ordinal(homeRank)}`)
+    if (awayRank) bits.push(`a win for ${awayName} would take them to ${ordinal(awayRank)}`)
+    if (bits.length) parts.push(bits.join(', while ') + '.')
+  } else if (info?.cupRun) {
+    const describeCupRun = (teamName, run) => {
+      if (!run) return null
+      const round = roundLabelFromCompName(run.competition_name)
+      if (round) return `${teamName} reached ${round} of this competition last season.`
+      const dateStr = new Date(run.fixture_date).toLocaleDateString('en-GB', { month: 'short', year: 'numeric' })
+      return `${teamName} featured in this competition last season, last playing in ${dateStr}.`
+    }
+    const h = describeCupRun(homeName, info.cupRun.home)
+    const a = describeCupRun(awayName, info.cupRun.away)
+    if (h) parts.push(h)
+    if (a) parts.push(a)
+  }
+
+  return parts.join(' ')
+}
+
 function recapSentenceForFixture(f, allFixturesForComp, groupTeams, selectedDate) {
   const homeName = f.home_team?.name
   const awayName = f.away_team?.name
@@ -404,6 +489,113 @@ export default function Home() {
 
   const hasResultsToday = matchesForDate.some((f) => f.status === 'played')
 
+  const [currentSeasonLabel, setCurrentSeasonLabel] = useState('')
+  useEffect(() => {
+    supabase
+      .from('competitions')
+      .select('season')
+      .limit(1)
+      .then(({ data }) => setCurrentSeasonLabel(data?.[0]?.season || ''))
+  }, [])
+
+  const [previewInfo, setPreviewInfo] = useState({})
+  useEffect(() => {
+    const upcoming = matchesForDate.filter((f) => f.status !== 'played')
+    if (upcoming.length === 0) {
+      setPreviewInfo({})
+      return
+    }
+
+    let cancelled = false
+    async function load() {
+      const teamIds = Array.from(
+        new Set(upcoming.flatMap((f) => [f.home_team?.id, f.away_team?.id]).filter(Boolean))
+      )
+      if (teamIds.length === 0) return
+      const { data: hist } = await supabase
+        .from('historic_fixtures')
+        .select(
+          'id, season, competition_name, fixture_date, home_team_name, home_team_id, home_goals, away_team_name, away_team_id, away_goals'
+        )
+        .or(`home_team_id.in.(${teamIds.join(',')}),away_team_id.in.(${teamIds.join(',')})`)
+        .order('fixture_date', { ascending: false })
+
+      const prevSeason = previousSeasonLabel(currentSeasonLabel)
+
+      const info = {}
+      for (const f of upcoming) {
+        const homeId = f.home_team?.id
+        const awayId = f.away_team?.id
+
+        let lastMeeting = null
+        for (const comp of competitions) {
+          for (const other of comp.fixtures) {
+            if (other.id === f.id || other.status !== 'played') continue
+            const oh = other.home_team?.id
+            const oa = other.away_team?.id
+            if ((oh === homeId && oa === awayId) || (oh === awayId && oa === homeId)) {
+              if (!lastMeeting || new Date(other.fixture_date) > new Date(lastMeeting.fixture_date)) {
+                lastMeeting = { ...other, isCurrentSeason: true }
+              }
+            }
+          }
+        }
+        if (!lastMeeting) {
+          const match = (hist || []).find(
+            (h) =>
+              (h.home_team_id === homeId && h.away_team_id === awayId) ||
+              (h.home_team_id === awayId && h.away_team_id === homeId)
+          )
+          if (match) lastMeeting = match
+        }
+
+        let cupRun = null
+        if (!f.isGroupStage && prevSeason) {
+          const keyword = CUP_NAME_KEYWORDS[f.compSlug]
+          if (keyword) {
+            const findRun = (teamId) => {
+              if (!teamId) return null
+              const rows = (hist || []).filter(
+                (h) =>
+                  h.season === prevSeason &&
+                  h.competition_name.toLowerCase().includes(keyword) &&
+                  (h.home_team_id === teamId || h.away_team_id === teamId)
+              )
+              if (rows.length === 0) return null
+              rows.sort((a, b) => new Date(b.fixture_date) - new Date(a.fixture_date))
+              return rows[0]
+            }
+            cupRun = { home: findRun(homeId), away: findRun(awayId) }
+          }
+        }
+
+        info[f.id] = { lastMeeting, cupRun }
+      }
+      if (!cancelled) setPreviewInfo(info)
+    }
+    load()
+    return () => {
+      cancelled = true
+    }
+  }, [matchesForDate, competitions, currentSeasonLabel])
+
+  const previewParagraphs = useMemo(() => {
+    if (!selectedDate || hasResultsToday) return []
+    const paragraphs = []
+    for (const comp of competitions) {
+      const upcomingToday = comp.fixtures.filter(
+        (f) => dateKey(f.fixture_date) === selectedDate && f.status !== 'played'
+      )
+      if (upcomingToday.length === 0) continue
+      const sentences = upcomingToday
+        .map((f) => previewSentenceForFixture(f, comp, comp.groupTeams, previewInfo[f.id]))
+        .filter(Boolean)
+      if (sentences.length === 0) continue
+      paragraphs.push({ compName: comp.name, text: sentences.join(' ') })
+    }
+    return paragraphs
+  }, [competitions, selectedDate, hasResultsToday, previewInfo])
+
   const appinStandings = useMemo(() => {
     const appin = competitions.find((c) => c.slug === 'appin-league')
     if (!appin) return []
@@ -438,6 +630,19 @@ export default function Home() {
             Match Day Recap
           </h2>
           {recapParagraphs.map((p) => (
+            <p key={p.compName} style={{ fontSize: 14, lineHeight: 1.6, marginBottom: 10 }}>
+              {p.text}
+            </p>
+          ))}
+        </section>
+      )}
+
+      {!hasResultsToday && previewParagraphs.length > 0 && (
+        <section style={{ marginBottom: 28 }}>
+          <h2 style={{ fontSize: 13, textTransform: 'uppercase', letterSpacing: 0.5, color: 'var(--brass)', marginBottom: 10 }}>
+            Match Preview
+          </h2>
+          {previewParagraphs.map((p) => (
             <p key={p.compName} style={{ fontSize: 14, lineHeight: 1.6, marginBottom: 10 }}>
               {p.text}
             </p>
