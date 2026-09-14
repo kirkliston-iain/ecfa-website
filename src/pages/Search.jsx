@@ -60,7 +60,7 @@ export default function Search() {
 
       const pattern = `%${query}%`
       const [playersResult, historicResult, refereesResult, teamsResult, competitionsResult] = await Promise.all([
-        supabase.from('players').select('id, first_name, last_name, team:team_id(name)').limit(500),
+        supabase.from('players').select('id, first_name, last_name, team:team_id(name)').limit(1000),
         supabase.from('historic_scorers').select('player_name, team_name, season').ilike('player_name', pattern).limit(100),
         supabase.from('referees').select('id, name').ilike('name', pattern).order('name').limit(20),
         supabase.from('teams').select('id, name, manager_name').or(`name.ilike.${pattern},manager_name.ilike.${pattern}`).order('name').limit(20),
