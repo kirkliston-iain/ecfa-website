@@ -1,74 +1,120 @@
 import { useEffect, useMemo, useState } from 'react'
 import { supabase } from '../supabaseClient'
 
-const PAGE_SIZE = 1000
+function pageCategory(path) {
+  if (path.startsWith('/fixtures/')) return 'Matches'
+  if (path === '/competitions' || path === '/standings' || path.startsWith('/competitions/')) return 'Competitions'
+  if (path === '/teams' || path.startsWith('/teams/')) return 'Teams'
+  if (path === '/scorers') return 'Players'
+  return 'Other pages'
+}
 
-async function fetchAll(table, select = '*') {
-  let from = 0
-  let rows = []
-  while (true) {
-    const { data, error } = await supabase
-      .from(table)
-      .select(select)
-      .range(from, from + PAGE_SIZE - 1)
-    if (error) throw error
-    rows = rows.concat(data || [])
-    if (!data || data.length < PAGE_SIZE) return rows
-    from += PAGE_SIZE
+function makeDailySeries(rows) {
+  const byDate = Object.fromEntries((rows || []).map((row) => [String(row.date).slice(0, 10), Number(row.views)]))
+  const series = []
+  const today = new Date()
+  for (let offset = 59; offset >= 0; offset -= 1) {
+    const date = new Date(today)
+    date.setDate(today.getDate() - offset)
+    const key = date.toISOString().slice(0, 10)
+    series.push({ date: key, views: byDate[key] || 0 })
   }
+  return series
 }
 
-function sum(rows, value) {
-  return rows.reduce((total, row) => total + Number(value(row) || 0), 0)
-}
+function DailyChart({ rows }) {
+  const width = 720
+  const height = 250
+  const pad = { top: 18, right: 12, bottom: 42, left: 42 }
+  const maximum = Math.max(5, ...rows.map((row) => row.views))
+  const chartHeight = height - pad.top - pad.bottom
+  const chartWidth = width - pad.left - pad.right
+  const slot = chartWidth / rows.length
+  const tickMaximum = Math.ceil(maximum / 5) * 5
 
-function rank(rows, key, value, limit = 10) {
-  const totals = {}
-  for (const row of rows) {
-    const name = key(row)
-    if (!name) continue
-    totals[name] = (totals[name] || 0) + Number(value(row) || 0)
-  }
-  return Object.entries(totals)
-    .map(([name, total]) => ({ name, total }))
-    .sort((a, b) => b.total - a.total || a.name.localeCompare(b.name))
-    .slice(0, limit)
-}
-
-function StatCard({ label, value, detail }) {
   return (
-    <div style={statCardStyle}>
-      <div style={{ fontSize: 30, lineHeight: 1, fontWeight: 800, color: 'var(--ink)' }}>
-        {Number(value || 0).toLocaleString()}
-      </div>
-      <div style={{ marginTop: 8, fontSize: 12, fontWeight: 800, textTransform: 'uppercase', letterSpacing: 0.5, color: 'var(--brass)' }}>
-        {label}
-      </div>
-      {detail && <div style={{ marginTop: 4, fontSize: 12, color: 'var(--muted)' }}>{detail}</div>}
+    <div style={{ overflowX: 'auto' }}>
+      <svg viewBox={`0 0 ${width} ${height}`} role="img" aria-label="Daily page views over the last 60 days" style={{ width: '100%', minWidth: 620, display: 'block' }}>
+        {[0, 0.25, 0.5, 0.75, 1].map((ratio) => {
+          const y = pad.top + chartHeight * (1 - ratio)
+          return (
+            <g key={ratio}>
+              <line x1={pad.left} x2={width - pad.right} y1={y} y2={y} stroke="#d8dee3" strokeWidth="1" />
+              <text x={pad.left - 7} y={y + 4} textAnchor="end" fontSize="11" fill="#69747d">
+                {Math.round(tickMaximum * ratio)}
+              </text>
+            </g>
+          )
+        })}
+        {rows.map((row, index) => {
+          const barHeight = (row.views / tickMaximum) * chartHeight
+          return (
+            <rect
+              key={row.date}
+              x={pad.left + index * slot + 1}
+              y={pad.top + chartHeight - barHeight}
+              width={Math.max(2, slot - 2)}
+              height={barHeight}
+              fill="var(--brass)"
+              rx="1"
+            >
+              <title>{row.date}: {row.views} page views</title>
+            </rect>
+          )
+        })}
+        {rows.filter((_row, index) => index % 10 === 0 || index === rows.length - 1).map((row) => {
+          const index = rows.findIndex((item) => item.date === row.date)
+          return (
+            <text
+              key={row.date}
+              x={pad.left + index * slot + slot / 2}
+              y={height - 10}
+              textAnchor="middle"
+              fontSize="10"
+              fill="#69747d"
+            >
+              {new Date(row.date + 'T00:00:00').toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit' })}
+            </text>
+          )
+        })}
+      </svg>
     </div>
   )
 }
 
-function Ranking({ title, rows, suffix = '' }) {
-  const maximum = rows[0]?.total || 1
+function TotalCard({ title, value }) {
+  return (
+    <div style={totalCardStyle}>
+      <div style={{ color: 'var(--brass)', fontWeight: 800, fontSize: 14 }}>{title}</div>
+      <div style={{ fontSize: 38, lineHeight: 1.15, fontWeight: 900, marginTop: 8 }}>
+        {Number(value || 0).toLocaleString()}
+      </div>
+      <div style={{ color: 'var(--muted)', fontSize: 14 }}>Page views</div>
+    </div>
+  )
+}
+
+function PageTable({ title, rows }) {
+  if (rows.length === 0) return null
   return (
     <section style={panelStyle}>
-      <h2 style={sectionTitleStyle}>{title}</h2>
-      {rows.length === 0 ? (
-        <p style={{ color: 'var(--muted)', fontSize: 13 }}>No data recorded yet.</p>
-      ) : (
-        rows.map((row, index) => (
-          <div key={row.name} style={{ marginBottom: 12 }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, fontSize: 13, marginBottom: 4 }}>
-              <span><strong>{index + 1}.</strong> {row.name}</span>
-              <strong>{row.total.toLocaleString()}{suffix}</strong>
-            </div>
-            <div style={{ height: 7, borderRadius: 6, background: 'var(--line)', overflow: 'hidden' }}>
-              <div style={{ width: `${Math.max(3, (row.total / maximum) * 100)}%`, height: '100%', background: 'var(--brass)' }} />
-            </div>
-          </div>
-        ))
-      )}
+      <h2 style={{ color: 'var(--brass)', fontSize: 18, margin: '0 0 14px' }}>{title}</h2>
+      <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+        <thead>
+          <tr>
+            <th style={thStyle}>Page</th>
+            <th style={{ ...thStyle, textAlign: 'right' }}>Page views</th>
+          </tr>
+        </thead>
+        <tbody>
+          {rows.slice(0, 10).map((row) => (
+            <tr key={row.path}>
+              <td style={tdStyle}>{row.label}</td>
+              <td style={viewsCellStyle}>{Number(row.views).toLocaleString()}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
     </section>
   )
 }
@@ -76,34 +122,51 @@ function Ranking({ title, rows, suffix = '' }) {
 export default function WebStats() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
-  const [data, setData] = useState(null)
+  const [stats, setStats] = useState(null)
+  const [labels, setLabels] = useState({})
 
   useEffect(() => {
     let cancelled = false
     async function load() {
       try {
-        const [
-          siteStats,
-          teams,
-          players,
-          fixtures,
-          currentScorers,
-          historicFixtures,
-          historicScorers,
-        ] = await Promise.all([
-          fetchAll('site_stats', 'key, value'),
-          fetchAll('teams', 'id, name'),
-          fetchAll('players', 'id, first_name, last_name, team_id'),
-          fetchAll('fixtures', 'id, fixture_date, venue, referee_name, home_score, away_score, status, home_team:home_team_id(name), away_team:away_team_id(name)'),
-          fetchAll('fixture_scorers', 'goals, player:player_id(first_name, last_name), team:team_id(name)'),
-          fetchAll('historic_fixtures', 'season, venue, referee_name, home_team_name, away_team_name, home_goals, away_goals'),
-          fetchAll('historic_scorers', 'season, player_name, team_name, goals'),
+        const [{ data, error: statsError }, { data: fixtures }, { data: teams }, { data: competitions }] = await Promise.all([
+          supabase.rpc('get_web_stats'),
+          supabase.from('fixtures').select('id, fixture_date, home_score, away_score, home_team:home_team_id(name), away_team:away_team_id(name)'),
+          supabase.from('teams').select('id, name'),
+          supabase.from('competitions').select('slug, name'),
         ])
+        if (statsError) throw statsError
+
+        const pageLabels = {
+          '/': 'Match Hub',
+          '/standings': 'Competitions and standings',
+          '/competitions': 'Competitions',
+          '/scorers': 'Scorers',
+          '/honours': 'Honours',
+          '/history': 'History',
+          '/teams': 'Teams',
+          '/referees': 'Referees',
+          '/downloads': 'Downloads',
+          '/documents': 'Documents',
+        }
+        for (const fixture of fixtures || []) {
+          const date = fixture.fixture_date
+            ? new Date(fixture.fixture_date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })
+            : 'Match'
+          const score = fixture.home_score != null && fixture.away_score != null
+            ? ` ${fixture.home_score}-${fixture.away_score}`
+            : ''
+          pageLabels[`/fixtures/${fixture.id}`] = `${date}: ${fixture.home_team?.name || 'TBC'}${score} ${fixture.away_team?.name || 'TBC'}`
+        }
+        for (const team of teams || []) pageLabels[`/teams/${team.id}`] = team.name
+        for (const competition of competitions || []) pageLabels[`/competitions/${competition.slug}`] = competition.name
+
         if (!cancelled) {
-          setData({ siteStats, teams, players, fixtures, currentScorers, historicFixtures, historicScorers })
+          setStats(data)
+          setLabels(pageLabels)
         }
       } catch (err) {
-        if (!cancelled) setError(err.message || 'Statistics could not be loaded.')
+        if (!cancelled) setError(err.message || 'Web statistics could not be loaded.')
       } finally {
         if (!cancelled) setLoading(false)
       }
@@ -114,166 +177,94 @@ export default function WebStats() {
     }
   }, [])
 
-  const stats = useMemo(() => {
-    if (!data) return null
-    const playedCurrent = data.fixtures.filter(
-      (fixture) => fixture.status === 'played' && fixture.home_score != null && fixture.away_score != null
-    )
-    const currentGoals = sum(playedCurrent, (fixture) => fixture.home_score + fixture.away_score)
-    const historicGoals = sum(data.historicFixtures, (fixture) => fixture.home_goals + fixture.away_goals)
-    const pageViews = data.siteStats.find((row) => row.key === 'page_views')?.value || 0
-    const seasons = new Set(data.historicFixtures.map((fixture) => fixture.season).filter(Boolean))
-
-    const allScorers = [
-      ...data.historicScorers.map((row) => ({ name: row.player_name, goals: row.goals })),
-      ...data.currentScorers.map((row) => ({
-        name: `${row.player?.first_name || ''} ${row.player?.last_name || ''}`.trim(),
-        goals: row.goals,
-      })),
-    ]
-
-    const refereeRows = rank(
-      playedCurrent.filter((fixture) => fixture.referee_name),
-      (fixture) => fixture.referee_name,
-      () => 1
-    )
-    const venueRows = rank(
-      playedCurrent.filter((fixture) => fixture.venue && !['n/a', 'league decide'].includes(fixture.venue.toLowerCase())),
-      (fixture) => fixture.venue,
-      () => 1
-    )
-    const teamRows = rank(
-      playedCurrent.flatMap((fixture) => [
-        { team: fixture.home_team?.name },
-        { team: fixture.away_team?.name },
-      ]),
-      (row) => row.team,
-      () => 1
-    )
-
-    return {
-      pageViews,
-      currentMatches: playedCurrent.length,
-      currentGoals,
-      totalMatches: playedCurrent.length + data.historicFixtures.length,
-      totalGoals: currentGoals + historicGoals,
-      teams: data.teams.length,
-      players: data.players.length,
-      seasons: seasons.size + 1,
-      topScorers: rank(allScorers, (row) => row.name, (row) => row.goals),
-      referees: refereeRows,
-      venues: venueRows,
-      teamsPlayed: teamRows,
-    }
-  }, [data])
+  const daily = useMemo(() => makeDailySeries(stats?.daily || []), [stats])
+  const pages = useMemo(
+    () => (stats?.top_pages || []).map((row) => ({
+      ...row,
+      label: labels[row.path] || row.path,
+      category: pageCategory(row.path),
+    })),
+    [stats, labels]
+  )
+  const groups = ['Matches', 'Competitions', 'Teams', 'Players', 'Other pages']
 
   if (loading) return <div className="container" style={{ padding: 48 }}>Loading web statistics…</div>
   if (error) return <div className="container" style={{ padding: 48, color: '#B3261E' }}>{error}</div>
-  if (!stats) return null
 
   return (
-    <div className="container" style={{ padding: '32px 20px 48px', maxWidth: 980 }}>
-      <div style={{ marginBottom: 28 }}>
-        <div style={{ fontSize: 12, color: 'var(--brass)', fontWeight: 800, letterSpacing: 0.7, textTransform: 'uppercase', marginBottom: 6 }}>
-          ECFA by the numbers
-        </div>
-        <h1 style={{ fontSize: 32, marginBottom: 6 }}>Web Stats</h1>
-        <p style={{ color: 'var(--muted)', margin: 0 }}>
-          Live figures from the current season and the ECFA historical archive.
-        </p>
+    <div className="container" style={{ padding: '32px 20px 48px', maxWidth: 900 }}>
+      <h1 style={{ fontSize: 30, marginBottom: 4 }}>Web Stats</h1>
+      <p style={{ color: 'var(--muted)', marginBottom: 28 }}>
+        Actual page views across the ECFA website.
+      </p>
+
+      <section style={panelStyle}>
+        <h2 style={{ color: 'var(--brass)', fontSize: 20, margin: '0 0 8px' }}>Daily totals</h2>
+        <div style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 12 }}>Page views over the last 60 days</div>
+        <DailyChart rows={daily} />
+      </section>
+
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(170px, 1fr))', gap: 12, margin: '16px 0 34px' }}>
+        <TotalCard title="Last 30 days" value={stats?.last_30} />
+        <TotalCard title="Last 60 days" value={stats?.last_60} />
+        <TotalCard title="Last year" value={stats?.last_year} />
+        <TotalCard title="All time" value={stats?.all_time} />
       </div>
 
-      <div style={heroStyle}>
-        <div>
-          <div style={{ fontSize: 12, textTransform: 'uppercase', letterSpacing: 0.7, opacity: 0.75 }}>Website visits</div>
-          <div style={{ fontSize: 48, lineHeight: 1.1, fontWeight: 900, marginTop: 6 }}>{Number(stats.pageViews).toLocaleString()}</div>
-        </div>
-        <div style={{ fontSize: 13, maxWidth: 320, opacity: 0.85 }}>
-          A growing digital record of Edinburgh Churches Football Association football.
-        </div>
+      <h2 style={{ fontSize: 24, marginBottom: 4 }}>Top pages</h2>
+      <p style={{ color: 'var(--muted)', marginTop: 0, marginBottom: 16 }}>
+        Page views during the last 30 days
+      </p>
+
+      <PageTable title="All pages" rows={pages} />
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 14, marginTop: 14 }}>
+        {groups.map((group) => (
+          <PageTable key={group} title={group} rows={pages.filter((page) => page.category === group)} />
+        ))}
       </div>
 
-      <h2 style={groupTitleStyle}>All-time record</h2>
-      <div style={gridStyle}>
-        <StatCard label="Matches recorded" value={stats.totalMatches} />
-        <StatCard label="Goals recorded" value={stats.totalGoals} />
-        <StatCard label="Seasons covered" value={stats.seasons} />
-        <StatCard label="Registered players" value={stats.players} />
-      </div>
-
-      <h2 style={groupTitleStyle}>Current season</h2>
-      <div style={gridStyle}>
-        <StatCard label="Matches played" value={stats.currentMatches} />
-        <StatCard label="Goals scored" value={stats.currentGoals} />
-        <StatCard label="Active teams" value={stats.teams} />
-        <StatCard
-          label="Goals per match"
-          value={stats.currentMatches ? (stats.currentGoals / stats.currentMatches).toFixed(2) : 0}
-        />
-      </div>
-
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 16, marginTop: 28 }}>
-        <Ranking title="All-time leading scorers" rows={stats.topScorers} suffix=" goals" />
-        <Ranking title="Referee appointments this season" rows={stats.referees} suffix=" games" />
-        <Ranking title="Most-used venues this season" rows={stats.venues} suffix=" games" />
-        <Ranking title="Team appearances this season" rows={stats.teamsPlayed} suffix=" games" />
-      </div>
-
-      <p style={{ marginTop: 24, color: 'var(--muted)', fontSize: 12 }}>
-        Figures update automatically as fixtures, results, scorers, referees and historical records are added.
+      <p style={{ marginTop: 22, color: 'var(--muted)', fontSize: 12 }}>
+        Tracking records only the page visited and the time of the visit. Admin and discipline pages are excluded.
       </p>
     </div>
   )
 }
 
-const heroStyle = {
-  display: 'flex',
-  justifyContent: 'space-between',
-  alignItems: 'flex-end',
-  gap: 20,
-  flexWrap: 'wrap',
-  padding: '24px',
-  borderRadius: 10,
-  color: '#fff',
-  background: 'linear-gradient(135deg, var(--ink), #34495e)',
-  borderBottom: '5px solid var(--brass)',
-}
-
-const gridStyle = {
-  display: 'grid',
-  gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))',
-  gap: 12,
-}
-
-const statCardStyle = {
-  padding: 18,
-  background: '#fff',
-  border: '1px solid var(--line)',
-  borderRadius: 8,
-}
-
-const groupTitleStyle = {
-  marginTop: 30,
-  marginBottom: 12,
-  fontSize: 14,
-  textTransform: 'uppercase',
-  letterSpacing: 0.5,
-  color: 'var(--brass)',
-}
-
 const panelStyle = {
   padding: 18,
-  background: '#fff',
+  background: '#f5f8fa',
   border: '1px solid var(--line)',
   borderRadius: 8,
 }
 
-const sectionTitleStyle = {
-  fontSize: 14,
-  marginTop: 0,
-  marginBottom: 16,
-  paddingBottom: 8,
-  borderBottom: '2px solid var(--line)',
+const totalCardStyle = {
+  padding: 18,
+  background: '#f5f8fa',
+  border: '1px solid var(--line)',
+  borderRadius: 8,
+}
+
+const thStyle = {
+  padding: '7px 8px',
+  color: 'var(--muted)',
+  borderBottom: '1px solid var(--line)',
+  fontSize: 11,
   textTransform: 'uppercase',
   letterSpacing: 0.4,
+  textAlign: 'left',
+}
+
+const tdStyle = {
+  padding: '8px',
+  borderBottom: '1px solid var(--line)',
+  verticalAlign: 'middle',
+}
+
+const viewsCellStyle = {
+  ...tdStyle,
+  width: 86,
+  textAlign: 'right',
+  fontWeight: 800,
+  background: 'var(--brass)',
+  color: '#fff',
 }
