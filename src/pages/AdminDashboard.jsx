@@ -360,8 +360,12 @@ export default function AdminDashboard() {
         Manage referees &amp; venues &rarr;
       </Link>
 
-      <Link to="/admin/season" style={{ ...linkButtonStyle, display: 'block', marginBottom: 20 }}>
+      <Link to="/admin/season" style={{ ...linkButtonStyle, display: 'block', marginBottom: 8 }}>
         Season management &rarr;
+      </Link>
+
+      <Link to="/admin/fixture-tracker" style={{ ...linkButtonStyle, display: 'block', marginBottom: 20 }}>
+        Fixture tracker &rarr;
       </Link>
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 24 }}>
