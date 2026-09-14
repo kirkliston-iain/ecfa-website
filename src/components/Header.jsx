@@ -10,6 +10,7 @@ const TABS = [
   { to: '/history', label: 'History' },
   { to: '/teams', label: 'Teams' },
   { to: '/referees', label: 'Referees' },
+  { to: '/sponsors', label: 'Sponsors' },
   { to: '/downloads', label: 'Downloads' },
   { to: '/web-stats', label: 'Web Stats' },
   { to: '/contact', label: 'Contact Us' },

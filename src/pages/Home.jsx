@@ -14,14 +14,6 @@ const COMPETITIONS = [
   { slug: 'brian-latto-cup', name: 'Brian Latto Cup' },
 ]
 
-const SPONSORS = [
-  {
-    name: 'Appin Sports',
-    url: 'https://appinsports.com/',
-    logo: 'https://appinsports.com/wp-content/uploads/logo/logo-footer.png',
-    blurb: 'Custom teamwear specialists — proud kit sponsor of the ECFA.',
-  },
-]
 
 function todayUK() {
   const parts = new Intl.DateTimeFormat('en-GB', {
@@ -759,42 +751,6 @@ export default function Home() {
         </section>
       )}
 
-      <h2
-        style={{
-          fontSize: 13,
-          fontWeight: 700,
-          letterSpacing: 0.6,
-          textTransform: 'uppercase',
-          color: 'var(--muted)',
-          marginBottom: 16,
-        }}
-      >
-        Our Sponsors
-      </h2>
-      <div style={{ display: 'grid', gap: 1, background: 'var(--line)' }}>
-        {SPONSORS.map((s) => (
-          <a
-            key={s.name}
-            href={s.url}
-            target="_blank"
-            rel="noopener noreferrer"
-            style={{
-              background: '#fff',
-              padding: '20px 24px',
-              display: 'flex',
-              alignItems: 'center',
-              gap: 20,
-            }}
-          >
-            <img src={s.logo} alt={s.name} style={{ height: 40, width: 'auto', objectFit: 'contain', flexShrink: 0 }} />
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontWeight: 700, fontSize: 15 }}>{s.name}</div>
-              <p style={{ margin: '2px 0 0', fontSize: 13, color: 'var(--muted)' }}>{s.blurb}</p>
-            </div>
-            <span style={{ fontSize: 22, color: 'var(--brass)' }}>&rarr;</span>
-          </a>
-        ))}
-      </div>
     </div>
   )
 }
