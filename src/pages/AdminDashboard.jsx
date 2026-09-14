@@ -377,6 +377,23 @@ export default function AdminDashboard() {
     }
   }
 
+  async function deleteContactEnquiry(enquiry) {
+    const confirmed = window.confirm(
+      `Delete the message from ${enquiry.name}? This cannot be undone.`
+    )
+    if (!confirmed) return
+
+    const { error } = await supabase
+      .from('contact_enquiries')
+      .delete()
+      .eq('id', enquiry.id)
+
+    if (!error) {
+      setContactEnquiries((current) => current.filter((item) => item.id !== enquiry.id))
+      setExpandedEnquiry(null)
+    }
+  }
+
   function contactDate(value) {
     return new Date(value).toLocaleString('en-GB', {
       day: 'numeric',
@@ -470,14 +487,27 @@ export default function AdminDashboard() {
                       <div style={{ whiteSpace: 'pre-wrap', lineHeight: 1.5, marginBottom: 12 }}>
                         {enquiry.message}
                       </div>
-                      {enquiry.status !== 'closed' && (
+                      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                        {enquiry.status !== 'closed' && (
+                          <button
+                            onClick={() => closeContactEnquiry(enquiry.id)}
+                            style={{ ...outlineButtonStyle, flex: 1 }}
+                          >
+                            Mark as closed
+                          </button>
+                        )}
                         <button
-                          onClick={() => closeContactEnquiry(enquiry.id)}
-                          style={{ ...outlineButtonStyle, width: '100%' }}
+                          onClick={() => deleteContactEnquiry(enquiry)}
+                          style={{
+                            ...outlineButtonStyle,
+                            flex: 1,
+                            color: '#B3261E',
+                            borderColor: '#B3261E',
+                          }}
                         >
-                          Mark as closed
+                          Delete message
                         </button>
-                      )}
+                      </div>
                     </div>
                   )}
                 </article>
