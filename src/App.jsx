@@ -23,6 +23,7 @@ import RefereesHub from './pages/RefereesHub'
 import FixtureTracker from './pages/FixtureTracker'
 import Downloads from './pages/Downloads'
 import WebStats from './pages/WebStats'
+import Contact from './pages/Contact'
 
 export default function App() {
   return (
@@ -43,6 +44,7 @@ export default function App() {
           <Route path="/referees" element={<RefereesHub />} />
           <Route path="/downloads" element={<Downloads />} />
           <Route path="/web-stats" element={<WebStats />} />
+          <Route path="/contact" element={<Contact />} />
           <Route
             path="/admin/season"
             element={
