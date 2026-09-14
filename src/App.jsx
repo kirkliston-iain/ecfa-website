@@ -27,6 +27,7 @@ import Contact from './pages/Contact'
 import Sponsors from './pages/Sponsors'
 import Search from './pages/Search'
 import PlayerDetail from './pages/PlayerDetail'
+import WeeklyDisciplineReport from './pages/WeeklyDisciplineReport'
 
 export default function App() {
   return (
@@ -89,6 +90,14 @@ export default function App() {
             element={
               <ProtectedRoute>
                 <Discipline />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/discipline/weekly"
+            element={
+              <ProtectedRoute>
+                <WeeklyDisciplineReport />
               </ProtectedRoute>
             }
           />
