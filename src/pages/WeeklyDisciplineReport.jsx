@@ -5,10 +5,10 @@ import { supabase } from '../supabaseClient'
 const YELLOW_POINTS = 2
 const RED_POINTS = 4
 const SERIOUS_RULES = {
-  opponent_abuse: { label: 'Abusive language (opponent)', ban: 3 },
-  official_abuse: { label: 'Abusive language (official)', ban: 5 },
-  discriminatory: { label: 'Discriminatory language', ban: 3 },
-  violent_conduct: { label: 'Violent conduct', months: 12 },
+  opponent_abuse: { label: 'Abusive language (opponent)', tiers: [{ ban: 3 }] },
+  official_abuse: { label: 'Abusive language (official)', tiers: [{ ban: 5 }, { months: 12 }] },
+  discriminatory: { label: 'Discriminatory language', tiers: [{ ban: 3 }, { months: 12 }] },
+  violent_conduct: { label: 'Violent conduct', tiers: [{ months: 12 }, { lifetime: true }] },
 }
 
 function dateKey(value) {
@@ -313,15 +313,19 @@ export default function WeeklyDisciplineReport() {
     const automatic = Array.from(seriousGroups.values()).filter((row) => !coveredPlayers.has(row.player?.id)).map((row) => {
       const rule = SERIOUS_RULES[row.serious_offence]
       if (!rule) return null
+      const tier = rule.tiers[Math.min(row.count - 1, rule.tiers.length - 1)]
       const startDate = row.dates.sort().at(-1)
       const served = gamesPlayedSince(fixtures, row.team?.id, startDate)
       let active = true
       let progress = ''
       let ban = rule.label
-      if (rule.ban) {
-        active = served < rule.ban
-        ban += ` - ${rule.ban}-match ban`
-        progress = `${served} served · ${Math.max(0, rule.ban - served)} remaining`
+      if (tier.lifetime) {
+        ban += ' - lifetime ban'
+        progress = 'Indefinite / lifetime'
+      } else if (tier.ban) {
+        active = served < tier.ban
+        ban += ` - ${tier.ban}-match ban`
+        progress = `${served} served · ${Math.max(0, tier.ban - served)} remaining`
       } else {
         const available = new Date(`${startDate}T00:00:00`)
         available.setFullYear(available.getFullYear() + 1)
