@@ -20,6 +20,7 @@ import ListsAdmin from './pages/ListsAdmin'
 import TeamsHub from './pages/TeamsHub'
 import SeasonAdmin from './pages/SeasonAdmin'
 import RefereesHub from './pages/RefereesHub'
+import FixtureTracker from './pages/FixtureTracker'
 
 export default function App() {
   return (
@@ -43,6 +44,14 @@ export default function App() {
             element={
               <ProtectedRoute>
                 <SeasonAdmin />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/fixture-tracker"
+            element={
+              <ProtectedRoute>
+                <FixtureTracker />
               </ProtectedRoute>
             }
           />
