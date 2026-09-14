@@ -440,6 +440,51 @@ export default function Discipline() {
     .filter((s) => !teamFilter || s.team?.id === teamFilter)
   const filteredPlayerRows = playerRows.filter((row) => !teamFilter || row.team.id === teamFilter)
 
+  const completedSeriousBans = seriousRows
+    .filter((row) => {
+      const served = gamesPlayedSince(row.team?.id, row.startDate)
+      const dateBanFinished = row.availableFrom && new Date(`${row.availableFrom}T23:59:59`) < new Date()
+      return dateBanFinished || (row.gamesBanned && served >= row.gamesBanned)
+    })
+    .map((row) => ({
+      id: `history-serious-${row.player.id}-${row.type}`,
+      player: row.player,
+      team: row.team,
+      reason: row.label,
+      summary: row.gamesBanned
+        ? `${row.gamesBanned}-match ban — served`
+        : `Ban ended ${new Date(`${row.availableFrom}T00:00:00`).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}`,
+      completedOn: row.availableFrom || row.startDate,
+    }))
+
+  const completedManualBans = manualSuspensions
+    .filter((s) => {
+      const reason = String(s.reason || '')
+      const isThresholdBan = /points?|threshold/i.test(reason)
+      const isSerious = /abusive|discriminatory|violent|serious/i.test(reason)
+      const isFinished =
+        s.status === 'served' ||
+        (!s.is_lifetime && s.available_from && new Date(`${s.available_from}T23:59:59`) < new Date()) ||
+        (!s.is_lifetime && !s.available_from && s.games_banned && s.automaticGamesServed >= s.games_banned)
+      return isFinished && !isThresholdBan && (isSerious || Number(s.games_banned || 0) >= 3)
+    })
+    .map((s) => ({
+      id: `history-manual-${s.id}`,
+      player: s.player,
+      team: s.team,
+      reason: s.reason,
+      summary: s.games_banned
+        ? `${s.games_banned}-match ban — served`
+        : s.available_from
+          ? `Ban ended ${new Date(`${s.available_from}T00:00:00`).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}`
+          : 'Ban served',
+      completedOn: s.available_from || s.created_at,
+    }))
+
+  const banHistory = [...completedSeriousBans, ...completedManualBans]
+    .filter((s) => !teamFilter || s.team?.id === teamFilter)
+    .sort((a, b) => new Date(b.completedOn || 0) - new Date(a.completedOn || 0))
+
   if (loading) {
     return (
       <div className="container" style={{ padding: '32px 20px' }}>
@@ -898,6 +943,31 @@ export default function Discipline() {
               {row.label} — offence #{row.offenceNumber}
             </div>
             <div style={{ fontSize: 13, color: '#B3261E', fontWeight: 600, marginTop: 4 }}>{row.ban}</div>
+          </div>
+        ))
+      )}
+
+      <h2 style={{ fontSize: 15, textTransform: 'uppercase', letterSpacing: 0.4, color: 'var(--brass)', marginTop: 36, marginBottom: 6 }}>
+        Served Ban History
+      </h2>
+      <p style={{ fontSize: 13, color: 'var(--muted)', marginBottom: 12 }}>
+        Completed serious bans and other suspensions of three matches or more. Points-threshold bans are excluded.
+      </p>
+      {banHistory.length === 0 ? (
+        <p style={{ color: 'var(--muted)', fontSize: 14 }}>No completed qualifying bans.</p>
+      ) : (
+        banHistory.map((ban) => (
+          <div key={ban.id} style={cardStyle}>
+            <div style={{ fontWeight: 600 }}>
+              {ban.player.first_name} {ban.player.last_name}
+            </div>
+            <div style={{ fontSize: 13, color: 'var(--muted)', marginBottom: 6 }}>
+              {ban.team?.name || 'No team'}
+            </div>
+            <div style={{ fontSize: 14 }}>{ban.reason}</div>
+            <div style={{ fontSize: 13, color: 'var(--muted)', fontWeight: 600, marginTop: 4 }}>
+              {ban.summary}
+            </div>
           </div>
         ))
       )}
