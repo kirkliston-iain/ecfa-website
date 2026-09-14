@@ -399,9 +399,9 @@ export default function TeamDetail() {
           }}
         >
           {squad.map((p) => (
-            <div key={p.id} style={{ fontSize: 14, padding: '4px 0' }}>
+            <Link key={p.id} to={`/players/${p.id}`} style={{ fontSize: 14, padding: '4px 0', color: 'var(--ink)' }}>
               {p.first_name} {p.last_name}
-            </div>
+            </Link>
           ))}
         </div>
       </section>
