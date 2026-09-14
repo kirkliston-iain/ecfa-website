@@ -46,7 +46,7 @@ export default function Competition() {
           const { data: fixtures } = await supabase
             .from('fixtures')
             .select(
-              'id, round_name, fixture_date, venue, home_score, away_score, status, group_id, home_team:home_team_id(id, name, logo_url), away_team:away_team_id(id, name, logo_url)'
+              'id, round_name, fixture_date, venue, home_placeholder, away_placeholder, home_score, away_score, status, group_id, home_team:home_team_id(id, name, logo_url), away_team:away_team_id(id, name, logo_url)'
             )
             .eq('stage_id', stage.id)
             .eq('hidden_from_public', false)
