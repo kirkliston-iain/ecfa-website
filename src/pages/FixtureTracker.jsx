@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { supabase } from '../supabaseClient'
 
+const PLACEHOLDER_VENUES = new Set(['n/a', 'league decide', ''])
+
 function formatDateTime(iso) {
   const d = new Date(iso)
   const dateStr = d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
@@ -12,8 +14,8 @@ function formatDateTime(iso) {
 export default function FixtureTracker() {
   const [isAdmin, setIsAdmin] = useState(false)
   const [loading, setLoading] = useState(true)
-  const [venueRows, setVenueRows] = useState([]) // { team, venue, entries: [{date, time}] }
-  const [refRows, setRefRows] = useState([]) // { team, referee, entries: [{date}] }
+  const [venueRows, setVenueRows] = useState([])
+  const [refRows, setRefRows] = useState([])
 
   useEffect(() => {
     supabase
@@ -30,13 +32,14 @@ export default function FixtureTracker() {
         )
         .order('fixture_date')
 
-      const venueMap = {} // team -> venue -> [{date,time}]
-      const refMap = {} // team -> referee -> [{date}]
+      const venueMap = {}
+      const refMap = {}
 
       for (const f of fixtures || []) {
         const teams = [f.home_team?.name, f.away_team?.name].filter(Boolean)
+        const venueOk = f.venue && !PLACEHOLDER_VENUES.has(f.venue.trim().toLowerCase())
         for (const team of teams) {
-          if (f.venue) {
+          if (venueOk) {
             venueMap[team] = venueMap[team] || {}
             venueMap[team][f.venue] = venueMap[team][f.venue] || []
             venueMap[team][f.venue].push(formatDateTime(f.fixture_date))
@@ -79,8 +82,8 @@ export default function FixtureTracker() {
       </Link>
       <h1 style={{ fontSize: 22, color: 'var(--pitch)', marginBottom: 4 }}>Fixture Tracker</h1>
       <p style={{ fontSize: 13, color: 'var(--muted)', marginBottom: 24 }}>
-        How often each team has been at a venue or had a particular referee this season, with kickoff
-        times and dates. Covers every fixture with a venue or referee set, played or upcoming.
+        How often each team has been at a venue or had a particular referee this season, with dates
+        (and kickoff times, for venues). Only fixtures with a real venue/referee assigned are counted.
       </p>
 
       {!isAdmin && <p style={{ color: 'var(--muted)' }}>Admin access required.</p>}
@@ -92,19 +95,27 @@ export default function FixtureTracker() {
           {venueRows.length === 0 ? (
             <p style={{ color: 'var(--muted)', fontSize: 14, marginBottom: 28 }}>No venue data recorded yet.</p>
           ) : (
-            <div style={{ marginBottom: 32 }}>
-              {venueRows.map((r, i) => (
-                <div key={i} style={cardStyle}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 4 }}>
-                    <div>
-                      <strong>{r.team}</strong>
-                      <span style={{ color: 'var(--muted)' }}> at {r.venue}</span>
-                    </div>
-                    <strong>{r.count}</strong>
-                  </div>
-                  <div style={{ fontSize: 12, color: 'var(--muted)' }}>{r.dates.join(' · ')}</div>
-                </div>
-              ))}
+            <div style={{ overflowX: 'auto', marginBottom: 32 }}>
+              <table style={tableStyle}>
+                <thead>
+                  <tr>
+                    <th style={thStyle}>Team</th>
+                    <th style={thStyle}>Venue</th>
+                    <th style={{ ...thStyle, textAlign: 'center' }}>Count</th>
+                    <th style={thStyle}>Dates &amp; KO times</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {venueRows.map((r, i) => (
+                    <tr key={i}>
+                      <td style={tdStyle}>{r.team}</td>
+                      <td style={tdStyle}>{r.venue}</td>
+                      <td style={{ ...tdStyle, textAlign: 'center', fontWeight: 700 }}>{r.count}</td>
+                      <td style={{ ...tdStyle, color: 'var(--muted)' }}>{r.dates.join(', ')}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
           )}
 
@@ -112,19 +123,27 @@ export default function FixtureTracker() {
           {refRows.length === 0 ? (
             <p style={{ color: 'var(--muted)', fontSize: 14 }}>No referee data recorded yet.</p>
           ) : (
-            <div>
-              {refRows.map((r, i) => (
-                <div key={i} style={cardStyle}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 4 }}>
-                    <div>
-                      <strong>{r.team}</strong>
-                      <span style={{ color: 'var(--muted)' }}> with {r.referee}</span>
-                    </div>
-                    <strong>{r.count}</strong>
-                  </div>
-                  <div style={{ fontSize: 12, color: 'var(--muted)' }}>{r.dates.join(' · ')}</div>
-                </div>
-              ))}
+            <div style={{ overflowX: 'auto' }}>
+              <table style={tableStyle}>
+                <thead>
+                  <tr>
+                    <th style={thStyle}>Team</th>
+                    <th style={thStyle}>Referee</th>
+                    <th style={{ ...thStyle, textAlign: 'center' }}>Count</th>
+                    <th style={thStyle}>Dates</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {refRows.map((r, i) => (
+                    <tr key={i}>
+                      <td style={tdStyle}>{r.team}</td>
+                      <td style={tdStyle}>{r.referee}</td>
+                      <td style={{ ...tdStyle, textAlign: 'center', fontWeight: 700 }}>{r.count}</td>
+                      <td style={{ ...tdStyle, color: 'var(--muted)' }}>{r.dates.join(', ')}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
           )}
         </>
@@ -133,12 +152,6 @@ export default function FixtureTracker() {
   )
 }
 
-const cardStyle = {
-  border: '1px solid var(--line)',
-  borderRadius: 8,
-  padding: 12,
-  marginBottom: 8,
-}
 const sectionHeaderStyle = {
   fontSize: 15,
   textTransform: 'uppercase',
@@ -147,4 +160,25 @@ const sectionHeaderStyle = {
   marginBottom: 12,
   paddingBottom: 8,
   borderBottom: '2px solid var(--line)',
+}
+const tableStyle = {
+  width: '100%',
+  borderCollapse: 'collapse',
+  fontSize: 12,
+  minWidth: 480,
+}
+const thStyle = {
+  textAlign: 'left',
+  fontSize: 11,
+  textTransform: 'uppercase',
+  letterSpacing: 0.3,
+  color: 'var(--muted)',
+  padding: '6px 8px',
+  borderBottom: '1px solid var(--line)',
+  whiteSpace: 'nowrap',
+}
+const tdStyle = {
+  padding: '6px 8px',
+  borderBottom: '1px solid var(--line)',
+  verticalAlign: 'top',
 }
