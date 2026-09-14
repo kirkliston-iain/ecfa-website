@@ -82,7 +82,7 @@ export default function Search() {
           key: `current-${player.id}`,
           label: name,
           description: player.team?.name ? `Player · ${player.team.name}` : 'Player',
-          to: `/scorers?player=${encodeURIComponent(name)}`,
+          to: `/players/${player.id}`,
         })
       }
       for (const player of historicResult.data || []) {
