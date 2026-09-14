@@ -12,6 +12,10 @@ export default function AdminDashboard() {
   const [fixtures, setFixtures] = useState([])
   const [saving, setSaving] = useState(null)
   const [expandedFixture, setExpandedFixture] = useState(null)
+  const [contactEnquiries, setContactEnquiries] = useState([])
+  const [showContactEnquiries, setShowContactEnquiries] = useState(false)
+  const [expandedEnquiry, setExpandedEnquiry] = useState(null)
+  const newContactCount = contactEnquiries.filter((enquiry) => enquiry.status === 'new').length
 
   const [squadsByFixture, setSquadsByFixture] = useState({})
   const [scorersByFixture, setScorersByFixture] = useState({})
@@ -71,6 +75,7 @@ export default function AdminDashboard() {
       .then(({ data }) => setVenues(data || []))
 
     loadPostponed()
+    loadContactEnquiries()
   }, [])
 
   useEffect(() => {
@@ -338,6 +343,50 @@ export default function AdminDashboard() {
     refreshDiscipline(fixtureId)
   }
 
+  async function loadContactEnquiries() {
+    const { data, error } = await supabase
+      .from('contact_enquiries')
+      .select('id, enquiry_type, name, email, mobile, message, status, created_at')
+      .order('created_at', { ascending: false })
+    if (!error) setContactEnquiries(data || [])
+  }
+
+  async function viewContactEnquiry(enquiry) {
+    setExpandedEnquiry((current) => (current === enquiry.id ? null : enquiry.id))
+    if (enquiry.status !== 'new') return
+    const { error } = await supabase
+      .from('contact_enquiries')
+      .update({ status: 'in_progress' })
+      .eq('id', enquiry.id)
+    if (!error) {
+      setContactEnquiries((current) =>
+        current.map((item) => item.id === enquiry.id ? { ...item, status: 'in_progress' } : item)
+      )
+    }
+  }
+
+  async function closeContactEnquiry(id) {
+    const { error } = await supabase
+      .from('contact_enquiries')
+      .update({ status: 'closed' })
+      .eq('id', id)
+    if (!error) {
+      setContactEnquiries((current) =>
+        current.map((item) => item.id === id ? { ...item, status: 'closed' } : item)
+      )
+    }
+  }
+
+  function contactDate(value) {
+    return new Date(value).toLocaleString('en-GB', {
+      day: 'numeric',
+      month: 'short',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    })
+  }
+
   async function handleSignOut() {
     await supabase.auth.signOut()
     window.location.href = '/admin'
@@ -351,6 +400,92 @@ export default function AdminDashboard() {
           Sign out
         </button>
       </div>
+
+      {newContactCount > 0 && (
+        <div
+          role="alert"
+          style={{
+            padding: 14,
+            marginBottom: 16,
+            border: '2px solid var(--brass)',
+            borderRadius: 8,
+            background: '#FFF9E8',
+          }}
+        >
+          <div style={{ fontWeight: 700, marginBottom: 8 }}>
+            New contact {newContactCount === 1 ? 'message' : 'messages'}: {newContactCount}
+          </div>
+          <button
+            onClick={() => setShowContactEnquiries(true)}
+            style={{ ...saveButtonStyle, width: '100%' }}
+          >
+            View {newContactCount === 1 ? 'message' : 'messages'}
+          </button>
+        </div>
+      )}
+
+      <button
+        onClick={() => setShowContactEnquiries((current) => !current)}
+        style={{ ...linkButtonStyle, display: 'block', width: '100%', textAlign: 'left', marginBottom: 12 }}
+      >
+        Contact messages{newContactCount ? ` (${newContactCount} new)` : ''} &rarr;
+      </button>
+
+      {showContactEnquiries && (
+        <section id="contact-messages" style={{ marginBottom: 24 }}>
+          <h2 style={{ fontSize: 17, margin: '0 0 10px' }}>Contact messages</h2>
+          {contactEnquiries.length === 0 ? (
+            <div style={{ color: 'var(--muted)', fontSize: 13 }}>No messages received.</div>
+          ) : (
+            <div style={{ display: 'grid', gap: 8 }}>
+              {contactEnquiries.map((enquiry) => (
+                <article
+                  key={enquiry.id}
+                  style={{
+                    ...cardStyle,
+                    borderLeft: enquiry.status === 'new' ? '5px solid var(--brass)' : '1px solid var(--line)',
+                  }}
+                >
+                  <button
+                    onClick={() => viewContactEnquiry(enquiry)}
+                    style={{ border: 0, background: 'transparent', padding: 0, width: '100%', textAlign: 'left', cursor: 'pointer' }}
+                  >
+                    <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10 }}>
+                      <strong>{enquiry.name}</strong>
+                      {enquiry.status === 'new' && (
+                        <span style={{ color: 'var(--brass)', fontSize: 12, fontWeight: 700 }}>NEW</span>
+                      )}
+                    </div>
+                    <div style={{ color: 'var(--muted)', fontSize: 12, marginTop: 3 }}>
+                      {enquiry.enquiry_type} · {contactDate(enquiry.created_at)}
+                    </div>
+                  </button>
+
+                  {expandedEnquiry === enquiry.id && (
+                    <div style={{ marginTop: 12, paddingTop: 12, borderTop: '1px solid var(--line)' }}>
+                      <div style={{ display: 'grid', gap: 5, fontSize: 13, marginBottom: 12 }}>
+                        {enquiry.email && <a href={`mailto:${enquiry.email}`}>{enquiry.email}</a>}
+                        {enquiry.mobile && <a href={`tel:${enquiry.mobile}`}>{enquiry.mobile}</a>}
+                      </div>
+                      <div style={{ whiteSpace: 'pre-wrap', lineHeight: 1.5, marginBottom: 12 }}>
+                        {enquiry.message}
+                      </div>
+                      {enquiry.status !== 'closed' && (
+                        <button
+                          onClick={() => closeContactEnquiry(enquiry.id)}
+                          style={{ ...outlineButtonStyle, width: '100%' }}
+                        >
+                          Mark as closed
+                        </button>
+                      )}
+                    </div>
+                  )}
+                </article>
+              ))}
+            </div>
+          )}
+        </section>
+      )}
 
       <Link to="/admin/teams" style={{ ...linkButtonStyle, display: 'block', marginBottom: 8 }}>
         Manage squads &rarr;
