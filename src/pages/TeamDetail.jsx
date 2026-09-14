@@ -94,7 +94,7 @@ export default function TeamDetail() {
 
       const { data: t, error: tErr } = await supabase
         .from('teams')
-        .select('id, name, logo_url')
+        .select('id, name, logo_url, manager_name')
         .eq('id', id)
         .single()
 
@@ -203,6 +203,24 @@ export default function TeamDetail() {
         <Badge logoUrl={team.logo_url} name={team.name} size={64} />
         <h1 style={{ fontSize: 26 }}>{team.name}</h1>
       </div>
+
+      {team.manager_name && (
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'baseline',
+            gap: 8,
+            marginBottom: 18,
+            paddingLeft: 80,
+            fontSize: 14,
+          }}
+        >
+          <span style={{ color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: 0.5, fontSize: 11, fontWeight: 700 }}>
+            Manager
+          </span>
+          <span style={{ fontWeight: 700, color: 'var(--ink)' }}>{team.manager_name}</span>
+        </div>
+      )}
 
       {honours.length > 0 && (
         <div
