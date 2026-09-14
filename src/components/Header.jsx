@@ -13,6 +13,7 @@ const TABS = [
   { to: '/sponsors', label: 'Sponsors' },
   { to: '/downloads', label: 'Downloads' },
   { to: '/web-stats', label: 'Web Stats' },
+  { to: '/search', label: 'Search' },
   { to: '/contact', label: 'Contact Us' },
 ]
 
