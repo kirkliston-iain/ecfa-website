@@ -66,11 +66,21 @@ export default function FixtureList({ fixtures }) {
               <div style={{ fontSize: 12, color: 'var(--brass)', marginBottom: 2, fontWeight: 600 }}>{f.round_name}</div>
             )}
             <div style={{ fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
-              <Badge logoUrl={f.home_team?.logo_url} name={f.home_team?.name} />
-              <span>{f.home_team?.name}</span>
+              <Badge
+                logoUrl={f.home_team?.logo_url}
+                name={f.home_team?.name || f.home_placeholder || 'TBC'}
+              />
+              <span style={!f.home_team ? placeholderStyle : undefined}>
+                {f.home_team?.name || f.home_placeholder || 'TBC'}
+              </span>
               <span style={{ color: 'var(--muted)' }}>v</span>
-              <Badge logoUrl={f.away_team?.logo_url} name={f.away_team?.name} />
-              <span>{f.away_team?.name}</span>
+              <Badge
+                logoUrl={f.away_team?.logo_url}
+                name={f.away_team?.name || f.away_placeholder || 'TBC'}
+              />
+              <span style={!f.away_team ? placeholderStyle : undefined}>
+                {f.away_team?.name || f.away_placeholder || 'TBC'}
+              </span>
             </div>
             {(f.venue || (f.fixture_date && f.fixture_date.slice(11, 16) !== '00:00')) && (
               <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 3 }}>
@@ -100,4 +110,10 @@ export default function FixtureList({ fixtures }) {
       ))}
     </ul>
   )
+}
+
+const placeholderStyle = {
+  color: 'var(--muted)',
+  fontStyle: 'italic',
+  fontWeight: 400,
 }
