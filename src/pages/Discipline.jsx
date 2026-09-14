@@ -158,11 +158,22 @@ export default function Discipline() {
     const { data } = await supabase
       .from('discipline_records')
       .select(
-        'fixture_id, card_type, card_count, serious_offence, player:player_id(id, first_name, last_name), team:team_id(id, name), fixture:fixture_id(id, fixture_date)'
+        'fixture_id, card_type, card_count, serious_offence, player:player_id(id, first_name, last_name), team:team_id(id, name)'
       )
       .order('created_at')
 
     const rows = data || []
+    const seriousFixtureIds = Array.from(
+      new Set(rows.filter((r) => r.serious_offence && r.fixture_id).map((r) => r.fixture_id))
+    )
+    const fixtureDates = {}
+    if (seriousFixtureIds.length > 0) {
+      const { data: offenceFixtures } = await supabase
+        .from('fixtures')
+        .select('id, fixture_date')
+        .in('id', seriousFixtureIds)
+      for (const fixture of offenceFixtures || []) fixtureDates[fixture.id] = fixture.fixture_date
+    }
 
     const byPlayerFixture = new Map()
     for (const r of rows) {
@@ -219,7 +230,7 @@ export default function Discipline() {
       }
       const entry = seriousCounts.get(key)
       entry.count += 1
-      if (r.fixture?.fixture_date) entry.offenceDates.push(r.fixture.fixture_date)
+      if (fixtureDates[r.fixture_id]) entry.offenceDates.push(fixtureDates[r.fixture_id])
     }
 
     const seriousList = Array.from(seriousCounts.values())
