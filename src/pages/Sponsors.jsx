@@ -8,7 +8,7 @@ const SPONSORED_COMPETITIONS = [
     logo: '/sponsors/appin-sports.png',
     website: 'https://appinsports.com/',
     summary:
-      'Appin Sports creates custom sportswear for football clubs, running clubs, charities and sporting events. Its team supports customers from the first design ideas through production and delivery.',
+      'Edinburgh-based specialists in custom teamwear for football clubs, sports teams and events.',
   },
   {
     competition: 'ECFA League Cup',
@@ -17,7 +17,7 @@ const SPONSORED_COMPETITIONS = [
     logo: '/sponsors/kwik-fit.png',
     website: 'https://www.kwik-fit.com/',
     summary:
-      'Kwik Fit provides vehicle care across the UK, including tyres, MOT testing, servicing, exhausts, batteries and brakes, with online booking and local centres.',
+      'UK vehicle-care specialists providing tyres, MOT testing, servicing, brakes, batteries and exhausts.',
   },
 ]
 
@@ -33,29 +33,21 @@ export default function Sponsors() {
         {SPONSORED_COMPETITIONS.map((item) => (
           <section key={item.competition} style={competitionStyle}>
             <div style={competitionHeaderStyle}>
-              <div>
-                <div style={eyebrowStyle}>Competition</div>
-                <h2 style={{ fontSize: 21, margin: '3px 0 0' }}>{item.competition}</h2>
-              </div>
+              <div style={eyebrowStyle}>Competition</div>
+              <h2 style={{ fontSize: 19, margin: '3px 0 6px' }}>{item.competition}</h2>
               <Link to={item.competitionPath} style={competitionLinkStyle}>
                 View competition &rarr;
               </Link>
             </div>
 
             <div style={sponsorStyle}>
-              <a
-                href={item.website}
-                target="_blank"
-                rel="noopener noreferrer"
-                aria-label={`Visit ${item.sponsor} website`}
-                style={logoPanelStyle}
-              >
+              <div style={logoPanelStyle}>
                 <img src={item.logo} alt={`${item.sponsor} logo`} style={logoStyle} />
-              </a>
-              <div style={{ flex: 1, minWidth: 0 }}>
+              </div>
+              <div style={{ minWidth: 0 }}>
                 <div style={eyebrowStyle}>Competition sponsor</div>
-                <h3 style={{ fontSize: 19, margin: '3px 0 8px' }}>{item.sponsor}</h3>
-                <p style={{ margin: '0 0 14px', color: 'var(--muted)', lineHeight: 1.55 }}>
+                <h3 style={{ fontSize: 17, margin: '2px 0 5px' }}>{item.sponsor}</h3>
+                <p style={{ margin: '0 0 9px', color: 'var(--muted)', lineHeight: 1.45, fontSize: 14 }}>
                   {item.summary}
                 </p>
                 <a
@@ -64,7 +56,7 @@ export default function Sponsors() {
                   rel="noopener noreferrer"
                   style={websiteLinkStyle}
                 >
-                  Visit {item.sponsor} website &rarr;
+                  Visit website &rarr;
                 </a>
               </div>
             </div>
@@ -83,27 +75,23 @@ const competitionStyle = {
 }
 
 const competitionHeaderStyle = {
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'space-between',
-  gap: 14,
-  padding: '16px 18px',
+  padding: '14px 16px',
   borderBottom: '3px solid var(--brass)',
-  flexWrap: 'wrap',
 }
 
 const sponsorStyle = {
-  display: 'flex',
+  display: 'grid',
+  gridTemplateColumns: '72px minmax(0, 1fr)',
   alignItems: 'center',
-  gap: 22,
-  padding: 20,
-  flexWrap: 'wrap',
+  gap: 14,
+  padding: 16,
 }
 
 const logoPanelStyle = {
-  width: 210,
-  minHeight: 110,
-  padding: 16,
+  width: 72,
+  height: 72,
+  boxSizing: 'border-box',
+  padding: 7,
   border: '1px solid var(--line)',
   borderRadius: 8,
   display: 'flex',
@@ -115,8 +103,7 @@ const logoPanelStyle = {
 const logoStyle = {
   display: 'block',
   width: '100%',
-  maxWidth: 190,
-  maxHeight: 82,
+  maxHeight: 54,
   objectFit: 'contain',
 }
 
@@ -136,12 +123,9 @@ const competitionLinkStyle = {
 }
 
 const websiteLinkStyle = {
-  display: 'inline-block',
-  padding: '9px 13px',
-  borderRadius: 6,
-  background: 'var(--ink)',
-  color: '#fff',
+  color: 'var(--ink)',
   fontSize: 13,
   fontWeight: 700,
-  textDecoration: 'none',
+  textDecoration: 'underline',
+  textUnderlineOffset: 3,
 }
