@@ -13,7 +13,7 @@ function makeDailySeries(rows) {
   const byDate = Object.fromEntries((rows || []).map((row) => [String(row.date).slice(0, 10), Number(row.views)]))
   const series = []
   const today = new Date()
-  for (let offset = 59; offset >= 0; offset -= 1) {
+  for (let offset = 6; offset >= 0; offset -= 1) {
     const date = new Date(today)
     date.setDate(today.getDate() - offset)
     const key = date.toISOString().slice(0, 10)
@@ -34,7 +34,7 @@ function DailyChart({ rows }) {
 
   return (
     <div style={{ overflowX: 'auto' }}>
-      <svg viewBox={`0 0 ${width} ${height}`} role="img" aria-label="Daily page views over the last 60 days" style={{ width: '100%', minWidth: 620, display: 'block' }}>
+      <svg viewBox={`0 0 ${width} ${height}`} role="img" aria-label="Daily page views over the last 7 days" style={{ width: '100%', display: 'block' }}>
         {[0, 0.25, 0.5, 0.75, 1].map((ratio) => {
           const y = pad.top + chartHeight * (1 - ratio)
           return (
@@ -62,7 +62,7 @@ function DailyChart({ rows }) {
             </rect>
           )
         })}
-        {rows.filter((_row, index) => index % 10 === 0 || index === rows.length - 1).map((row) => {
+        {rows.map((row) => {
           const index = rows.findIndex((item) => item.date === row.date)
           return (
             <text
@@ -200,7 +200,7 @@ export default function WebStats() {
 
       <section style={panelStyle}>
         <h2 style={{ color: 'var(--brass)', fontSize: 20, margin: '0 0 8px' }}>Daily totals</h2>
-        <div style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 12 }}>Page views over the last 60 days</div>
+        <div style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 12 }}>Page views over the last 7 days</div>
         <DailyChart rows={daily} />
       </section>
 
