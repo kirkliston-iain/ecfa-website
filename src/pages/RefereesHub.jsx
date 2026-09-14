@@ -89,7 +89,7 @@ export default function RefereesHub() {
     async function load() {
       const { data: playedFixtures } = await supabase
         .from('fixtures')
-        .select('id, referee_name, home_team:home_team_id(name), away_team:away_team_id(name)')
+        .select('id, referee_name, home_team:home_team_id(id, name), away_team:away_team_id(id, name)')
         .eq('status', 'played')
         .not('referee_name', 'is', null)
 
@@ -108,17 +108,29 @@ export default function RefereesHub() {
 
       const fixtureIds = (playedFixtures || []).map((f) => f.id)
       const cardsByRef = {}
+      const cardsByRefTeam = {}
       if (fixtureIds.length > 0) {
         const { data: cards } = await supabase
           .from('discipline_records')
-          .select('card_count, fixture_id')
+          .select('card_count, fixture_id, team_id')
           .in('fixture_id', fixtureIds)
         const fixtureToRef = {}
-        for (const f of playedFixtures || []) fixtureToRef[f.id] = f.referee_name
-        for (const c of cards || []) {
-          const ref = fixtureToRef[c.fixture_id]
+        const teamNamesById = {}
+        for (const f of playedFixtures || []) {
+          fixtureToRef[f.id] = f.referee_name
+          if (f.home_team?.id) teamNamesById[f.home_team.id] = f.home_team.name
+          if (f.away_team?.id) teamNamesById[f.away_team.id] = f.away_team.name
+        }
+        for (const card of cards || []) {
+          const ref = fixtureToRef[card.fixture_id]
           if (!ref) continue
-          cardsByRef[ref] = (cardsByRef[ref] || 0) + (c.card_count || 0)
+          const count = card.card_count || 0
+          cardsByRef[ref] = (cardsByRef[ref] || 0) + count
+          const teamName = teamNamesById[card.team_id]
+          if (teamName) {
+            cardsByRefTeam[ref] = cardsByRefTeam[ref] || {}
+            cardsByRefTeam[ref][teamName] = (cardsByRefTeam[ref][teamName] || 0) + count
+          }
         }
       }
 
@@ -128,7 +140,7 @@ export default function RefereesHub() {
           const cards = cardsByRef[r.name] || 0
           const teams = Object.entries(teamsByRef[r.name] || {})
             .sort((a, b) => b[1] - a[1])
-            .map(([name, count]) => `${teamCode(name)}:${count}`)
+            .map(([name, count]) => `${teamCode(name)}:${count}G/${cardsByRefTeam[r.name]?.[name] || 0}C`)
           return { name: r.name, games, cards, rate: games ? cards / games : 0, teams }
         })
         .filter((r) => r.games > 0)
@@ -268,7 +280,7 @@ export default function RefereesHub() {
                   <th style={{ ...thStyle, textAlign: 'center' }}>Games</th>
                   <th style={{ ...thStyle, textAlign: 'center' }}>Cards</th>
                   <th style={{ ...thStyle, textAlign: 'center' }}>Rate</th>
-                  <th style={thStyle}>Teams</th>
+                  <th style={thStyle}>Teams (games/cards)</th>
                 </tr>
               </thead>
               <tbody>
