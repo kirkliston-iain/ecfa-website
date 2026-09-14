@@ -12,6 +12,7 @@ const TABS = [
   { to: '/referees', label: 'Referees' },
   { to: '/downloads', label: 'Downloads' },
   { to: '/web-stats', label: 'Web Stats' },
+  { to: '/contact', label: 'Contact Us' },
 ]
 
 export default function Header() {
