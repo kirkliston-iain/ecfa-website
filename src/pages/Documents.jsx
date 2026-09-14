@@ -1,8 +1,12 @@
 import { useState } from 'react'
 
 const DOCUMENTS = [
-  // Add public documents here as:
-  // { title: 'Document title', description: 'Short description', file: '/documents/file.pdf' }
+  {
+    title: 'ECFA League Handbook 2026/27',
+    description: 'Official league rules, disciplinary procedures, competition formats and manager guidance for the 2026/27 season.',
+    pdf: '/documents/ECFA-League-Handbook-2026-27.pdf',
+    word: '/documents/ECFA-League-Handbook-2026-27.docx',
+  },
 ]
 
 export default function Documents() {
@@ -12,35 +16,31 @@ export default function Documents() {
     <div className="container" style={{ padding: '32px 20px 48px', maxWidth: 820 }}>
       <h1 style={{ fontSize: 30, marginBottom: 4 }}>Documents</h1>
       <p style={{ color: 'var(--muted)', marginBottom: 28 }}>
-        View ECFA documents online or download a copy.
+        View official ECFA documents online or download a copy.
       </p>
 
-      {DOCUMENTS.length === 0 ? (
-        <div style={emptyStyle}>
-          Documents will appear here once they have been added.
-        </div>
-      ) : (
-        <div style={{ display: 'grid', gap: 12 }}>
-          {DOCUMENTS.map((document) => (
-            <article key={document.file} style={cardStyle}>
-              <div style={{ flex: 1 }}>
-                <div style={{ fontWeight: 700, marginBottom: 4 }}>{document.title}</div>
-                {document.description && (
-                  <div style={{ fontSize: 13, color: 'var(--muted)' }}>{document.description}</div>
-                )}
-              </div>
-              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                <button onClick={() => setViewing(document)} style={outlineButtonStyle}>
-                  View
-                </button>
-                <a href={document.file} download style={buttonStyle}>
-                  Download
-                </a>
-              </div>
-            </article>
-          ))}
-        </div>
-      )}
+      <div style={{ display: 'grid', gap: 12 }}>
+        {DOCUMENTS.map((document) => (
+          <article key={document.pdf} style={cardStyle}>
+            <div style={{ flex: 1, minWidth: 220 }}>
+              <div style={{ fontWeight: 700, marginBottom: 4 }}>{document.title}</div>
+              <div style={{ fontSize: 13, color: 'var(--muted)' }}>{document.description}</div>
+              <div style={{ fontSize: 12, color: 'var(--muted)', marginTop: 6 }}>Available as PDF or Word</div>
+            </div>
+            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+              <button onClick={() => setViewing(document)} style={outlineButtonStyle}>
+                View PDF
+              </button>
+              <a href={document.pdf} download style={outlineButtonStyle}>
+                Download PDF
+              </a>
+              <a href={document.word} download style={buttonStyle}>
+                Download Word
+              </a>
+            </div>
+          </article>
+        ))}
+      </div>
 
       {viewing && (
         <div
@@ -58,14 +58,13 @@ export default function Documents() {
               </button>
             </div>
             <iframe
-              src={viewing.file}
+              src={viewing.pdf}
               title={viewing.title}
               style={{ width: '100%', flex: 1, border: 0, background: '#fff' }}
             />
-            <div style={{ padding: 10, borderTop: '1px solid var(--line)', textAlign: 'right' }}>
-              <a href={viewing.file} download style={buttonStyle}>
-                Download
-              </a>
+            <div style={{ padding: 10, borderTop: '1px solid var(--line)', display: 'flex', gap: 8, justifyContent: 'flex-end', flexWrap: 'wrap' }}>
+              <a href={viewing.pdf} download style={outlineButtonStyle}>Download PDF</a>
+              <a href={viewing.word} download style={buttonStyle}>Download Word</a>
             </div>
           </div>
         </div>
@@ -83,14 +82,6 @@ const cardStyle = {
   borderRadius: 8,
   background: '#fff',
   flexWrap: 'wrap',
-}
-
-const emptyStyle = {
-  padding: 24,
-  border: '1px dashed var(--line)',
-  borderRadius: 8,
-  color: 'var(--muted)',
-  textAlign: 'center',
 }
 
 const buttonStyle = {

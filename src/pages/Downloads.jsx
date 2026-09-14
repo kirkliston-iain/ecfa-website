@@ -269,6 +269,29 @@ export default function Downloads() {
         </div>
       )}
 
+      <section style={{ marginBottom: 28 }}>
+        <h2 style={{ fontSize: 18, marginBottom: 10 }}>League documents</h2>
+        <div style={cardStyle}>
+          <div style={{ flex: 1, minWidth: 220 }}>
+            <div style={{ fontWeight: 700, marginBottom: 4 }}>ECFA League Handbook 2026/27</div>
+            <div style={{ fontSize: 13, color: 'var(--muted)' }}>
+              Official league rules, procedures, competition formats and manager guidance.
+            </div>
+          </div>
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+            <a href="/documents/ECFA-League-Handbook-2026-27.pdf" target="_blank" rel="noreferrer" style={{ ...buttonStyle, textDecoration: 'none' }}>
+              View PDF
+            </a>
+            <a href="/documents/ECFA-League-Handbook-2026-27.pdf" download style={{ ...buttonStyle, textDecoration: 'none' }}>
+              Download PDF
+            </a>
+            <a href="/documents/ECFA-League-Handbook-2026-27.docx" download style={{ ...buttonStyle, textDecoration: 'none' }}>
+              Download Word
+            </a>
+          </div>
+        </div>
+      </section>
+
       <div style={{ display: 'grid', gap: 12 }}>
         {DOWNLOADS.map((item) => (
           <div key={item.title} style={cardStyle}>
