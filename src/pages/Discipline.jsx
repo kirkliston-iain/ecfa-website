@@ -814,8 +814,21 @@ export default function Discipline() {
         Individual Player Points (2026/27)
       </h2>
       <p style={{ fontSize: 13, color: 'var(--muted)', marginBottom: 12 }}>
-        Sourced from the club's disciplinary records. Feeds into the team totals above.
+        All recorded players are shown. Use the team filter below to narrow the list.
       </p>
+      <select
+        value={teamFilter}
+        onChange={(e) => setTeamFilter(e.target.value)}
+        style={{ ...fullSelectStyle, marginBottom: 16 }}
+        aria-label="Filter individual player points by team"
+      >
+        <option value="">All teams</option>
+        {teams.map((t) => (
+          <option key={t.id} value={t.id}>
+            {t.name}
+          </option>
+        ))}
+      </select>
       {isAdmin && (
         <div style={{ ...cardStyle, marginBottom: 16 }}>
           <div style={{ fontWeight: 600, marginBottom: 10, fontSize: 14 }}>Add / correct a player</div>
