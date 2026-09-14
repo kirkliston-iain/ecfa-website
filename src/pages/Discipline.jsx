@@ -867,55 +867,73 @@ export default function Discipline() {
       {playerPoints.filter((p) => !teamFilter || p.team_id === teamFilter).length === 0 ? (
         <p style={{ color: 'var(--muted)', fontSize: 14, marginBottom: 32 }}>No player points recorded yet.</p>
       ) : (
-        <div style={{ marginBottom: 32 }}>
-          {playerPoints
-            .filter((p) => !teamFilter || p.team_id === teamFilter)
-            .map((p) => {
-              const isEditing = editingPlayerPoint === p.id
-              return (
-                <div key={p.id} style={{ padding: '8px 0', borderBottom: '1px solid var(--line)' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 14 }}>
-                    <span>
-                      {p.player_name}
-                      <span style={{ fontSize: 11, color: 'var(--muted)' }}> — {p.team?.name || p.team_name_raw}</span>
-                    </span>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                      <strong>{p.points}</strong>
-                      {isAdmin && !isEditing && (
-                        <button
-                          onClick={() => {
-                            setEditingPlayerPoint(p.id)
-                            setEditPlayerPointValue(String(p.points))
-                          }}
-                          style={{ ...smallOutlineStyle, padding: '4px 8px', fontSize: 12 }}
-                        >
-                          Edit
-                        </button>
+        <div style={{ overflowX: 'auto', marginBottom: 32 }}>
+          <table style={{ width: '100%', minWidth: 520, borderCollapse: 'collapse', fontSize: 13 }}>
+            <thead>
+              <tr>
+                <th style={tableHeaderStyle}>Player</th>
+                <th style={tableHeaderStyle}>Team</th>
+                <th style={{ ...tableHeaderStyle, textAlign: 'center' }}>Points</th>
+                {isAdmin && <th style={tableHeaderStyle}>Actions</th>}
+              </tr>
+            </thead>
+            <tbody>
+              {playerPoints
+                .filter((p) => !teamFilter || p.team_id === teamFilter)
+                .map((p) => {
+                  const isEditing = editingPlayerPoint === p.id
+                  return (
+                    <tr key={p.id}>
+                      <td style={{ ...tableCellStyle, fontWeight: 600 }}>{p.player_name}</td>
+                      <td style={{ ...tableCellStyle, color: 'var(--muted)' }}>
+                        {p.team?.name || p.team_name_raw}
+                      </td>
+                      <td style={{ ...tableCellStyle, textAlign: 'center', fontWeight: 700 }}>
+                        {isEditing ? (
+                          <input
+                            type="number"
+                            value={editPlayerPointValue}
+                            onChange={(e) => setEditPlayerPointValue(e.target.value)}
+                            style={{ ...fullSelectStyle, width: 76, padding: '6px 8px' }}
+                          />
+                        ) : (
+                          p.points
+                        )}
+                      </td>
+                      {isAdmin && (
+                        <td style={tableCellStyle}>
+                          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                            {isEditing ? (
+                              <>
+                                <button onClick={() => savePlayerPoint(p.id)} style={smallButtonStyle}>
+                                  Save
+                                </button>
+                                <button onClick={() => removePlayerPoint(p.id)} style={smallOutlineStyle}>
+                                  Remove
+                                </button>
+                                <button onClick={() => setEditingPlayerPoint(null)} style={smallOutlineStyle}>
+                                  Cancel
+                                </button>
+                              </>
+                            ) : (
+                              <button
+                                onClick={() => {
+                                  setEditingPlayerPoint(p.id)
+                                  setEditPlayerPointValue(String(p.points))
+                                }}
+                                style={smallOutlineStyle}
+                              >
+                                Edit
+                              </button>
+                            )}
+                          </div>
+                        </td>
                       )}
-                    </div>
-                  </div>
-                  {isAdmin && isEditing && (
-                    <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
-                      <input
-                        type="number"
-                        value={editPlayerPointValue}
-                        onChange={(e) => setEditPlayerPointValue(e.target.value)}
-                        style={{ ...fullSelectStyle, flex: 1 }}
-                      />
-                      <button onClick={() => savePlayerPoint(p.id)} style={{ ...smallButtonStyle, flex: 1 }}>
-                        Save
-                      </button>
-                      <button onClick={() => removePlayerPoint(p.id)} style={{ ...smallOutlineStyle, flex: 1 }}>
-                        Remove
-                      </button>
-                      <button onClick={() => setEditingPlayerPoint(null)} style={{ ...smallOutlineStyle, flex: 1 }}>
-                        Cancel
-                      </button>
-                    </div>
-                  )}
-                </div>
-              )
-            })}
+                    </tr>
+                  )
+                })}
+            </tbody>
+          </table>
         </div>
       )}
 
@@ -988,6 +1006,21 @@ export default function Discipline() {
   )
 }
 
+const tableHeaderStyle = {
+  textAlign: 'left',
+  padding: '8px 10px',
+  borderBottom: '2px solid var(--line)',
+  color: 'var(--muted)',
+  fontSize: 11,
+  textTransform: 'uppercase',
+  letterSpacing: 0.3,
+  whiteSpace: 'nowrap',
+}
+const tableCellStyle = {
+  padding: '9px 10px',
+  borderBottom: '1px solid var(--line)',
+  verticalAlign: 'middle',
+}
 const cardStyle = {
   border: '1px solid var(--line)',
   borderRadius: 8,
