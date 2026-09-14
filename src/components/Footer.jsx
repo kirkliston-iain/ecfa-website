@@ -36,7 +36,7 @@ export default function Footer() {
         }}
       >
         <span>Edinburgh Churches Football Association</span>
-        {views != null && <span>{views.toLocaleString()} site visits</span>}
+        {views != null && <Link to="/web-stats">{views.toLocaleString()} site visits · View stats</Link>}
         <div style={{ display: 'flex', gap: 12 }}>
           <button
             onClick={() => window.dispatchEvent(new Event('open-manager-gate'))}
