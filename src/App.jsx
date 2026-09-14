@@ -21,6 +21,7 @@ import TeamsHub from './pages/TeamsHub'
 import SeasonAdmin from './pages/SeasonAdmin'
 import RefereesHub from './pages/RefereesHub'
 import FixtureTracker from './pages/FixtureTracker'
+import Downloads from './pages/Downloads'
 
 export default function App() {
   return (
@@ -39,6 +40,7 @@ export default function App() {
           <Route path="/history" element={<HistoricalSeason />} />
           <Route path="/teams" element={<TeamsHub />} />
           <Route path="/referees" element={<RefereesHub />} />
+          <Route path="/downloads" element={<Downloads />} />
           <Route
             path="/admin/season"
             element={
