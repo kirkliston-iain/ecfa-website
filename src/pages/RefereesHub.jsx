@@ -205,6 +205,13 @@ export default function RefereesHub() {
       ? allGames
       : historicGames.filter((h) => h.season === seasonFilter)
 
+  const teamCounts = {}
+  for (const g of gamesForSeason) {
+    teamCounts[g.home_name] = (teamCounts[g.home_name] || 0) + 1
+    teamCounts[g.away_name] = (teamCounts[g.away_name] || 0) + 1
+  }
+  const teamCountsList = Object.entries(teamCounts).sort((a, b) => b[1] - a[1])
+
   return (
     <div className="container" style={{ padding: '32px 20px 48px' }}>
       <h1 style={{ fontSize: 30, marginBottom: 4 }}>Referees</h1>
@@ -297,9 +304,8 @@ export default function RefereesHub() {
             </>
           )}
 
-          <h2 style={sectionHeaderStyle}>All Games</h2>
           {seasonOptions.length > 1 && (
-            <select value={seasonFilter} onChange={(e) => setSeasonFilter(e.target.value)} style={{ ...selectStyle, marginBottom: 12 }}>
+            <select value={seasonFilter} onChange={(e) => setSeasonFilter(e.target.value)} style={{ ...selectStyle, marginBottom: 20 }}>
               {seasonOptions.map((s) => (
                 <option key={s} value={s}>
                   {s}
@@ -307,6 +313,25 @@ export default function RefereesHub() {
               ))}
             </select>
           )}
+
+          {teamCountsList.length > 0 && (
+            <>
+              <h2 style={sectionHeaderStyle}>Teams Officiated — {seasonFilter}</h2>
+              <p style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 10 }}>
+                How many times this referee has taken charge of each team this season — useful context for the card rate above.
+              </p>
+              <div style={{ marginBottom: 28 }}>
+                {teamCountsList.map(([team, count]) => (
+                  <div key={team} style={{ display: 'flex', justifyContent: 'space-between', padding: '5px 0', borderBottom: '1px solid var(--line)', fontSize: 13 }}>
+                    <span>{team}</span>
+                    <strong>{count}</strong>
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
+
+          <h2 style={sectionHeaderStyle}>All Games</h2>
           {gamesForSeason.length === 0 ? (
             <p style={{ color: 'var(--muted)', fontSize: 14 }}>No games recorded for this season.</p>
           ) : (
