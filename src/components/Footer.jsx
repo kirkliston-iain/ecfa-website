@@ -1,25 +1,25 @@
-import { Link } from 'react-router-dom'
+import { Link, useLocation } from 'react-router-dom'
 import { useEffect, useState } from 'react'
 import { supabase } from '../supabaseClient'
 
 export default function Footer() {
+  const location = useLocation()
   const [views, setViews] = useState(null)
 
   useEffect(() => {
     let cancelled = false
 
-    async function bump() {
-      const { data, error } = await supabase.rpc('increment_page_views')
-      if (!cancelled && !error && typeof data === 'number') {
-        setViews(data)
-      }
+    async function track() {
+      await supabase.rpc('record_page_view', { view_path: location.pathname })
+      const { data } = await supabase.rpc('get_web_stats')
+      if (!cancelled && data?.all_time != null) setViews(Number(data.all_time))
     }
 
-    bump()
+    track()
     return () => {
       cancelled = true
     }
-  }, [])
+  }, [location.pathname])
 
   return (
     <footer style={{ borderTop: '1px solid var(--line)', marginTop: 60 }}>
