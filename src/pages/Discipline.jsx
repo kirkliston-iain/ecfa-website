@@ -69,6 +69,8 @@ export default function Discipline() {
 
   useEffect(() => {
     loadPointsOverview()
+      .catch((error) => console.error('Could not load discipline overview', error))
+      .finally(() => setLoading(false))
     loadSuspensions()
     loadPlayedFixtures()
     loadTeamOverrides()
@@ -223,10 +225,12 @@ export default function Discipline() {
     const seriousList = Array.from(seriousCounts.values())
       .map((row) => {
         const rule = SERIOUS_OFFENCE_RULES[row.type]
+        if (!rule) return null
         const tierIndex = Math.min(row.count, rule.tiers.length) - 1
         const ban = rule.tiers[tierIndex]
         const matchBan = ban.match(/(\d+)-match/)
-        const startDate = [...row.offenceDates].sort().at(-1) || null
+        const sortedOffenceDates = [...row.offenceDates].sort()
+        const startDate = sortedOffenceDates[sortedOffenceDates.length - 1] || null
         let availableFrom = null
         if (startDate && (ban.includes('1-year') || ban.includes('12-month'))) {
           const date = new Date(`${startDate}T00:00:00`)
@@ -244,6 +248,7 @@ export default function Discipline() {
           isLifetime: ban === 'Lifetime ban',
         }
       })
+      .filter(Boolean)
       .sort((a, b) => b.count - a.count)
 
     setPlayerRows(playerList)
