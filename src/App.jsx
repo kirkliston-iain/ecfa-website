@@ -25,6 +25,7 @@ import Downloads from './pages/Downloads'
 import WebStats from './pages/WebStats'
 import Contact from './pages/Contact'
 import Sponsors from './pages/Sponsors'
+import Search from './pages/Search'
 
 export default function App() {
   return (
@@ -47,6 +48,7 @@ export default function App() {
           <Route path="/web-stats" element={<WebStats />} />
           <Route path="/contact" element={<Contact />} />
           <Route path="/sponsors" element={<Sponsors />} />
+          <Route path="/search" element={<Search />} />
           <Route
             path="/admin/season"
             element={
