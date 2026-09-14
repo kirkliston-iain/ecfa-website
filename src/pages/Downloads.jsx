@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import * as XLSX from 'xlsx'
 import { supabase } from '../supabaseClient'
 
 const PAGE_SIZE = 1000
@@ -23,22 +24,31 @@ function csvCell(value) {
   return `"${text.replace(/"/g, '""')}"`
 }
 
-function htmlCell(value) {
-  return String(value ?? '')
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-}
-
 function downloadExcel(filename, rows) {
   if (!rows.length) throw new Error('There is no data available for this download.')
+
+  const worksheet = XLSX.utils.json_to_sheet(rows)
   const columns = Array.from(new Set(rows.flatMap((row) => Object.keys(row))))
-  const table = `<table><thead><tr>${columns.map((column) => `<th>${htmlCell(column)}</th>`).join('')}</tr></thead><tbody>${rows
-    .map((row) => `<tr>${columns.map((column) => `<td>${htmlCell(row[column])}</td>`).join('')}</tr>`)
-    .join('')}</tbody></table>`
-  const workbook = `<!DOCTYPE html><html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel"><head><meta charset="utf-8"></head><body>${table}</body></html>`
-  downloadFile(filename, workbook, 'application/vnd.ms-excel;charset=utf-8')
+  worksheet['!cols'] = columns.map((column) => ({
+    wch: Math.min(
+      50,
+      Math.max(
+        column.length + 2,
+        ...rows.slice(0, 500).map((row) => String(row[column] ?? '').length + 2)
+      )
+    ),
+  }))
+  worksheet['!autofilter'] = { ref: worksheet['!ref'] }
+
+  const workbook = XLSX.utils.book_new()
+  XLSX.utils.book_append_sheet(workbook, worksheet, 'ECFA Data')
+  const bytes = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' })
+
+  downloadFile(
+    filename,
+    bytes,
+    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+  )
 }
 
 function downloadCsv(filename, rows) {
@@ -47,8 +57,8 @@ function downloadCsv(filename, rows) {
   const csv = [
     columns.map(csvCell).join(','),
     ...rows.map((row) => columns.map((column) => csvCell(row[column])).join(',')),
-  ].join('\n')
-  downloadFile(filename, csv, 'text/csv;charset=utf-8')
+  ].join('\r\n')
+  downloadFile(filename, `\uFEFF${csv}`, 'text/csv;charset=utf-8')
 }
 
 function downloadFile(filename, contents, type) {
@@ -60,7 +70,7 @@ function downloadFile(filename, contents, type) {
   document.body.appendChild(link)
   link.click()
   link.remove()
-  URL.revokeObjectURL(url)
+  window.setTimeout(() => URL.revokeObjectURL(url), 1000)
 }
 
 function todayStamp() {
@@ -221,7 +231,7 @@ export default function Downloads() {
     try {
       const rows = await item.load()
       if (format === 'excel') {
-        downloadExcel(item.filename.replace(/\.csv$/, '.xls'), rows)
+        downloadExcel(item.filename.replace(/\.csv$/, '.xlsx'), rows)
       } else {
         downloadCsv(item.filename, rows)
       }
