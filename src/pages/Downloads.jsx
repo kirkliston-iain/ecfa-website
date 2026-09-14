@@ -23,6 +23,24 @@ function csvCell(value) {
   return `"${text.replace(/"/g, '""')}"`
 }
 
+function htmlCell(value) {
+  return String(value ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+}
+
+function downloadExcel(filename, rows) {
+  if (!rows.length) throw new Error('There is no data available for this download.')
+  const columns = Array.from(new Set(rows.flatMap((row) => Object.keys(row))))
+  const table = `<table><thead><tr>${columns.map((column) => `<th>${htmlCell(column)}</th>`).join('')}</tr></thead><tbody>${rows
+    .map((row) => `<tr>${columns.map((column) => `<td>${htmlCell(row[column])}</td>`).join('')}</tr>`)
+    .join('')}</tbody></table>`
+  const workbook = `<!DOCTYPE html><html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel"><head><meta charset="utf-8"></head><body>${table}</body></html>`
+  downloadFile(filename, workbook, 'application/vnd.ms-excel;charset=utf-8')
+}
+
 function downloadCsv(filename, rows) {
   if (!rows.length) throw new Error('There is no data available for this download.')
   const columns = Array.from(new Set(rows.flatMap((row) => Object.keys(row))))
@@ -197,11 +215,16 @@ export default function Downloads() {
   const [working, setWorking] = useState('')
   const [error, setError] = useState('')
 
-  async function runDownload(item) {
-    setWorking(item.title)
+  async function runDownload(item, format) {
+    setWorking(`${item.title}-${format}`)
     setError('')
     try {
-      downloadCsv(item.filename, await item.load())
+      const rows = await item.load()
+      if (format === 'excel') {
+        downloadExcel(item.filename.replace(/\.csv$/, '.xls'), rows)
+      } else {
+        downloadCsv(item.filename, rows)
+      }
     } catch (err) {
       setError(err.message || 'The download could not be created.')
     } finally {
@@ -253,13 +276,22 @@ export default function Downloads() {
               <div style={{ fontWeight: 700, marginBottom: 4 }}>{item.title}</div>
               <div style={{ fontSize: 13, color: 'var(--muted)' }}>{item.description}</div>
             </div>
-            <button
-              onClick={() => runDownload(item)}
-              disabled={!!working}
-              style={buttonStyle}
-            >
-              {working === item.title ? 'Preparing…' : 'Download CSV'}
-            </button>
+            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+              <button
+                onClick={() => runDownload(item, 'csv')}
+                disabled={!!working}
+                style={buttonStyle}
+              >
+                {working === `${item.title}-csv` ? 'Preparing…' : 'CSV'}
+              </button>
+              <button
+                onClick={() => runDownload(item, 'excel')}
+                disabled={!!working}
+                style={buttonStyle}
+              >
+                {working === `${item.title}-excel` ? 'Preparing…' : 'Excel'}
+              </button>
+            </div>
           </div>
         ))}
       </div>
