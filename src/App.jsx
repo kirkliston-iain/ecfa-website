@@ -22,7 +22,6 @@ import SeasonAdmin from './pages/SeasonAdmin'
 import RefereesHub from './pages/RefereesHub'
 import FixtureTracker from './pages/FixtureTracker'
 import Downloads from './pages/Downloads'
-import Documents from './pages/Documents'
 import WebStats from './pages/WebStats'
 
 export default function App() {
@@ -43,7 +42,6 @@ export default function App() {
           <Route path="/teams" element={<TeamsHub />} />
           <Route path="/referees" element={<RefereesHub />} />
           <Route path="/downloads" element={<Downloads />} />
-          <Route path="/documents" element={<Documents />} />
           <Route path="/web-stats" element={<WebStats />} />
           <Route
             path="/admin/season"
