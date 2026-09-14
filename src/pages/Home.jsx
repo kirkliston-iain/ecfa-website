@@ -5,6 +5,7 @@ import MatchdayCarousel from '../components/MatchdayCarousel'
 import StandingsTable from '../components/StandingsTable'
 
 const APPIN_LOGO = 'https://appinsports.com/wp-content/uploads/logo/logo-footer.png'
+const MATCH_HUB_DATE_KEY = 'ecfa-match-hub-selected-date'
 
 const COMPETITIONS = [
   { slug: 'appin-league', name: 'Appin Sports League' },
@@ -484,7 +485,10 @@ export default function Home() {
       }
       const days = Array.from(dateMap.values()).sort((a, b) => a.date.localeCompare(b.date))
       const mode = getMode()
-      const initial = pickDefaultDate(days, todayUK(), mode)
+      const rememberedDate = sessionStorage.getItem(MATCH_HUB_DATE_KEY)
+      const initial = days.some((day) => day.date === rememberedDate)
+        ? rememberedDate
+        : pickDefaultDate(days, todayUK(), mode)
       setSelectedDate(initial)
       setLoading(false)
     }
@@ -494,6 +498,10 @@ export default function Home() {
       cancelled = true
     }
   }, [])
+
+  useEffect(() => {
+    if (selectedDate) sessionStorage.setItem(MATCH_HUB_DATE_KEY, selectedDate)
+  }, [selectedDate])
 
   const allDays = useMemo(() => {
     const dateMap = new Map()
