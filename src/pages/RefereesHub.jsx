@@ -28,6 +28,8 @@ export default function RefereesHub() {
   const [refName, setRefName] = useState('')
   const [loading, setLoading] = useState(false)
   const [currentSeason, setCurrentSeason] = useState(CURRENT_SEASON_FALLBACK)
+  const [isAdmin, setIsAdmin] = useState(false)
+  const [leagueTable, setLeagueTable] = useState([])
 
   const [lastGame, setLastGame] = useState(null)
   const [nextGame, setNextGame] = useState(null)
@@ -37,6 +39,12 @@ export default function RefereesHub() {
   const [cardStats, setCardStats] = useState(null)
 
   useEffect(() => {
+    supabase
+      .from('admin_profiles')
+      .select('id')
+      .maybeSingle()
+      .then(({ data }) => setIsAdmin(!!data))
+
     supabase
       .from('referees')
       .select('id, name')
@@ -53,6 +61,57 @@ export default function RefereesHub() {
         setSeasonFilter(s)
       })
   }, [])
+
+  useEffect(() => {
+    if (!isAdmin || referees.length === 0) {
+      setLeagueTable([])
+      return
+    }
+    let cancelled = false
+    async function load() {
+      const { data: playedFixtures } = await supabase
+        .from('fixtures')
+        .select('id, referee_name')
+        .eq('status', 'played')
+        .not('referee_name', 'is', null)
+
+      const gamesByRef = {}
+      for (const f of playedFixtures || []) {
+        gamesByRef[f.referee_name] = (gamesByRef[f.referee_name] || 0) + 1
+      }
+
+      const fixtureIds = (playedFixtures || []).map((f) => f.id)
+      const cardsByRef = {}
+      if (fixtureIds.length > 0) {
+        const { data: cards } = await supabase
+          .from('discipline_records')
+          .select('card_count, fixture_id')
+          .in('fixture_id', fixtureIds)
+        const fixtureToRef = {}
+        for (const f of playedFixtures || []) fixtureToRef[f.id] = f.referee_name
+        for (const c of cards || []) {
+          const ref = fixtureToRef[c.fixture_id]
+          if (!ref) continue
+          cardsByRef[ref] = (cardsByRef[ref] || 0) + (c.card_count || 0)
+        }
+      }
+
+      const table = referees
+        .map((r) => {
+          const games = gamesByRef[r.name] || 0
+          const cards = cardsByRef[r.name] || 0
+          return { name: r.name, games, cards, rate: games ? cards / games : 0 }
+        })
+        .filter((r) => r.games > 0)
+        .sort((a, b) => b.rate - a.rate)
+
+      if (!cancelled) setLeagueTable(table)
+    }
+    load()
+    return () => {
+      cancelled = true
+    }
+  }, [isAdmin, referees])
 
   useEffect(() => {
     if (!refName) {
@@ -152,6 +211,37 @@ export default function RefereesHub() {
       <p style={{ color: 'var(--muted)', marginBottom: 24 }}>
         Fixture history and card stats for each match official.
       </p>
+
+      {isAdmin && leagueTable.length > 0 && (
+        <section style={{ marginBottom: 32 }}>
+          <h2 style={sectionHeaderStyle}>Cards League Table — {currentSeason} (Admin only)</h2>
+          <div style={{ display: 'flex', fontSize: 11, color: 'var(--muted)', padding: '4px 0', fontWeight: 700 }}>
+            <div style={{ flex: 1 }}>Referee</div>
+            <div style={{ width: 50, textAlign: 'center' }}>Games</div>
+            <div style={{ width: 50, textAlign: 'center' }}>Cards</div>
+            <div style={{ width: 50, textAlign: 'center' }}>Rate</div>
+          </div>
+          {leagueTable.map((r, i) => (
+            <div
+              key={r.name}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                fontSize: 13,
+                padding: '6px 0',
+                borderBottom: '1px solid var(--line)',
+              }}
+            >
+              <div style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                {i + 1}. {r.name}
+              </div>
+              <div style={{ width: 50, textAlign: 'center' }}>{r.games}</div>
+              <div style={{ width: 50, textAlign: 'center' }}>{r.cards}</div>
+              <div style={{ width: 50, textAlign: 'center', fontWeight: 700 }}>{r.rate.toFixed(2)}</div>
+            </div>
+          ))}
+        </section>
+      )}
 
       <select value={refName} onChange={(e) => setRefName(e.target.value)} style={{ ...selectStyle, marginBottom: 24 }}>
         <option value="">Select a referee…</option>
