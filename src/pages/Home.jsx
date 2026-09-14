@@ -123,7 +123,7 @@ async function loadCompetition(meta) {
   const { data: fixtures } = await supabase
     .from('fixtures')
     .select(
-      'id, fixture_date, venue, referee_name, home_score, away_score, status, group_id, stage_id, home_team:home_team_id(id, name, logo_url), away_team:away_team_id(id, name, logo_url)'
+      'id, fixture_date, venue, referee_name, round_name, home_placeholder, away_placeholder, home_score, away_score, status, group_id, stage_id, home_team:home_team_id(id, name, logo_url), away_team:away_team_id(id, name, logo_url)'
     )
     .in('stage_id', stageIds.length ? stageIds : ['00000000-0000-0000-0000-000000000000'])
     .eq('hidden_from_public', false)
@@ -365,6 +365,20 @@ function Badge({ logoUrl, name, size = 24 }) {
   )
 }
 
+const tbcDotStyle = {
+  width: 24,
+  height: 24,
+  borderRadius: '50%',
+  background: 'var(--line)',
+  color: 'var(--muted)',
+  display: 'inline-flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  fontSize: 11,
+  fontWeight: 700,
+  flexShrink: 0,
+}
+
 function MatchCard({ f }) {
   const played = f.status === 'played'
   return (
@@ -384,11 +398,18 @@ function MatchCard({ f }) {
           <img src={APPIN_LOGO} alt="" style={{ height: 14, width: 'auto', objectFit: 'contain' }} />
         )}
         {f.compName}
+        {f.round_name ? ` — ${f.round_name}` : ''}
       </div>
       <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
         <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 8, fontWeight: 600, fontSize: 15, textAlign: 'right' }}>
-          <span>{f.home_team?.name}</span>
-          <Badge logoUrl={f.home_team?.logo_url} name={f.home_team?.name} />
+          <span style={!f.home_team ? { color: 'var(--muted)', fontStyle: 'italic', fontWeight: 400 } : undefined}>
+            {f.home_team?.name || f.home_placeholder || 'TBC'}
+          </span>
+          {f.home_team ? (
+            <Badge logoUrl={f.home_team?.logo_url} name={f.home_team?.name} />
+          ) : (
+            <span style={tbcDotStyle}>?</span>
+          )}
         </div>
         <div
           style={{
@@ -405,8 +426,14 @@ function MatchCard({ f }) {
           {played ? `${f.home_score} - ${f.away_score}` : 'v'}
         </div>
         <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 8, fontWeight: 600, fontSize: 15 }}>
-          <Badge logoUrl={f.away_team?.logo_url} name={f.away_team?.name} />
-          <span>{f.away_team?.name}</span>
+          {f.away_team ? (
+            <Badge logoUrl={f.away_team?.logo_url} name={f.away_team?.name} />
+          ) : (
+            <span style={tbcDotStyle}>?</span>
+          )}
+          <span style={!f.away_team ? { color: 'var(--muted)', fontStyle: 'italic', fontWeight: 400 } : undefined}>
+            {f.away_team?.name || f.away_placeholder || 'TBC'}
+          </span>
         </div>
       </div>
       {(f.venue || f.referee_name || (f.fixture_date && f.fixture_date.slice(11, 16) !== '00:00')) && (
@@ -428,6 +455,13 @@ export default function Home() {
   const [loading, setLoading] = useState(true)
   const [competitions, setCompetitions] = useState([])
   const [selectedDate, setSelectedDate] = useState(null)
+  const [calendarEvents, setCalendarEvents] = useState([])
+  useEffect(() => {
+    supabase
+      .from('calendar_events')
+      .select('event_date, title, description')
+      .then(({ data }) => setCalendarEvents(data || []))
+  }, [])
 
   useEffect(() => {
     let cancelled = false
@@ -473,8 +507,13 @@ export default function Home() {
         else entry.scheduled += 1
       }
     }
+    for (const ev of calendarEvents) {
+      if (!dateMap.has(ev.event_date)) {
+        dateMap.set(ev.event_date, { date: ev.event_date, played: 0, scheduled: 0, isEvent: true })
+      }
+    }
     return Array.from(dateMap.values()).sort((a, b) => a.date.localeCompare(b.date))
-  }, [competitions])
+  }, [competitions, calendarEvents])
 
   const matchesForDate = useMemo(() => {
     if (!selectedDate) return []
@@ -677,7 +716,27 @@ export default function Home() {
           {hasResultsToday ? 'Full Time' : 'Upcoming Fixtures'}
         </h2>
         {matchesForDate.length === 0 ? (
-          <p style={{ color: 'var(--muted)', fontSize: 14 }}>No matches on this date.</p>
+          (() => {
+            const events = calendarEvents.filter((ev) => ev.event_date === selectedDate)
+            if (events.length > 0) {
+              return events.map((ev, i) => (
+                <div
+                  key={i}
+                  style={{
+                    border: '1px solid var(--line)',
+                    borderRadius: 6,
+                    padding: '14px 16px',
+                    marginBottom: 10,
+                    background: '#fafafa',
+                  }}
+                >
+                  <div style={{ fontWeight: 700, fontSize: 15, marginBottom: ev.description ? 4 : 0 }}>{ev.title}</div>
+                  {ev.description && <div style={{ fontSize: 13, color: 'var(--muted)' }}>{ev.description}</div>}
+                </div>
+              ))
+            }
+            return <p style={{ color: 'var(--muted)', fontSize: 14 }}>No matches on this date.</p>
+          })()
         ) : (
           matchesForDate.map((f) => <MatchCard key={f.id} f={f} />)
         )}
