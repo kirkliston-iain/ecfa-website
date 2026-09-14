@@ -33,6 +33,7 @@ export default function Discipline() {
   const [playerRows, setPlayerRows] = useState([])
   const [teamRows, setTeamRows] = useState([])
   const [seriousRows, setSeriousRows] = useState([])
+  const [playedFixtures, setPlayedFixtures] = useState([])
 
   const [suspensions, setSuspensions] = useState([])
   const [teams, setTeams] = useState([])
@@ -69,6 +70,7 @@ export default function Discipline() {
   useEffect(() => {
     loadPointsOverview()
     loadSuspensions()
+    loadPlayedFixtures()
     loadTeamOverrides()
     loadPlayerPoints()
     checkAdmin()
@@ -154,7 +156,7 @@ export default function Discipline() {
     const { data } = await supabase
       .from('discipline_records')
       .select(
-        'fixture_id, card_type, card_count, serious_offence, player:player_id(id, first_name, last_name), team:team_id(id, name)'
+        'fixture_id, card_type, card_count, serious_offence, player:player_id(id, first_name, last_name), team:team_id(id, name), fixture:fixture_id(id, fixture_date)'
       )
       .order('created_at')
 
@@ -211,16 +213,36 @@ export default function Discipline() {
       if (!r.serious_offence) continue
       const key = `${r.player.id}::${r.serious_offence}`
       if (!seriousCounts.has(key)) {
-        seriousCounts.set(key, { player: r.player, team: r.team, type: r.serious_offence, count: 0 })
+        seriousCounts.set(key, { player: r.player, team: r.team, type: r.serious_offence, count: 0, offenceDates: [] })
       }
-      seriousCounts.get(key).count += 1
+      const entry = seriousCounts.get(key)
+      entry.count += 1
+      if (r.fixture?.fixture_date) entry.offenceDates.push(r.fixture.fixture_date)
     }
 
     const seriousList = Array.from(seriousCounts.values())
       .map((row) => {
         const rule = SERIOUS_OFFENCE_RULES[row.type]
         const tierIndex = Math.min(row.count, rule.tiers.length) - 1
-        return { ...row, label: rule.label, ban: rule.tiers[tierIndex], offenceNumber: row.count }
+        const ban = rule.tiers[tierIndex]
+        const matchBan = ban.match(/(\d+)-match/)
+        const startDate = [...row.offenceDates].sort().at(-1) || null
+        let availableFrom = null
+        if (startDate && (ban.includes('1-year') || ban.includes('12-month'))) {
+          const date = new Date(`${startDate}T00:00:00`)
+          date.setFullYear(date.getFullYear() + 1)
+          availableFrom = date.toISOString().slice(0, 10)
+        }
+        return {
+          ...row,
+          label: rule.label,
+          ban,
+          offenceNumber: row.count,
+          startDate,
+          gamesBanned: matchBan ? Number(matchBan[1]) : null,
+          availableFrom,
+          isLifetime: ban === 'Lifetime ban',
+        }
       })
       .sort((a, b) => b.count - a.count)
 
@@ -233,9 +255,28 @@ export default function Discipline() {
   async function loadSuspensions() {
     const { data } = await supabase
       .from('suspensions')
-      .select('id, reason, games_banned, is_lifetime, games_served, status, notes, player:player_id(id, first_name, last_name), team:team_id(id, name)')
+      .select('id, reason, games_banned, is_lifetime, games_served, status, notes, available_from, created_at, player:player_id(id, first_name, last_name), team:team_id(id, name)')
       .order('created_at', { ascending: false })
     setSuspensions(data || [])
+  }
+
+  async function loadPlayedFixtures() {
+    const { data } = await supabase
+      .from('fixtures')
+      .select('id, fixture_date, status, home_team_id, away_team_id')
+      .eq('status', 'played')
+      .order('fixture_date')
+    setPlayedFixtures(data || [])
+  }
+
+  function gamesPlayedSince(teamId, startDate) {
+    if (!teamId || !startDate) return 0
+    const start = String(startDate).slice(0, 10)
+    return playedFixtures.filter(
+      (fixture) =>
+        fixture.fixture_date > start &&
+        (fixture.home_team_id === teamId || fixture.away_team_id === teamId)
+    ).length
   }
 
   async function loadSquad(teamId) {
@@ -358,8 +399,44 @@ export default function Discipline() {
     (a, b) => (teamOverrides[b.team.id] ?? b.points) - (teamOverrides[a.team.id] ?? a.points)
   )
 
-  const activeSuspensions = suspensions
-    .filter((s) => s.status === 'active')
+  const manualSuspensions = suspensions.map((s) => ({
+    ...s,
+    automaticGamesServed: s.team?.id
+      ? gamesPlayedSince(s.team.id, s.created_at)
+      : Number(s.games_served || 0),
+  }))
+  const manuallyCoveredPlayers = new Set(
+    manualSuspensions.filter((s) => s.status === 'active').map((s) => s.player?.id)
+  )
+
+  const automaticSeriousSuspensions = seriousRows
+    .filter((row) => {
+      const served = gamesPlayedSince(row.team?.id, row.startDate)
+      const dateBanActive = row.availableFrom && new Date(`${row.availableFrom}T23:59:59`) >= new Date()
+      return (
+        !manuallyCoveredPlayers.has(row.player?.id) &&
+        (row.isLifetime || dateBanActive || (row.gamesBanned && served < row.gamesBanned))
+      )
+    })
+    .map((row) => ({
+      id: `serious-${row.player.id}-${row.type}`,
+      player: row.player,
+      team: row.team,
+      reason: row.label,
+      games_banned: row.gamesBanned,
+      is_lifetime: row.isLifetime,
+      available_from: row.availableFrom,
+      automaticGamesServed: gamesPlayedSince(row.team?.id, row.startDate),
+      isAutomatic: true,
+    }))
+
+  const activeSuspensions = [...manualSuspensions, ...automaticSeriousSuspensions]
+    .filter((s) => {
+      if (s.status && s.status !== 'active') return false
+      if (s.is_lifetime) return true
+      if (s.available_from) return new Date(`${s.available_from}T23:59:59`) >= new Date()
+      return !s.games_banned || s.automaticGamesServed < s.games_banned
+    })
     .filter((s) => !teamFilter || s.team?.id === teamFilter)
   const filteredPlayerRows = playerRows.filter((row) => !teamFilter || row.team.id === teamFilter)
 
@@ -395,8 +472,8 @@ export default function Discipline() {
         Current Bans
       </h2>
       <p style={{ fontSize: 13, color: 'var(--muted)', marginBottom: 14 }}>
-        Manually recorded — includes points-triggered bans, referee-added games, and any lifetime
-        or long bans (e.g. violent conduct) that aren't tied to the automatic points system below.
+        Includes serious-offence and manually added bans. Games served are counted automatically
+        from the team's played fixtures after the ban began.
       </p>
 
       {activeSuspensions.length === 0 ? (
@@ -453,29 +530,11 @@ export default function Discipline() {
                   ? 'Indefinite / lifetime ban'
                   : s.available_from
                     ? `Available from ${new Date(s.available_from + 'T00:00:00').toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}`
-                    : `${s.games_served} of ${s.games_banned} games served`}
+                    : `${s.automaticGamesServed} of ${s.games_banned} games served — ${Math.max(0, s.games_banned - s.automaticGamesServed)} remaining`}
               </div>
               {s.notes && <div style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 8 }}>{s.notes}</div>}
-              {isAdmin && (
+              {isAdmin && !s.isAutomatic && (
                 <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                  {!s.is_lifetime && !s.available_from && (
-                    <>
-                      <button
-                        onClick={() => markServed(s, 1)}
-                        disabled={savingSuspension === s.id}
-                        style={{ ...smallButtonStyle, flex: 1 }}
-                      >
-                        +1 game served
-                      </button>
-                      <button
-                        onClick={() => markServed(s, -1)}
-                        disabled={savingSuspension === s.id || s.games_served === 0}
-                        style={{ ...smallOutlineStyle, flex: 1 }}
-                      >
-                        -1 game served
-                      </button>
-                    </>
-                  )}
                   <button onClick={() => markFullyServed(s)} style={{ ...smallOutlineStyle, flex: 1 }}>
                     Mark fully served
                   </button>
