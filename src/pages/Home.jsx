@@ -230,19 +230,29 @@ function previewSentenceForFixture(f, comp, groupTeams, info) {
     const homeRank = projectedRank(f.home_team?.id)
     const awayRank = projectedRank(f.away_team?.id)
     const bits = []
-    if (homeRank) bits.push(`a win would put ${homeName} ${ordinal(homeRank)}`)
-    if (awayRank) bits.push(`a win for ${awayName} would take them to ${ordinal(awayRank)}`)
-    if (bits.length) parts.push(bits.join(', while ') + '.')
+    if (homeRank) bits.push(`a win could move ${homeName} to ${ordinal(homeRank)}`)
+    if (awayRank) bits.push(`a win for ${awayName} could take them to ${ordinal(awayRank)}`)
+    if (bits.length) parts.push(bits.join(', while ') + ' — depending on other results.')
   } else if (info?.cupRun) {
-    const describeCupRun = (teamName, run) => {
+    const describeCupRun = (teamName, run, teamId) => {
       if (!run) return null
+      const isHome = run.home_team_id === teamId
+      const oppName = isHome ? run.away_team_name : run.home_team_name
+      const us = isHome ? run.home_goals : run.away_goals
+      const opp = isHome ? run.away_goals : run.home_goals
       const round = roundLabelFromCompName(run.competition_name)
-      if (round) return `${teamName} reached ${round} of this competition last season.`
-      const dateStr = new Date(run.fixture_date).toLocaleDateString('en-GB', { month: 'short', year: 'numeric' })
-      return `${teamName} featured in this competition last season, last playing in ${dateStr}.`
+      const roundText = round ? ` in ${round}` : ' in their last game in this competition'
+      if (us == null || opp == null) {
+        return `${teamName} were last involved${roundText} against ${oppName} last season.`
+      }
+      if (us === opp) {
+        return `${teamName} drew ${us}-${opp} with ${oppName}${roundText} last season.`
+      }
+      const result = us > opp ? 'won' : 'lost'
+      return `${teamName} ${result} ${Math.max(us, opp)}-${Math.min(us, opp)} against ${oppName}${roundText} last season.`
     }
-    const h = describeCupRun(homeName, info.cupRun.home)
-    const a = describeCupRun(awayName, info.cupRun.away)
+    const h = describeCupRun(homeName, info.cupRun.home, f.home_team?.id)
+    const a = describeCupRun(awayName, info.cupRun.away, f.away_team?.id)
     if (h) parts.push(h)
     if (a) parts.push(a)
   }
@@ -581,19 +591,24 @@ export default function Home() {
 
   const previewParagraphs = useMemo(() => {
     if (!selectedDate || hasResultsToday) return []
-    const paragraphs = []
+    const items = []
     for (const comp of competitions) {
       const upcomingToday = comp.fixtures.filter(
         (f) => dateKey(f.fixture_date) === selectedDate && f.status !== 'played'
       )
-      if (upcomingToday.length === 0) continue
-      const sentences = upcomingToday
-        .map((f) => previewSentenceForFixture(f, comp, comp.groupTeams, previewInfo[f.id]))
-        .filter(Boolean)
-      if (sentences.length === 0) continue
-      paragraphs.push({ compName: comp.name, text: sentences.join(' ') })
+      for (const f of upcomingToday) {
+        const text = previewSentenceForFixture(f, comp, comp.groupTeams, previewInfo[f.id])
+        if (!text) continue
+        items.push({
+          fixtureId: f.id,
+          compName: comp.name,
+          homeName: f.home_team?.name,
+          awayName: f.away_team?.name,
+          text,
+        })
+      }
     }
-    return paragraphs
+    return items
   }, [competitions, selectedDate, hasResultsToday, previewInfo])
 
   const appinStandings = useMemo(() => {
@@ -643,9 +658,12 @@ export default function Home() {
             Match Preview
           </h2>
           {previewParagraphs.map((p) => (
-            <p key={p.compName} style={{ fontSize: 14, lineHeight: 1.6, marginBottom: 10 }}>
-              {p.text}
-            </p>
+            <div key={p.fixtureId} style={{ marginBottom: 14 }}>
+              <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 2 }}>
+                {p.homeName} v {p.awayName}
+              </div>
+              <p style={{ fontSize: 14, lineHeight: 1.6, color: 'var(--muted)', margin: 0 }}>{p.text}</p>
+            </div>
           ))}
         </section>
       )}
