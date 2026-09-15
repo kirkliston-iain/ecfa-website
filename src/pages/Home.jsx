@@ -751,6 +751,16 @@ export default function Home() {
         </section>
       )}
 
+      <section style={{ marginTop: 8, padding: 18, border: '1px solid var(--line)', borderRadius: 8, background: '#f7f8f9', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' }}>
+        <div style={{ flex: '1 1 260px' }}>
+          <div style={{ fontWeight: 800, marginBottom: 4 }}>Spotted a website problem?</div>
+          <div style={{ color: 'var(--muted)', fontSize: 13 }}>Report an error, broken page or suggest a new feature. Contact details are optional.</div>
+        </div>
+        <Link to="/contact?type=Website%20Error" style={{ padding: '11px 15px', borderRadius: 6, background: 'var(--ink)', color: '#fff', fontWeight: 700, textDecoration: 'none', whiteSpace: 'nowrap' }}>
+          Report error or request feature
+        </Link>
+      </section>
+
     </div>
   )
 }
