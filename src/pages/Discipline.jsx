@@ -33,6 +33,7 @@ export default function Discipline() {
   const [isAdmin, setIsAdmin] = useState(false)
   const [playerRows, setPlayerRows] = useState([])
   const [teamRows, setTeamRows] = useState([])
+  const [teamCardRows, setTeamCardRows] = useState([])
   const [seriousRows, setSeriousRows] = useState([])
   const [playedFixtures, setPlayedFixtures] = useState([])
 
@@ -187,6 +188,19 @@ export default function Discipline() {
       if (r.card_type === 'red') entry.red += r.card_count
       else entry.yellow += r.card_count
     }
+
+    const cardsByTeam = new Map()
+    for (const row of rows) {
+      if (!row.team?.id || !row.card_type) continue
+      if (!cardsByTeam.has(row.team.id)) {
+        cardsByTeam.set(row.team.id, { team: row.team, yellow: 0, red: 0 })
+      }
+      const entry = cardsByTeam.get(row.team.id)
+      const count = Number(row.card_count || 0)
+      if (row.card_type === 'red') entry.red += count
+      else if (row.card_type === 'yellow') entry.yellow += count
+    }
+    setTeamCardRows(Array.from(cardsByTeam.values()))
 
     const totals = new Map()
     for (const { player, team, yellow, red } of byPlayerFixture.values()) {
@@ -539,6 +553,45 @@ export default function Discipline() {
       >
         Generate weekly discipline report
       </Link>
+
+      <h2 style={{ fontSize: 15, textTransform: 'uppercase', letterSpacing: 0.4, color: 'var(--brass)', marginBottom: 6 }}>
+        Cards League Table
+      </h2>
+      <p style={{ fontSize: 13, color: 'var(--muted)', marginBottom: 12 }}>
+        Current-season team totals. Managers can view this table; figures update when admins change recorded cards.
+      </p>
+      <div style={{ overflowX: 'auto', marginBottom: 28 }}>
+        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+          <thead>
+            <tr>
+              <th style={tableHeaderStyle}>Team</th>
+              <th style={{ ...tableHeaderStyle, textAlign: 'center' }}>Yellow</th>
+              <th style={{ ...tableHeaderStyle, textAlign: 'center' }}>Red</th>
+              <th style={{ ...tableHeaderStyle, textAlign: 'center' }}>Total</th>
+            </tr>
+          </thead>
+          <tbody>
+            {teams
+              .map((team) => {
+                const cards = teamCardRows.find((row) => row.team.id === team.id)
+                const yellow = cards?.yellow || 0
+                const red = cards?.red || 0
+                return { team, yellow, red, total: yellow + red }
+              })
+              .sort((a, b) => b.total - a.total || b.red - a.red || a.team.name.localeCompare(b.team.name))
+              .map((row, index) => (
+                <tr key={row.team.id}>
+                  <td style={{ ...tableCellStyle, fontWeight: 600 }}>
+                    {index + 1}. {row.team.name}
+                  </td>
+                  <td style={{ ...tableCellStyle, textAlign: 'center' }}>{row.yellow}</td>
+                  <td style={{ ...tableCellStyle, textAlign: 'center' }}>{row.red}</td>
+                  <td style={{ ...tableCellStyle, textAlign: 'center', fontWeight: 800 }}>{row.total}</td>
+                </tr>
+              ))}
+          </tbody>
+        </table>
+      </div>
 
       <select
         value={teamFilter}
