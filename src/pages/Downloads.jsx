@@ -180,6 +180,7 @@ const PUBLIC_TABLES = [
   'players',
   'fixture_scorers',
   'historic_scorers',
+  'historic_match_scorers',
   'historic_fixtures',
   'historic_league_tables',
   'honours',
