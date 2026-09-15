@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { Link } from 'react-router-dom'
 import * as XLSX from 'xlsx'
 import { supabase } from '../supabaseClient'
 
@@ -299,6 +300,21 @@ export default function Downloads() {
               Download Word
             </a>
           </div>
+        </div>
+      </section>
+
+      <section style={{ marginBottom: 28 }}>
+        <h2 style={{ fontSize: 18, marginBottom: 10 }}>Player reports</h2>
+        <div style={cardStyle}>
+          <div style={{ flex: 1, minWidth: 220 }}>
+            <div style={{ fontWeight: 700, marginBottom: 4 }}>Individual player scoring report</div>
+            <div style={{ fontSize: 13, color: 'var(--muted)' }}>
+              Choose a player and one season or combine their full history. Includes verified scoring matches and season-by-season totals.
+            </div>
+          </div>
+          <Link to="/downloads/player-report" style={{ ...buttonStyle, textDecoration: 'none' }}>
+            Create report
+          </Link>
         </div>
       </section>
 
