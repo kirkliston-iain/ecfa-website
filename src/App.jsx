@@ -28,6 +28,7 @@ import Sponsors from './pages/Sponsors'
 import Search from './pages/Search'
 import PlayerDetail from './pages/PlayerDetail'
 import WeeklyDisciplineReport from './pages/WeeklyDisciplineReport'
+import MatchAppointments from './pages/MatchAppointments'
 
 export default function App() {
   return (
@@ -57,6 +58,14 @@ export default function App() {
             element={
               <ProtectedRoute>
                 <SeasonAdmin />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/appointments"
+            element={
+              <ProtectedRoute>
+                <MatchAppointments />
               </ProtectedRoute>
             }
           />
