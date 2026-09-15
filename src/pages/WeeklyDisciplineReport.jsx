@@ -6,6 +6,13 @@ import { supabase } from '../supabaseClient'
 
 const YELLOW_POINTS = 2
 const RED_POINTS = 4
+const THRESHOLDS = [
+  { points: 10, ban: '1-match suspension' },
+  { points: 18, ban: '3-match suspension' },
+  { points: 24, ban: '5-match suspension' },
+  { points: 28, ban: '7-match suspension' },
+  { points: 30, ban: '10-match suspension' },
+]
 const SERIOUS_RULES = {
   opponent_abuse: { label: 'Abusive language (opponent)', tiers: [{ ban: 3 }] },
   official_abuse: { label: 'Abusive language (official)', tiers: [{ ban: 5 }, { months: 12 }] },
@@ -329,6 +336,57 @@ export default function WeeklyDisciplineReport() {
       points: String(teamOverrides[team.id] ?? teamTotals[team.id] ?? 0),
     })).sort((a, b) => Number(b.points) - Number(a.points) || a.team.localeCompare(b.team))
 
+    const thresholdBans = weekendRows.flatMap((row) => {
+      const total = Number(row.season)
+      const before = total - Number(row.weekend)
+      return THRESHOLDS
+        .filter((threshold) => before < threshold.points && total >= threshold.points)
+        .map((threshold) => ({ player: row.player, team: row.team, ban: threshold.ban }))
+    })
+
+    const seriousBansThisMatchday = records
+      .filter((record) => dateKey(record.fixture?.fixture_date) === reportDate && record.serious_offence)
+      .map((record) => ({
+        player: fullName(record.player),
+        team: record.team?.name || 'No team',
+        ban: SERIOUS_RULES[record.serious_offence]?.label || 'Serious-offence ban',
+      }))
+
+    const manualBansThisMatchday = suspensions
+      .filter((suspension) => dateKey(suspension.start_date || suspension.created_at) === reportDate)
+      .map((suspension) => ({
+        player: fullName(suspension.player),
+        team: suspension.team?.name || 'No team',
+        ban: suspension.reason || (suspension.is_lifetime ? 'Indefinite ban' : `${suspension.games_banned || ''}-match suspension`),
+      }))
+
+    const newBanMap = new Map()
+    for (const ban of [...thresholdBans, ...seriousBansThisMatchday, ...manualBansThisMatchday]) {
+      const key = `${normalName(ban.player)}::${normalName(ban.ban)}`
+      if (ban.player && !newBanMap.has(key)) newBanMap.set(key, ban)
+    }
+    const newBans = Array.from(newBanMap.values())
+
+    const playerPointMap = new Map()
+    for (const row of playerPoints) {
+      const key = normalName(row.player_name)
+      const points = Number(row.points || 0)
+      const existing = playerPointMap.get(key)
+      if (!existing || points > existing.points) {
+        playerPointMap.set(key, {
+          player: row.player_name,
+          team: row.team?.name || row.team_name_raw || 'No team',
+          points,
+        })
+      }
+    }
+    const newBanPlayers = new Set(newBans.map((ban) => normalName(ban.player)))
+    const nearThresholds = Array.from(playerPointMap.values()).flatMap((player) => {
+      const next = THRESHOLDS.find((threshold) => threshold.points > player.points)
+      if (!next || next.points - player.points > 2 || newBanPlayers.has(normalName(player.player))) return []
+      return [{ ...player, threshold: next.points, ban: next.ban }]
+    }).sort((a, b) => a.threshold - a.points - (b.threshold - b.points) || b.points - a.points || a.player.localeCompare(b.player))
+
     const activeManual = suspensions.filter((suspension) => {
       if (suspension.status && suspension.status !== 'active') return false
       if (suspension.is_lifetime) return true
@@ -398,7 +456,7 @@ export default function WeeklyDisciplineReport() {
       progress: row.progress,
     }))
 
-    return { weekendRows, teamRows, bans: [...automaticBans, ...manualBans].sort((a, b) => a.team.localeCompare(b.team)) }
+    return { weekendRows, teamRows, bans: [...automaticBans, ...manualBans].sort((a, b) => a.team.localeCompare(b.team)), newBans, nearThresholds }
   }, [records, playerPoints, teamOverrides, teams, suspensions, fixtures, reportDate])
 
   function generate() {
@@ -494,9 +552,15 @@ export default function WeeklyDisciplineReport() {
   async function share() {
     if (!graphicBlob) return
     const file = new File([graphicBlob], `ecfa-weekly-discipline-${reportDate}.png`, { type: 'image/png' })
+    const newBanText = reportData.newBans.length
+      ? ['NEW BANS:', ...reportData.newBans.map((ban) => `• ${ban.player} (${ban.team}) — ${ban.ban}`)].join('\\n')
+      : 'NEW BANS: None picked up this matchday.'
+    const thresholdText = reportData.nearThresholds.length
+      ? ['CLOSE TO A THRESHOLD BAN:', ...reportData.nearThresholds.map((player) => `• ${player.player} (${player.team}) — ${player.points} points; ${player.threshold - player.points} point${player.threshold - player.points === 1 ? '' : 's'} from ${player.ban}`)].join('\\n')
+      : 'No players are within 2 points of a threshold ban.'
     const shareData = {
       title: 'ECFA Weekly Discipline',
-      text: `ECFA weekly disciplinary update - ${displayDate(reportDate)}`,
+      text: [`ECFA weekly disciplinary update — ${displayDate(reportDate)}`, newBanText, thresholdText].join('\\n\\n'),
       files: [file],
     }
     if (navigator.share && (!navigator.canShare || navigator.canShare({ files: [file] }))) {
