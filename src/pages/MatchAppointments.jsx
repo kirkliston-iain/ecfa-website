@@ -31,6 +31,7 @@ export default function MatchAppointments() {
   const [loading, setLoading] = useState(true)
   const [working, setWorking] = useState('')
   const [message, setMessage] = useState('')
+  const [showAdditional, setShowAdditional] = useState(false)
 
   const slots = useMemo(() => {
     if (!settings) return []
@@ -86,7 +87,7 @@ export default function MatchAppointments() {
       setAllocations(week.allocations || [])
       setStatus(week.status || 'draft')
     } else {
-      const defaults = settings.venues.flatMap((venue) => venue.slots.flatMap((slot) =>
+      const defaults = settings.venues.filter((venue) => !venue.additional).flatMap((venue) => venue.slots.flatMap((slot) =>
         Array.from({ length: slot.pitches }, (_, index) => slotKey(venue.name, slot.start, index + 1))
       ))
       setAvailableSlots(defaults)
@@ -259,8 +260,21 @@ export default function MatchAppointments() {
         <section style={sectionStyle}>
           <h3 style={subheadingStyle}>1. Available venue slots</h3>
           <div style={{ display: 'grid', gap: 7 }}>
-            {slots.map((slot) => <label key={slot.key} style={checkStyle}><input type="checkbox" checked={availableSlots.includes(slot.key)} onChange={() => toggle(availableSlots, setAvailableSlots, slot.key)} /> {slot.label}</label>)}
+            {slots
+              .filter((slot) => !settings.venues.find((venue) => venue.name === slot.venue)?.additional)
+              .map((slot) => <label key={slot.key} style={checkStyle}><input type="checkbox" checked={availableSlots.includes(slot.key)} onChange={() => toggle(availableSlots, setAvailableSlots, slot.key)} /> {slot.label}</label>)}
           </div>
+          <button type="button" onClick={() => setShowAdditional((current) => !current)} style={{ ...outlineStyle, width: '100%', marginTop: 14 }}>
+            {showAdditional ? 'Hide additional venues' : 'Additional venues'}
+          </button>
+          {showAdditional && (
+            <div style={{ display: 'grid', gap: 7, marginTop: 12, paddingTop: 12, borderTop: '1px solid var(--line)' }}>
+              <p style={{ color: 'var(--muted)', fontSize: 12, margin: '0 0 4px' }}>These are not normally used. Tick only the slots available for this matchday.</p>
+              {slots
+                .filter((slot) => settings.venues.find((venue) => venue.name === slot.venue)?.additional)
+                .map((slot) => <label key={slot.key} style={checkStyle}><input type="checkbox" checked={availableSlots.includes(slot.key)} onChange={() => toggle(availableSlots, setAvailableSlots, slot.key)} /> {slot.label}</label>)}
+            </div>
+          )}
         </section>
 
         <section style={sectionStyle}>
