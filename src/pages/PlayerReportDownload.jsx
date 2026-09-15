@@ -169,6 +169,8 @@ export default function PlayerReportDownload() {
   const [historicMatches, setHistoricMatches] = useState([])
   const [current, setCurrent] = useState([])
   const [playerKey, setPlayerKey] = useState('')
+  const [playerSearch, setPlayerSearch] = useState('')
+  const [showPlayerResults, setShowPlayerResults] = useState(false)
   const [season, setSeason] = useState('combined')
   const [working, setWorking] = useState('')
 
@@ -215,6 +217,18 @@ export default function PlayerReportDownload() {
     }
     return [...map.values()].sort((a, b) => a.name.localeCompare(b.name))
   }, [historic, current])
+
+  const filteredPlayers = useMemo(() => {
+    const query = normalName(playerSearch)
+    if (!query) return players.slice(0, 30)
+    return players.filter((player) => normalName(player.name).includes(query)).slice(0, 50)
+  }, [players, playerSearch])
+
+  function choosePlayer(player) {
+    setPlayerKey(player.key)
+    setPlayerSearch(player.name)
+    setShowPlayerResults(false)
+  }
 
   const seasons = useMemo(() => {
     const values = new Set([CURRENT_SEASON])
@@ -309,11 +323,38 @@ export default function PlayerReportDownload() {
       {error && <div style={{ padding: 12, marginBottom: 16, border: '1px solid #B3261E', borderRadius: 6, color: '#B3261E' }}>{error}</div>}
 
       <section style={panelStyle}>
-        <label style={labelStyle}>Player
-          <select value={playerKey} onChange={(e) => setPlayerKey(e.target.value)} style={selectStyle}>
-            <option value="">Select a player…</option>
-            {players.map((player) => <option key={player.key} value={player.key}>{player.name}</option>)}
-          </select>
+        <label style={{ ...labelStyle, position: 'relative' }}>Player
+          <input
+            type="search"
+            value={playerSearch}
+            placeholder="Search part of a name…"
+            autoComplete="off"
+            onFocus={() => setShowPlayerResults(true)}
+            onBlur={() => window.setTimeout(() => setShowPlayerResults(false), 150)}
+            onChange={(e) => {
+              setPlayerSearch(e.target.value)
+              setPlayerKey('')
+              setShowPlayerResults(true)
+            }}
+            style={selectStyle}
+          />
+          {showPlayerResults && (
+            <div style={searchResultsStyle}>
+              {filteredPlayers.map((player) => (
+                <button
+                  type="button"
+                  key={player.key}
+                  onMouseDown={(e) => e.preventDefault()}
+                  onClick={() => choosePlayer(player)}
+                  style={searchResultStyle}
+                >
+                  <span>{player.name}</span>
+                  {player.currentTeam && <small style={{ color: 'var(--muted)' }}>{player.currentTeam}</small>}
+                </button>
+              ))}
+              {!filteredPlayers.length && <div style={{ padding: 12, color: 'var(--muted)', fontWeight: 400 }}>No matching players</div>}
+            </div>
+          )}
         </label>
         <label style={labelStyle}>Season
           <select value={season} onChange={(e) => setSeason(e.target.value)} style={selectStyle}>
@@ -354,6 +395,8 @@ export default function PlayerReportDownload() {
 const panelStyle = { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(210px, 1fr))', gap: 14, padding: 18, border: '1px solid var(--line)', borderRadius: 8, background: '#f7f8f9' }
 const labelStyle = { display: 'grid', gap: 6, fontWeight: 700, fontSize: 13 }
 const selectStyle = { width: '100%', padding: '11px 12px', border: '1px solid var(--line)', borderRadius: 6, background: '#fff', fontSize: 14 }
+const searchResultsStyle = { position: 'absolute', zIndex: 20, top: '100%', left: 0, right: 0, maxHeight: 300, overflowY: 'auto', marginTop: 4, border: '1px solid var(--line)', borderRadius: 6, background: '#fff', boxShadow: '0 8px 24px rgba(0,0,0,.14)' }
+const searchResultStyle = { width: '100%', display: 'grid', gap: 2, padding: '10px 12px', border: 0, borderBottom: '1px solid var(--line)', background: '#fff', color: 'var(--ink)', textAlign: 'left', cursor: 'pointer', fontSize: 14 }
 const buttonStyle = { padding: '11px 15px', border: 0, borderRadius: 6, background: 'var(--ink)', color: '#fff', fontWeight: 700, cursor: 'pointer' }
 const sectionTitleStyle = { fontSize: 18, color: 'var(--brass)', marginBottom: 6 }
 const tableStyle = { width: '100%', minWidth: 780, borderCollapse: 'collapse', fontSize: 13 }
