@@ -529,6 +529,10 @@ export default function AdminDashboard() {
         Season management &rarr;
       </Link>
 
+      <Link to="/admin/appointments" style={{ ...linkButtonStyle, display: 'block', marginBottom: 8 }}>
+        Match appointments &rarr;
+      </Link>
+
       <Link to="/admin/fixture-tracker" style={{ ...linkButtonStyle, display: 'block', marginBottom: 20 }}>
         Fixture tracker &rarr;
       </Link>
