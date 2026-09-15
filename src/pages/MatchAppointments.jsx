@@ -70,13 +70,13 @@ export default function MatchAppointments() {
   async function loadWeek() {
     setLoading(true)
     setMessage('')
-    const next = new Date(`${weekDate}T00:00:00`)
-    next.setDate(next.getDate() + 1)
-    const nextDate = next.toISOString().slice(0, 10)
+    const localStart = new Date(`${weekDate}T00:00:00`)
+    const localEnd = new Date(`${weekDate}T00:00:00`)
+    localEnd.setDate(localEnd.getDate() + 1)
     const [{ data: fixtureRows }, { data: week }] = await Promise.all([
       supabase.from('fixtures')
         .select('id, fixture_date, venue, referee_name, status, home_team:home_team_id(id, name), away_team:away_team_id(id, name)')
-        .gte('fixture_date', `${weekDate}T00:00:00`).lt('fixture_date', `${nextDate}T00:00:00`)
+        .gte('fixture_date', localStart.toISOString()).lt('fixture_date', localEnd.toISOString())
         .in('status', ['scheduled', 'played']).order('fixture_date'),
       supabase.from('appointment_weeks').select('*').eq('week_date', weekDate).maybeSingle(),
     ])
@@ -230,7 +230,7 @@ export default function MatchAppointments() {
         const { error } = await supabase.from('fixtures').update({
           venue: row.venue,
           referee_name: row.referee,
-          fixture_date: `${weekDate}T${row.start}:00`,
+          fixture_date: new Date(`${weekDate}T${row.start}:00`).toISOString(),
         }).eq('id', row.fixtureId)
         if (error) throw error
       }
