@@ -22,6 +22,7 @@ import SeasonAdmin from './pages/SeasonAdmin'
 import RefereesHub from './pages/RefereesHub'
 import FixtureTracker from './pages/FixtureTracker'
 import Downloads from './pages/Downloads'
+import PlayerReportDownload from './pages/PlayerReportDownload'
 import WebStats from './pages/WebStats'
 import Contact from './pages/Contact'
 import Sponsors from './pages/Sponsors'
@@ -48,6 +49,7 @@ export default function App() {
           <Route path="/teams" element={<TeamsHub />} />
           <Route path="/referees" element={<RefereesHub />} />
           <Route path="/downloads" element={<Downloads />} />
+          <Route path="/downloads/player-report" element={<PlayerReportDownload />} />
           <Route path="/web-stats" element={<WebStats />} />
           <Route path="/contact" element={<Contact />} />
           <Route path="/sponsors" element={<Sponsors />} />
