@@ -138,10 +138,10 @@ async function wordReport(report) {
     shading: shade ? { fill: shade.replace('#', '') } : undefined,
     children: [new Paragraph({ children: [new TextRun({ text: String(value ?? ''), bold })] })],
   })
-  const matchHeader = ['Date', 'Season', 'Competition', 'Team', 'Opponent', 'H/A', 'Score', 'Result', 'Goals']
+  const matchHeader = ['Date', 'Season', 'Competition', 'Team', 'Opponent', 'H/A', 'Score', 'Result', 'Goals', 'Source']
   const matchRows = report.matches.map((m) => new TableRow({ children: [
     cell(displayDate(m.date)), cell(m.season), cell(m.competition), cell(m.team), cell(m.opponent),
-    cell(m.homeAway), cell(m.score), cell(m.result, true, resultColour(m.result)), cell(m.goals),
+    cell(m.homeAway), cell(m.score), cell(m.result, true, resultColour(m.result)), cell(m.goals), cell(m.sourceUrl || ''),
   ] }))
   const documentFile = new Document({ sections: [{ children: [
     new Paragraph({ children: [new TextRun({ text: 'ECFA PLAYER SCORING REPORT', bold: true, size: 32 })] }),
@@ -166,6 +166,7 @@ export default function PlayerReportDownload() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [historic, setHistoric] = useState([])
+  const [historicMatches, setHistoricMatches] = useState([])
   const [current, setCurrent] = useState([])
   const [playerKey, setPlayerKey] = useState('')
   const [season, setSeason] = useState('combined')
@@ -175,12 +176,14 @@ export default function PlayerReportDownload() {
     let cancelled = false
     async function load() {
       try {
-        const [historicRows, currentRows] = await Promise.all([
+        const [historicRows, historicMatchRows, currentRows] = await Promise.all([
           fetchAll('historic_scorers', 'player_name, team_name, goals, season, fixture_date, fixture:historic_fixture_id(id, competition_name, season, fixture_date, home_team_name, home_goals, away_team_name, away_goals)'),
-          fetchAll('fixture_scorers', 'goals, player:player_id(first_name, last_name, team:team_id(name)), team:team_id(name), fixture:fixture_id(fixture_date, home_score, away_score, home_team:home_team_id(name), away_team:away_team_id(name), stage:stage_id(name, competition:competition_id(name, season)))'),
+          fetchAll('historic_match_scorers', 'player_name, team_name, goals, season, fixture_date, competition_name, home_team_name, away_team_name, home_goals, away_goals, source_url'),
+          fetchAll('fixture_scorers', 'goals, player:player_id(first_name, last_name, team:team_id(name)), team:team_id(name), fixture:fixture_id(id, fixture_date, home_score, away_score, home_team:home_team_id(name), away_team:away_team_id(name), stage:stage_id(name, competition:competition_id(name, season)))'),
         ])
         if (cancelled) return
         setHistoric(historicRows)
+        setHistoricMatches(historicMatchRows)
         setCurrent(currentRows.map((row) => ({
           player_name: `${row.player?.first_name || ''} ${row.player?.last_name || ''}`.trim(),
           current_team: row.player?.team?.name || '',
@@ -224,10 +227,26 @@ export default function PlayerReportDownload() {
     const player = players.find((p) => p.key === playerKey)
     const historicRows = historic.filter((row) => normalName(row.player_name) === playerKey)
     const currentRows = current.filter((row) => normalName(row.player_name) === playerKey)
+    const playerHistoricMatches = historicMatches.filter((row) => normalName(row.player_name) === playerKey)
     const allRows = [...historicRows, ...currentRows]
     const selected = season === 'combined' ? allRows : allRows.filter((row) => seasonLabel(row.season) === season)
+    const detailedRows = [
+      ...playerHistoricMatches.map((row) => ({
+        ...row,
+        fixture: {
+          fixture_date: row.fixture_date,
+          competition_name: row.competition_name,
+          home_team_name: row.home_team_name,
+          away_team_name: row.away_team_name,
+          home_goals: row.home_goals,
+          away_goals: row.away_goals,
+        },
+      })),
+      ...currentRows,
+    ]
+    const selectedMatches = season === 'combined' ? detailedRows : detailedRows.filter((row) => seasonLabel(row.season) === season)
 
-    const matches = selected.flatMap((row) => {
+    const matches = selectedMatches.flatMap((row) => {
       const fixture = row.fixture
       if (!fixture) return []
       const home = fixture.home_team_name || fixture.home_team?.name || ''
@@ -246,6 +265,7 @@ export default function PlayerReportDownload() {
         score: `${homeScore ?? ''}-${awayScore ?? ''}`,
         result: resultFor(team, home, away, homeScore, awayScore),
         goals: Number(row.goals || 0),
+        sourceUrl: row.source_url || (fixture.id ? `/fixtures/${fixture.id}` : ''),
       }]
     }).sort((a, b) => String(a.date).localeCompare(String(b.date)))
 
@@ -263,7 +283,7 @@ export default function PlayerReportDownload() {
       selectionLabel: season === 'combined' ? 'Combined / all seasons' : season,
       totalGoals: summary.reduce((sum, row) => sum + row.goals, 0), matches, summary,
     }
-  }, [playerKey, season, players, historic, current])
+  }, [playerKey, season, players, historic, historicMatches, current])
 
   async function exportReport(format) {
     if (!report) return
@@ -315,9 +335,9 @@ export default function PlayerReportDownload() {
         <section style={{ marginTop: 28 }}>
           <h2 style={sectionTitleStyle}>Verified scoring matches</h2>
           <p style={{ color: 'var(--muted)', fontSize: 13 }}>Games where this player’s scoring record can be linked to a fixture. This is not a full appearance record.</p>
-          <div style={{ overflowX: 'auto' }}><table style={tableStyle}><thead><tr>{['Date','Season','Competition','Team','Opponent','H/A','Score','Result','Goals'].map((h) => <th key={h} style={thStyle}>{h}</th>)}</tr></thead><tbody>
-            {report.matches.map((m, i) => <tr key={`${m.date}-${i}`} style={{ borderBottom: '1px solid var(--line)' }}><td style={tdStyle}>{displayDate(m.date)}</td><td style={tdStyle}>{m.season}</td><td style={tdStyle}>{m.competition}</td><td style={tdStyle}>{m.team}</td><td style={tdStyle}>{m.opponent}</td><td style={tdStyle}>{m.homeAway}</td><td style={tdStyle}>{m.score}</td><td style={{ ...tdStyle, background: resultColour(m.result), fontWeight: 700 }}>{m.result}</td><td style={{ ...tdStyle, textAlign: 'center', fontWeight: 800 }}>{m.goals}</td></tr>)}
-            {!report.matches.length && <tr><td colSpan="9" style={{ ...tdStyle, padding: 24, textAlign: 'center', color: 'var(--muted)' }}>No fixture-linked scoring records are available for this selection.</td></tr>}
+          <div style={{ overflowX: 'auto' }}><table style={tableStyle}><thead><tr>{['Date','Season','Competition','Team','Opponent','H/A','Score','Result','Goals','Source'].map((h) => <th key={h} style={thStyle}>{h}</th>)}</tr></thead><tbody>
+            {report.matches.map((m, i) => <tr key={`${m.date}-${i}`} style={{ borderBottom: '1px solid var(--line)' }}><td style={tdStyle}>{displayDate(m.date)}</td><td style={tdStyle}>{m.season}</td><td style={tdStyle}>{m.competition}</td><td style={tdStyle}>{m.team}</td><td style={tdStyle}>{m.opponent}</td><td style={tdStyle}>{m.homeAway}</td><td style={tdStyle}>{m.score}</td><td style={{ ...tdStyle, background: resultColour(m.result), fontWeight: 700 }}>{m.result}</td><td style={{ ...tdStyle, textAlign: 'center', fontWeight: 800 }}>{m.goals}</td><td style={tdStyle}>{m.sourceUrl && <a href={m.sourceUrl} target="_blank" rel="noreferrer" style={{ color: 'var(--brass)', fontWeight: 700, whiteSpace: 'nowrap' }}>View match</a>}</td></tr>)}
+            {!report.matches.length && <tr><td colSpan="10" style={{ ...tdStyle, padding: 24, textAlign: 'center', color: 'var(--muted)' }}>No fixture-linked scoring records are available for this selection.</td></tr>}
           </tbody></table></div>
         </section>
         <section style={{ marginTop: 30 }}>
@@ -336,6 +356,6 @@ const labelStyle = { display: 'grid', gap: 6, fontWeight: 700, fontSize: 13 }
 const selectStyle = { width: '100%', padding: '11px 12px', border: '1px solid var(--line)', borderRadius: 6, background: '#fff', fontSize: 14 }
 const buttonStyle = { padding: '11px 15px', border: 0, borderRadius: 6, background: 'var(--ink)', color: '#fff', fontWeight: 700, cursor: 'pointer' }
 const sectionTitleStyle = { fontSize: 18, color: 'var(--brass)', marginBottom: 6 }
-const tableStyle = { width: '100%', minWidth: 680, borderCollapse: 'collapse', fontSize: 13 }
+const tableStyle = { width: '100%', minWidth: 780, borderCollapse: 'collapse', fontSize: 13 }
 const thStyle = { padding: '9px 8px', textAlign: 'left', color: '#fff', background: 'var(--ink)', whiteSpace: 'nowrap' }
 const tdStyle = { padding: '9px 8px', verticalAlign: 'top' }
