@@ -65,6 +65,19 @@ function normalisePlayerName(name) {
   return String(name || '').trim().replace(/\s+/g, ' ').toLocaleLowerCase('en-GB')
 }
 
+const PLAYER_NAME_ALIASES = {
+  'darron taylor': 'darran taylor',
+}
+
+function playerKey(name) {
+  const normalised = normalisePlayerName(name)
+  return PLAYER_NAME_ALIASES[normalised] || normalised
+}
+
+function canonicalPlayerName(name) {
+  return playerKey(name) === 'darran taylor' ? 'Darran Taylor' : String(name || '').trim()
+}
+
 // Supabase/PostgREST caps a plain select at 1000 rows by default. historic_scorers
 // has more rows than that, so a single query silently truncates the tail end of the
 // table. Page through it in batches of 1000 so every row is loaded.
@@ -136,7 +149,7 @@ export default function ScorersPage() {
     const rosterNames = {}
     const rosterIds = {}
     for (const row of current) {
-      const key = normalisePlayerName(row.player_name)
+      const key = playerKey(row.player_name)
       rosterNames[key] = row.player_name
       if (row.player_id) rosterIds[key] = row.player_id
     }
@@ -151,10 +164,10 @@ export default function ScorersPage() {
     const displayNames = {}
     const teamOf = {}
     for (const row of sourceRows) {
-      const key = normalisePlayerName(row.player_name)
+      const key = playerKey(row.player_name)
       if (!key) continue
       totals[key] = (totals[key] || 0) + Number(row.goals || 0)
-      displayNames[key] = rosterNames[key] || displayNames[key] || String(row.player_name).trim()
+      displayNames[key] = key === 'darran taylor' ? 'Darran Taylor' : rosterNames[key] || displayNames[key] || canonicalPlayerName(row.player_name)
       if (row.team_name) teamOf[key] = row.team_name
     }
 
@@ -169,7 +182,7 @@ export default function ScorersPage() {
   }, [season, historic, current])
 
   const visibleRows = playerSearch
-    ? rows.filter((row) => normalisePlayerName(row.player_name) === normalisePlayerName(playerSearch))
+    ? rows.filter((row) => playerKey(row.player_name) === playerKey(playerSearch))
     : rows
 
   if (loading) return <div className="container" style={{ padding: 48 }}>Loading…</div>
