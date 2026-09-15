@@ -1,5 +1,7 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
+import { Document, ImageRun, Packer, PageOrientation, Paragraph } from 'docx'
+import { jsPDF } from 'jspdf'
 import { supabase } from '../supabaseClient'
 
 const YELLOW_POINTS = 2
@@ -194,6 +196,41 @@ function makeGraphic({ reportDate, weekendRows, teamRows, bans, season }) {
   return canvas
 }
 
+function canvasToBlob(canvas) {
+  return new Promise((resolve, reject) => {
+    canvas.toBlob((blob) => blob ? resolve(blob) : reject(new Error('The report file could not be created.')), 'image/png')
+  })
+}
+
+function splitCanvasForA4(canvas) {
+  const pageRatio = 210 / 297
+  const sliceHeight = Math.floor(canvas.width * pageRatio)
+  const slices = []
+  for (let top = 0; top < canvas.height; top += sliceHeight) {
+    const height = Math.min(sliceHeight, canvas.height - top)
+    const slice = document.createElement('canvas')
+    slice.width = canvas.width
+    slice.height = height
+    const context = slice.getContext('2d')
+    context.fillStyle = '#ffffff'
+    context.fillRect(0, 0, slice.width, slice.height)
+    context.drawImage(canvas, 0, top, canvas.width, height, 0, 0, canvas.width, height)
+    slices.push(slice)
+  }
+  return slices
+}
+
+function saveBlob(blob, filename) {
+  const url = URL.createObjectURL(blob)
+  const link = document.createElement('a')
+  link.href = url
+  link.download = filename
+  document.body.appendChild(link)
+  link.click()
+  link.remove()
+  window.setTimeout(() => URL.revokeObjectURL(url), 1000)
+}
+
 export default function WeeklyDisciplineReport() {
   const [loading, setLoading] = useState(true)
   const [generating, setGenerating] = useState(false)
@@ -208,6 +245,8 @@ export default function WeeklyDisciplineReport() {
   const [reportDate, setReportDate] = useState('')
   const [graphicUrl, setGraphicUrl] = useState('')
   const [graphicBlob, setGraphicBlob] = useState(null)
+  const [exporting, setExporting] = useState('')
+  const canvasRef = useRef(null)
 
   useEffect(() => {
     let cancelled = false
@@ -368,6 +407,7 @@ export default function WeeklyDisciplineReport() {
     try {
       if (graphicUrl) URL.revokeObjectURL(graphicUrl)
       const canvas = makeGraphic({ reportDate, ...reportData, season })
+      canvasRef.current = canvas
       canvas.toBlob((blob) => {
         if (!blob) {
           setError('The report graphic could not be created.')
@@ -392,6 +432,63 @@ export default function WeeklyDisciplineReport() {
     document.body.appendChild(link)
     link.click()
     link.remove()
+  }
+
+  async function downloadPdf() {
+    if (!canvasRef.current) return
+    setExporting('pdf')
+    setError('')
+    try {
+      const slices = splitCanvasForA4(canvasRef.current)
+      const pdf = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4', compress: true })
+      slices.forEach((slice, index) => {
+        if (index) pdf.addPage('a4', 'landscape')
+        const maxWidth = 281
+        const maxHeight = 194
+        const ratio = Math.min(maxWidth / slice.width, maxHeight / slice.height)
+        const width = slice.width * ratio
+        const height = slice.height * ratio
+        pdf.addImage(slice.toDataURL('image/png'), 'PNG', (297 - width) / 2, (210 - height) / 2, width, height, undefined, 'FAST')
+      })
+      pdf.save(`ecfa-weekly-discipline-${reportDate}.pdf`)
+    } catch (err) {
+      setError(err.message || 'The PDF could not be created.')
+    } finally {
+      setExporting('')
+    }
+  }
+
+  async function downloadWord() {
+    if (!canvasRef.current) return
+    setExporting('word')
+    setError('')
+    try {
+      const slices = splitCanvasForA4(canvasRef.current)
+      const sections = []
+      for (const slice of slices) {
+        const blob = await canvasToBlob(slice)
+        const data = new Uint8Array(await blob.arrayBuffer())
+        const width = 720
+        const height = Math.round(width * slice.height / slice.width)
+        sections.push({
+          properties: {
+            page: {
+              size: { orientation: PageOrientation.LANDSCAPE },
+              margin: { top: 360, right: 360, bottom: 360, left: 360 },
+            },
+          },
+          children: [new Paragraph({
+            children: [new ImageRun({ data, type: 'png', transformation: { width, height } })],
+          })],
+        })
+      }
+      const blob = await Packer.toBlob(new Document({ sections }))
+      saveBlob(blob, `ecfa-weekly-discipline-${reportDate}.docx`)
+    } catch (err) {
+      setError(err.message || 'The Word document could not be created.')
+    } finally {
+      setExporting('')
+    }
   }
 
   async function share() {
@@ -443,6 +540,8 @@ export default function WeeklyDisciplineReport() {
           <img src={graphicUrl} alt={`ECFA weekly discipline report for ${displayDate(reportDate)}`} style={{ width: '100%', display: 'block', border: '1px solid var(--line)', borderRadius: 8, marginBottom: 14 }} />
           <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
             <button onClick={share} style={{ ...primaryButtonStyle, flex: '1 1 220px' }}>Share to WhatsApp</button>
+            <button onClick={downloadPdf} disabled={Boolean(exporting)} style={{ ...secondaryButtonStyle, flex: '1 1 150px' }}>{exporting === 'pdf' ? 'Creating PDF…' : 'Download PDF'}</button>
+            <button onClick={downloadWord} disabled={Boolean(exporting)} style={{ ...secondaryButtonStyle, flex: '1 1 150px' }}>{exporting === 'word' ? 'Creating Word…' : 'Download Word'}</button>
             <button onClick={download} style={{ ...secondaryButtonStyle, flex: '1 1 180px' }}>Download graphic</button>
           </div>
           <p style={{ color: 'var(--muted)', fontSize: 12 }}>
