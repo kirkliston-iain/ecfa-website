@@ -171,7 +171,7 @@ export default function RefereeReportDownload() {
         const [refRows, liveRows, historicRows, cardRows] = await Promise.all([
           fetchAll('referees', 'id, name'),
           fetchAll('fixtures', 'id, fixture_date, venue, referee_name, home_score, away_score, status, home_team:home_team_id(name), away_team:away_team_id(name), stage:stage_id(name, competition:competition_id(name, season))'),
-          fetchAll('historic_fixtures', 'id, season, competition_name, fixture_date, venue, referee_name, home_team_name, away_team_name, home_goals, away_goals'),
+          fetchAll('historic_fixtures', 'id, season, competition_name, fixture_date, referee_name, home_team_name, away_team_name, home_goals, away_goals'),
           fetchAll('discipline_records', 'fixture_id, card_type, card_count, player:player_id(first_name, last_name), team:team_id(name)'),
         ])
         if (cancelled) return
@@ -195,7 +195,7 @@ export default function RefereeReportDownload() {
           season: seasonLabel(row.season),
           competition: row.competition_name || '',
           date: row.fixture_date,
-          venue: row.venue || '',
+          venue: '',
           home: row.home_team_name || '',
           away: row.away_team_name || '',
           homeScore: row.home_goals,
