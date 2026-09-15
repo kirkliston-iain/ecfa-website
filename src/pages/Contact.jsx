@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { supabase } from '../supabaseClient'
 
 const initialForm = {
@@ -11,7 +12,10 @@ const initialForm = {
 }
 
 export default function Contact() {
-  const [form, setForm] = useState(initialForm)
+  const [searchParams] = useSearchParams()
+  const requestedType = searchParams.get('type')
+  const startingType = ['Website Error', 'Feature Request'].includes(requestedType) ? requestedType : initialForm.enquiryType
+  const [form, setForm] = useState({ ...initialForm, enquiryType: startingType })
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState('')
   const [sent, setSent] = useState(false)
@@ -27,11 +31,16 @@ export default function Contact() {
     setSent(false)
 
     if (form.website) return
-    if (!form.name.trim() || !form.message.trim()) {
-      setError('Please enter your name and message.')
+    const isWebsiteReport = ['Website Error', 'Feature Request'].includes(form.enquiryType)
+    if (!form.message.trim()) {
+      setError('Please describe the problem or feature request.')
       return
     }
-    if (!form.email.trim() && !form.mobile.trim()) {
+    if (!isWebsiteReport && !form.name.trim()) {
+      setError('Please enter your name.')
+      return
+    }
+    if (!isWebsiteReport && !form.email.trim() && !form.mobile.trim()) {
       setError('Please provide either an email address or mobile number.')
       return
     }
@@ -39,7 +48,7 @@ export default function Contact() {
     setSubmitting(true)
     const { error: submitError } = await supabase.from('contact_enquiries').insert({
       enquiry_type: form.enquiryType,
-      name: form.name.trim(),
+      name: form.name.trim() || 'Anonymous website report',
       email: form.email.trim() || null,
       mobile: form.mobile.trim() || null,
       message: form.message.trim(),
@@ -51,15 +60,19 @@ export default function Contact() {
       return
     }
 
-    setForm(initialForm)
+    setForm({ ...initialForm, enquiryType: startingType })
     setSent(true)
   }
 
+  const isWebsiteReport = ['Website Error', 'Feature Request'].includes(form.enquiryType)
+
   return (
     <div className="container" style={{ padding: '32px 20px 48px', maxWidth: 720 }}>
-      <h1 style={{ fontSize: 30, marginBottom: 4 }}>Contact Us</h1>
+      <h1 style={{ fontSize: 30, marginBottom: 4 }}>{isWebsiteReport ? 'Report a website issue' : 'Contact Us'}</h1>
       <p style={{ color: 'var(--muted)', marginBottom: 26 }}>
-        Send the ECFA a general question or ask about sponsorship opportunities.
+        {isWebsiteReport
+          ? 'Tell us what is wrong or suggest something you would like added. Your name and contact details are optional.'
+          : 'Send the ECFA a general question or ask about sponsorship opportunities.'}
       </p>
 
       {sent && (
@@ -75,7 +88,7 @@ export default function Contact() {
         <fieldset style={fieldsetStyle}>
           <legend style={legendStyle}>What is your enquiry about?</legend>
           <div style={{ display: 'grid', gap: 10 }}>
-            {['General Query', 'Sponsorship Enquiry'].map((type) => (
+            {['General Query', 'Sponsorship Enquiry', 'Website Error', 'Feature Request'].map((type) => (
               <label key={type} style={optionStyle}>
                 <input
                   type="radio"
@@ -91,13 +104,13 @@ export default function Contact() {
         </fieldset>
 
         <label style={labelStyle}>
-          Your name <span aria-hidden="true">*</span>
+          Your name {!isWebsiteReport && <span aria-hidden="true">*</span>} {isWebsiteReport && <span style={{ color: 'var(--muted)', fontWeight: 400 }}>(optional)</span>}
           <input
             value={form.name}
             onChange={(event) => update('name', event.target.value)}
             maxLength={120}
             autoComplete="name"
-            required
+            required={!isWebsiteReport}
             style={inputStyle}
           />
         </label>
@@ -129,11 +142,11 @@ export default function Contact() {
           </label>
         </div>
         <p style={{ margin: '-6px 0 4px', color: 'var(--muted)', fontSize: 13 }}>
-          Please provide at least one: email address or mobile number.
+          {isWebsiteReport ? 'Email and mobile are optional.' : 'Please provide at least one: email address or mobile number.'}
         </p>
 
         <label style={labelStyle}>
-          Message <span aria-hidden="true">*</span>
+          {isWebsiteReport ? 'What happened, or what would you like added?' : 'Message'} <span aria-hidden="true">*</span>
           <textarea
             value={form.message}
             onChange={(event) => update('message', event.target.value)}
@@ -156,7 +169,7 @@ export default function Contact() {
         </label>
 
         <button type="submit" disabled={submitting} style={buttonStyle}>
-          {submitting ? 'Sending…' : 'Send enquiry'}
+          {submitting ? 'Sending…' : isWebsiteReport ? 'Submit website report' : 'Send enquiry'}
         </button>
         <p style={{ color: 'var(--muted)', fontSize: 12, margin: 0 }}>
           Your details will only be used to respond to this enquiry.
