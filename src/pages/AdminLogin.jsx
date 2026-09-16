@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { supabase } from '../supabaseClient'
 
 export default function AdminLogin() {
-  const [email, setEmail] = useState('')
+  const [login, setLogin] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState(null)
   const [loading, setLoading] = useState(false)
@@ -14,14 +14,21 @@ export default function AdminLogin() {
     setLoading(true)
     setError(null)
 
-    const { error: signInError } = await supabase.auth.signInWithPassword({ email, password })
+    const cleanedLogin = login.trim().toLowerCase()
+    const email = cleanedLogin.includes('@') ? cleanedLogin : `${cleanedLogin}@admin.ecfa.local`
+    const { data, error: signInError } = await supabase.auth.signInWithPassword({ email, password })
 
     setLoading(false)
     if (signInError) {
-      setError('Could not sign in — check your email and password.')
+      setError('Could not sign in — check your username or email and password.')
       return
     }
-    navigate('/admin/dashboard')
+    const { data: profile } = await supabase
+      .from('admin_profiles')
+      .select('must_change_password')
+      .eq('id', data.user.id)
+      .maybeSingle()
+    navigate(profile?.must_change_password ? '/admin/change-password' : '/admin/dashboard')
   }
 
   return (
@@ -29,11 +36,13 @@ export default function AdminLogin() {
       <h1 style={{ fontSize: 26, marginBottom: 24, color: 'var(--pitch)' }}>Admin sign in</h1>
       <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
         <label style={labelStyle}>
-          Email
+          Username or email
           <input
-            type="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
+            type="text"
+            autoCapitalize="none"
+            autoComplete="username"
+            value={login}
+            onChange={(e) => setLogin(e.target.value)}
             required
             style={inputStyle}
           />
@@ -42,6 +51,7 @@ export default function AdminLogin() {
           Password
           <input
             type="password"
+            autoComplete="current-password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             required
