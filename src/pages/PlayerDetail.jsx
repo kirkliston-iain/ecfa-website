@@ -89,8 +89,24 @@ export default function PlayerDetail() {
     () => discipline.filter((row) => row.card_type === 'red').reduce((sum, row) => sum + Number(row.card_count || 0), 0),
     [discipline]
   )
+  const aggregatedHistoricGoals = useMemo(() => {
+    const totals = new Map()
+    for (const row of historicGoals) {
+      const season = String(row.season || 'Unknown').trim()
+      const teamName = String(row.team_name || 'Team not recorded').trim().replace(/\s+/g, ' ')
+      const key = `${season.toLocaleLowerCase('en-GB')}::${teamName.toLocaleLowerCase('en-GB')}`
+      const existing = totals.get(key)
+      if (existing) existing.goals += Number(row.goals || 0)
+      else totals.set(key, { season, team_name: teamName, goals: Number(row.goals || 0) })
+    }
+    return [...totals.values()].sort((left, right) => {
+      const seasonOrder = right.season.localeCompare(left.season, 'en-GB', { numeric: true })
+      return seasonOrder || left.team_name.localeCompare(right.team_name, 'en-GB')
+    })
+  }, [historicGoals])
+
   const currentGoals = goals.reduce((sum, row) => sum + Number(row.goals || 0), 0)
-  const historicalGoals = historicGoals.reduce((sum, row) => sum + Number(row.goals || 0), 0)
+  const historicalGoals = aggregatedHistoricGoals.reduce((sum, row) => sum + Number(row.goals || 0), 0)
 
   if (loading) return <div className="container" style={{ padding: 48 }}>Loading player…</div>
   if (error) return <div className="container" style={{ padding: 48 }}>{error}</div>
@@ -165,12 +181,12 @@ export default function PlayerDetail() {
         <p style={{ color: 'var(--muted)', fontSize: 13 }}>
           {currentGoals} goal{currentGoals === 1 ? '' : 's'} this season and {historicalGoals} across previous recorded seasons.
         </p>
-        {historicGoals.length > 0 && (
+        {aggregatedHistoricGoals.length > 0 && (
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
             <thead><tr><th style={thStyle}>Season</th><th style={thStyle}>Team</th><th style={{ ...thStyle, textAlign: 'right' }}>Goals</th></tr></thead>
             <tbody>
-              {historicGoals.map((row, index) => (
-                <tr key={`${row.season}-${row.team_name}-${index}`}>
+              {aggregatedHistoricGoals.map((row) => (
+                <tr key={`${row.season}-${row.team_name}`}>
                   <td style={tdStyle}>{row.season}</td>
                   <td style={tdStyle}>{row.team_name}</td>
                   <td style={{ ...tdStyle, textAlign: 'right', fontWeight: 800 }}>{row.goals}</td>
