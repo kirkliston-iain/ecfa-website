@@ -84,6 +84,14 @@ Deno.serve(async (req) => {
       userId = data.user.id;
     }
 
+    if (account.role === "owner") {
+      const { error: releaseError } = await admin
+        .from("admin_profiles")
+        .update({ username: null })
+        .eq("id", BOOTSTRAP_IAIN_ID);
+      if (releaseError) return new Response(JSON.stringify({ error: releaseError.message }), { status: 500, headers: { ...cors, "Content-Type": "application/json" } });
+    }
+
     const { error: profileError } = await admin.from("admin_profiles").upsert({
       id: userId,
       display_name: account.displayName,
