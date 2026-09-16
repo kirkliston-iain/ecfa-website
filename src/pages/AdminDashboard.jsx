@@ -11,6 +11,8 @@ export default function AdminDashboard() {
   const [dateFilter, setDateFilter] = useState('')
   const [fixtures, setFixtures] = useState([])
   const [saving, setSaving] = useState(null)
+  const [fixtureSaveStatus, setFixtureSaveStatus] = useState({})
+  const [currentProfile, setCurrentProfile] = useState(null)
   const [expandedFixture, setExpandedFixture] = useState(null)
   const [contactEnquiries, setContactEnquiries] = useState([])
   const [showContactEnquiries, setShowContactEnquiries] = useState(false)
@@ -53,6 +55,16 @@ export default function AdminDashboard() {
   const [addingFixture, setAddingFixture] = useState(false)
 
   useEffect(() => {
+    supabase.auth.getUser().then(async ({ data }) => {
+      if (!data.user) return
+      const { data: profile } = await supabase
+        .from('admin_profiles')
+        .select('id, display_name, username')
+        .eq('id', data.user.id)
+        .maybeSingle()
+      setCurrentProfile(profile || { id: data.user.id })
+    })
+
     supabase
       .from('competitions')
       .select('id, name')
@@ -157,7 +169,7 @@ export default function AdminDashboard() {
     const { data } = await supabase
       .from('fixtures')
       .select(
-        'id, round_name, fixture_date, home_score, away_score, status, hidden_from_public, venue, referee_name, home_team:home_team_id(id, name), away_team:away_team_id(id, name)'
+        'id, round_name, fixture_date, home_score, away_score, status, hidden_from_public, venue, referee_name, updated_at, home_team:home_team_id(id, name), away_team:away_team_id(id, name)'
       )
       .eq('stage_id', stageId)
       .neq('status', 'postponed')
@@ -169,7 +181,7 @@ export default function AdminDashboard() {
     const { data } = await supabase
       .from('fixtures')
       .select(
-        'id, fixture_date, venue, status, hidden_from_public, week_off_requested, week_off_requested_team_id, home_team:home_team_id(id, name), away_team:away_team_id(id, name), stage:stage_id(name, competition:competition_id(name))'
+        'id, fixture_date, venue, status, hidden_from_public, week_off_requested, week_off_requested_team_id, updated_at, home_team:home_team_id(id, name), away_team:away_team_id(id, name), stage:stage_id(name, competition:competition_id(name))'
       )
       .eq('status', 'postponed')
       .order('fixture_date')
@@ -210,7 +222,8 @@ export default function AdminDashboard() {
 
   async function saveFixture(fixture) {
     setSaving(fixture.id)
-    await supabase
+    setFixtureSaveStatus((current) => ({ ...current, [fixture.id]: '' }))
+    const { data, error } = await supabase
       .from('fixtures')
       .update({
         home_score: fixture.home_score === '' ? null : Number(fixture.home_score),
@@ -222,7 +235,26 @@ export default function AdminDashboard() {
         fixture_date: fixture.fixture_date,
       })
       .eq('id', fixture.id)
+      .eq('updated_at', fixture.updated_at)
+      .select('updated_at')
+      .maybeSingle()
     setSaving(null)
+
+    if (error) {
+      setFixtureSaveStatus((current) => ({ ...current, [fixture.id]: 'Could not save. Please try again.' }))
+      return
+    }
+    if (!data) {
+      setFixtureSaveStatus((current) => ({
+        ...current,
+        [fixture.id]: 'Another administrator changed this fixture first. The latest version has been reloaded — review it before saving again.',
+      }))
+      await loadFixtures()
+      return
+    }
+
+    setFixtures((current) => current.map((item) => item.id === fixture.id ? { ...item, updated_at: data.updated_at } : item))
+    setFixtureSaveStatus((current) => ({ ...current, [fixture.id]: 'Saved.' }))
 
     if (fixture.status === 'postponed') {
       loadFixtures()
@@ -245,7 +277,8 @@ export default function AdminDashboard() {
 
   async function savePostponed(fixture) {
     setSavingPostponed(fixture.id)
-    await supabase
+    setFixtureSaveStatus((current) => ({ ...current, [fixture.id]: '' }))
+    const { data, error } = await supabase
       .from('fixtures')
       .update({
         fixture_date: fixture.fixture_date || null,
@@ -255,7 +288,25 @@ export default function AdminDashboard() {
         week_off_requested_team_id: fixture.week_off_requested ? fixture.week_off_requested_team_id : null,
       })
       .eq('id', fixture.id)
+      .eq('updated_at', fixture.updated_at)
+      .select('updated_at')
+      .maybeSingle()
     setSavingPostponed(null)
+
+    if (error) {
+      setFixtureSaveStatus((current) => ({ ...current, [fixture.id]: 'Could not save. Please try again.' }))
+      return
+    }
+    if (!data) {
+      setFixtureSaveStatus((current) => ({
+        ...current,
+        [fixture.id]: 'Another administrator changed this fixture first. The latest version has been reloaded — review it before saving again.',
+      }))
+      await loadPostponed()
+      return
+    }
+
+    setFixtureSaveStatus((current) => ({ ...current, [fixture.id]: 'Saved.' }))
     loadPostponed()
     if (stageId) loadFixtures()
   }
@@ -565,9 +616,20 @@ export default function AdminDashboard() {
         Match appointments &rarr;
       </Link>
 
-      <Link to="/admin/fixture-tracker" style={{ ...linkButtonStyle, display: 'block', marginBottom: 20 }}>
+      <Link to="/admin/fixture-tracker" style={{ ...linkButtonStyle, display: 'block', marginBottom: 8 }}>
         Fixture tracker &rarr;
       </Link>
+
+      {currentProfile?.id === '28696bc6-2df2-4855-b259-3f156ad55748' && (
+        <>
+          <Link to="/admin/accounts" style={{ ...linkButtonStyle, display: 'block', marginBottom: 8 }}>
+            Administrator accounts &rarr;
+          </Link>
+          <Link to="/admin/audit" style={{ ...linkButtonStyle, display: 'block', marginBottom: 20 }}>
+            Audit trail &rarr;
+          </Link>
+        </>
+      )}
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 24 }}>
         <select value={competitionId} onChange={(e) => setCompetitionId(e.target.value)} style={fullSelectStyle}>
@@ -853,6 +915,19 @@ export default function AdminDashboard() {
                     {expandedFixture === f.id ? 'Hide details' : 'Scorers & cards'}
                   </button>
                 </div>
+                {fixtureSaveStatus[f.id] && (
+                  <div
+                    role="status"
+                    style={{
+                      marginTop: 8,
+                      fontSize: 12,
+                      fontWeight: 700,
+                      color: fixtureSaveStatus[f.id] === 'Saved.' ? '#1B8A4A' : '#B3261E',
+                    }}
+                  >
+                    {fixtureSaveStatus[f.id]}
+                  </div>
+                )}
 
                 {expandedFixture === f.id && (
                   <div style={{ marginTop: 14, paddingTop: 14, borderTop: '1px solid var(--line)' }}>
@@ -1132,6 +1207,19 @@ export default function AdminDashboard() {
             >
               {savingPostponed === f.id ? 'Saving…' : 'Save'}
             </button>
+            {fixtureSaveStatus[f.id] && (
+              <div
+                role="status"
+                style={{
+                  marginTop: 8,
+                  fontSize: 12,
+                  fontWeight: 700,
+                  color: fixtureSaveStatus[f.id] === 'Saved.' ? '#1B8A4A' : '#B3261E',
+                }}
+              >
+                {fixtureSaveStatus[f.id]}
+              </div>
+            )}
           </div>
         ))}
         {postponedFixtures.length === 0 && (
