@@ -1,12 +1,13 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "jsr:@supabase/supabase-js@2";
 
-const IAIN_ID = "28696bc6-2df2-4855-b259-3f156ad55748";
+const BOOTSTRAP_IAIN_ID = "28696bc6-2df2-4855-b259-3f156ad55748";
 const ACCOUNTS = [
-  { username: "ian.midwinter", displayName: "Ian Midwinter" },
-  { username: "craig.mitchell", displayName: "Craig Mitchell" },
-  { username: "liam.burns", displayName: "Liam Burns" },
-  { username: "jake.morris", displayName: "Jake Morris" },
+  { username: "iain.mccalman", displayName: "Iain McCalman", role: "owner" },
+  { username: "ian.midwinter", displayName: "Ian Midwinter", role: "admin" },
+  { username: "craig.mitchell", displayName: "Craig Mitchell", role: "admin" },
+  { username: "liam.burns", displayName: "Liam Burns", role: "admin" },
+  { username: "jake.morris", displayName: "Jake Morris", role: "admin" },
 ];
 const cors = {
   "Access-Control-Allow-Origin": "*",
@@ -30,9 +31,26 @@ Deno.serve(async (req) => {
 
   const callerClient = createClient(url, anonKey, { global: { headers: { Authorization: authHeader } } });
   const { data: { user } } = await callerClient.auth.getUser();
-  if (!user || user.id !== IAIN_ID) {
-    return new Response(JSON.stringify({ error: "Only Iain McCalman can generate administrator accounts." }), {
+  const isOwner = user?.id === BOOTSTRAP_IAIN_ID || user?.app_metadata?.role === "owner";
+  if (!user || !isOwner) {
+    return new Response(JSON.stringify({ error: "Only Iain McCalman can manage administrator accounts." }), {
       status: 403, headers: { ...cors, "Content-Type": "application/json" },
+    });
+  }
+
+  let requestedUsername = "";
+  try {
+    const body = await req.json();
+    requestedUsername = String(body?.username || "").trim().toLowerCase();
+  } catch {
+    requestedUsername = "";
+  }
+  const selected = requestedUsername
+    ? ACCOUNTS.filter((account) => account.username === requestedUsername)
+    : ACCOUNTS;
+  if (selected.length === 0) {
+    return new Response(JSON.stringify({ error: "Administrator account not found." }), {
+      status: 404, headers: { ...cors, "Content-Type": "application/json" },
     });
   }
 
@@ -41,7 +59,7 @@ Deno.serve(async (req) => {
   if (listError) return new Response(JSON.stringify({ error: listError.message }), { status: 500, headers: { ...cors, "Content-Type": "application/json" } });
 
   const credentials = [];
-  for (const account of ACCOUNTS) {
+  for (const account of selected) {
     const email = account.username + "@admin.ecfa.local";
     const temporaryPassword = password();
     const existing = listed.users.find((item) => item.email?.toLowerCase() === email);
@@ -51,7 +69,7 @@ Deno.serve(async (req) => {
       const { data, error } = await admin.auth.admin.updateUserById(existing.id, {
         password: temporaryPassword,
         email_confirm: true,
-        app_metadata: { ...existing.app_metadata, role: "admin" },
+        app_metadata: { ...existing.app_metadata, role: account.role },
       });
       if (error) return new Response(JSON.stringify({ error: error.message }), { status: 500, headers: { ...cors, "Content-Type": "application/json" } });
       userId = data.user.id;
@@ -60,7 +78,7 @@ Deno.serve(async (req) => {
         email,
         password: temporaryPassword,
         email_confirm: true,
-        app_metadata: { role: "admin" },
+        app_metadata: { role: account.role },
       });
       if (error) return new Response(JSON.stringify({ error: error.message }), { status: 500, headers: { ...cors, "Content-Type": "application/json" } });
       userId = data.user.id;
