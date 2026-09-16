@@ -81,9 +81,9 @@ begin
     'team_points_override', 'calendar_events', 'contact_enquiries', 'referees', 'venues'
   ]
   loop
-    execute format('drop trigger if exists capture_admin_audit on public.%I', table_name);
+    execute format('drop trigger if exists admin_audit_trigger on public.%I', table_name);
     execute format(
-      'create trigger capture_admin_audit after insert or update or delete on public.%I for each row execute function private.capture_admin_audit()',
+      'create trigger admin_audit_trigger after insert or update or delete on public.%I for each row execute function private.capture_admin_audit()',
       table_name
     );
   end loop;
