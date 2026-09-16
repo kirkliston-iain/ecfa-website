@@ -31,6 +31,9 @@ import Search from './pages/Search'
 import PlayerDetail from './pages/PlayerDetail'
 import WeeklyDisciplineReport from './pages/WeeklyDisciplineReport'
 import MatchAppointments from './pages/MatchAppointments'
+import AdminChangePassword from './pages/AdminChangePassword'
+import AdminAccounts from './pages/AdminAccounts'
+import AdminAudit from './pages/AdminAudit'
 
 export default function App() {
   return (
@@ -90,6 +93,30 @@ export default function App() {
             }
           />
           <Route path="/admin" element={<AdminLogin />} />
+          <Route
+            path="/admin/change-password"
+            element={
+              <ProtectedRoute>
+                <AdminChangePassword />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/accounts"
+            element={
+              <ProtectedRoute>
+                <AdminAccounts />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/audit"
+            element={
+              <ProtectedRoute>
+                <AdminAudit />
+              </ProtectedRoute>
+            }
+          />
           <Route
             path="/admin/dashboard"
             element={
