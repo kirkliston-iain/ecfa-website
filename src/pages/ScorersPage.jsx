@@ -67,6 +67,7 @@ function normalisePlayerName(name) {
 
 const PLAYER_NAME_ALIASES = {
   'darron taylor': 'darran taylor',
+  'darron cairns': 'darran taylor',
 }
 
 function playerKey(name) {
