@@ -62,7 +62,7 @@ export default function AdminDashboard() {
         .select('id, display_name, username')
         .eq('id', data.user.id)
         .maybeSingle()
-      setCurrentProfile(profile || { id: data.user.id })
+      setCurrentProfile({ ...(profile || {}), id: data.user.id, role: data.user.app_metadata?.role })
     })
 
     supabase
@@ -620,7 +620,7 @@ export default function AdminDashboard() {
         Fixture tracker &rarr;
       </Link>
 
-      {currentProfile?.id === '28696bc6-2df2-4855-b259-3f156ad55748' && (
+      {(currentProfile?.id === '28696bc6-2df2-4855-b259-3f156ad55748' || currentProfile?.role === 'owner') && (
         <>
           <Link to="/admin/accounts" style={{ ...linkButtonStyle, display: 'block', marginBottom: 8 }}>
             Administrator accounts &rarr;
