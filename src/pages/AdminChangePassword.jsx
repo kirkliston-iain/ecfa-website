@@ -44,12 +44,14 @@ export default function AdminChangePassword() {
     }
 
     setStatus('Password changed. Completing setup…')
-    const { error: profileError } = await supabase
+    const { data: updatedProfile, error: profileError } = await supabase
       .from('admin_profiles')
       .update({ must_change_password: false })
       .eq('id', userData.user.id)
+      .select('must_change_password')
+      .maybeSingle()
 
-    if (profileError) {
+    if (profileError || !updatedProfile || updatedProfile.must_change_password) {
       setError('Your password changed, but setup could not be completed. Please contact Iain.')
       setStatus('')
       setSaving(false)
