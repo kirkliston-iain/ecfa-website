@@ -34,6 +34,7 @@ import MatchAppointments from './pages/MatchAppointments'
 import AdminChangePassword from './pages/AdminChangePassword'
 import AdminAccounts from './pages/AdminAccounts'
 import AdminAudit from './pages/AdminAudit'
+import DownloadsAdmin from './pages/DownloadsAdmin'
 
 export default function App() {
   return (
@@ -114,6 +115,14 @@ export default function App() {
             element={
               <ProtectedRoute>
                 <AdminAudit />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/downloads"
+            element={
+              <ProtectedRoute>
+                <DownloadsAdmin />
               </ProtectedRoute>
             }
           />

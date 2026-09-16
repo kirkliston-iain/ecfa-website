@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import * as XLSX from 'xlsx'
 import { supabase } from '../supabaseClient'
@@ -226,6 +226,34 @@ const DOWNLOADS = [
 export default function Downloads() {
   const [working, setWorking] = useState('')
   const [error, setError] = useState('')
+  const [uploadedDownloads, setUploadedDownloads] = useState([])
+
+  async function downloadUploaded(item) {
+    setWorking(`uploaded-${item.id}`)
+    setError('')
+    try {
+      const { data, error: downloadError } = await supabase.storage
+        .from('website-downloads')
+        .download(item.storage_path)
+      if (downloadError) throw downloadError
+      downloadFile(item.file_name, await data.arrayBuffer(), item.mime_type || 'application/octet-stream')
+    } catch (err) {
+      setError(err.message || 'The file could not be downloaded.')
+    } finally {
+      setWorking('')
+    }
+  }
+
+  useEffect(() => {
+    supabase
+      .from('site_downloads')
+      .select('id, title, description, file_name, storage_path, mime_type, file_size_bytes, created_at')
+      .eq('is_published', true)
+      .order('created_at', { ascending: false })
+      .then(({ data, error: loadError }) => {
+        if (!loadError) setUploadedDownloads(data || [])
+      })
+  }, [])
 
   async function runDownload(item, format) {
     setWorking(`${item.title}-${format}`)
@@ -279,6 +307,33 @@ export default function Downloads() {
         <div style={{ padding: 12, marginBottom: 16, border: '1px solid #B3261E', borderRadius: 6, color: '#B3261E' }}>
           {error}
         </div>
+      )}
+
+      {uploadedDownloads.length > 0 && (
+        <section style={{ marginBottom: 28 }}>
+          <h2 style={{ fontSize: 18, marginBottom: 10 }}>Latest downloads</h2>
+          <div style={{ display: 'grid', gap: 12 }}>
+            {uploadedDownloads.map((item) => {
+              const publicUrl = supabase.storage.from('website-downloads').getPublicUrl(item.storage_path).data.publicUrl
+              const canView = item.mime_type === 'application/pdf' || item.mime_type?.startsWith('image/') || item.mime_type === 'text/plain'
+              return (
+                <div key={item.id} style={cardStyle}>
+                  <div style={{ flex: 1, minWidth: 220 }}>
+                    <div style={{ fontWeight: 700, marginBottom: 4 }}>{item.title}</div>
+                    {item.description && <div style={{ fontSize: 13, color: 'var(--muted)' }}>{item.description}</div>}
+                    <div style={{ fontSize: 12, color: 'var(--muted)', marginTop: 5, overflowWrap: 'anywhere' }}>{item.file_name}</div>
+                  </div>
+                  <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                    {canView && <a href={publicUrl} target="_blank" rel="noreferrer" style={{ ...buttonStyle, textDecoration: 'none' }}>View</a>}
+                    <button onClick={() => downloadUploaded(item)} disabled={!!working} style={buttonStyle}>
+                      {working === `uploaded-${item.id}` ? 'Downloading…' : 'Download'}
+                    </button>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        </section>
       )}
 
       <section style={{ marginBottom: 28 }}>
