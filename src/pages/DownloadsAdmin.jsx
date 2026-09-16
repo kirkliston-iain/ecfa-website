@@ -24,6 +24,8 @@ export default function DownloadsAdmin() {
   const [description, setDescription] = useState('')
   const [file, setFile] = useState(null)
   const [published, setPublished] = useState(true)
+  const [allowView, setAllowView] = useState(true)
+  const [allowDownload, setAllowDownload] = useState(true)
   const [working, setWorking] = useState(false)
   const [message, setMessage] = useState('')
   const [error, setError] = useState('')
@@ -48,6 +50,10 @@ export default function DownloadsAdmin() {
 
     if (!title.trim() || !file) {
       setError('Add a clear title and choose a file.')
+      return
+    }
+    if (!allowView && !allowDownload) {
+      setError('Choose View, Download, or both.')
       return
     }
     if (file.size > MAX_FILE_SIZE) {
@@ -76,6 +82,8 @@ export default function DownloadsAdmin() {
       mime_type: file.type || null,
       file_size_bytes: file.size,
       is_published: published,
+      allow_view: allowView,
+      allow_download: allowDownload,
       uploaded_by: userData.user?.id,
     })
 
@@ -90,6 +98,8 @@ export default function DownloadsAdmin() {
     setDescription('')
     setFile(null)
     setPublished(true)
+    setAllowView(true)
+    setAllowDownload(true)
     event.currentTarget.reset()
     setMessage(published ? 'File uploaded and published.' : 'File uploaded as hidden.')
     setWorking(false)
@@ -109,16 +119,41 @@ export default function DownloadsAdmin() {
     }
   }
 
+  async function setAvailability(item, field, nextValue) {
+    const nextView = field === 'allow_view' ? nextValue : item.allow_view
+    const nextDownload = field === 'allow_download' ? nextValue : item.allow_download
+    if (!nextView && !nextDownload) {
+      setError('Each published file must offer View, Download, or both.')
+      return
+    }
+    setError('')
+    const { error: updateError } = await supabase
+      .from('site_downloads')
+      .update({ [field]: nextValue })
+      .eq('id', item.id)
+    if (updateError) setError(updateError.message)
+    else {
+      setMessage('File options saved.')
+      loadDownloads()
+    }
+  }
+
   async function deleteDownload(item) {
     if (!window.confirm(`Delete “${item.title}”? This cannot be undone.`)) return
     setError('')
     setMessage('')
-    const { error: storageError } = await supabase.storage
-      .from('website-downloads')
-      .remove([item.storage_path])
-    if (storageError) {
-      setError(storageError.message)
+    if (item.is_system_managed) {
+      setError('This guide is maintained with the website and cannot be deleted here. You can hide it instead.')
       return
+    }
+    if (item.storage_path) {
+      const { error: storageError } = await supabase.storage
+        .from('website-downloads')
+        .remove([item.storage_path])
+      if (storageError) {
+        setError(storageError.message)
+        return
+      }
     }
     const { error: rowError } = await supabase.from('site_downloads').delete().eq('id', item.id)
     if (rowError) setError(rowError.message)
@@ -163,6 +198,20 @@ export default function DownloadsAdmin() {
           <input type="checkbox" checked={published} onChange={(e) => setPublished(e.target.checked)} style={{ width: 22, height: 22 }} />
           Publish immediately
         </label>
+        <fieldset style={{ border: '1px solid var(--line)', borderRadius: 8, padding: 14, margin: '0 0 20px' }}>
+          <legend style={{ fontWeight: 800, padding: '0 6px' }}>Public choices</legend>
+          <label style={checkLabelStyle}>
+            <input type="checkbox" checked={allowView} onChange={(e) => setAllowView(e.target.checked)} style={checkStyle} />
+            Allow people to view online
+          </label>
+          <label style={{ ...checkLabelStyle, marginBottom: 0 }}>
+            <input type="checkbox" checked={allowDownload} onChange={(e) => setAllowDownload(e.target.checked)} style={checkStyle} />
+            Allow people to download a copy
+          </label>
+          <div style={{ color: 'var(--muted)', fontSize: 13, marginTop: 9 }}>
+            Choose either option or both. PDFs, images and text open directly; Word and Excel files use an online viewer.
+          </div>
+        </fieldset>
         <button type="submit" disabled={working} style={{ ...buttonStyle, width: '100%' }}>
           {working ? 'Uploading…' : 'Upload file'}
         </button>
@@ -175,7 +224,7 @@ export default function DownloadsAdmin() {
         ) : (
           <div style={{ display: 'grid', gap: 12 }}>
             {downloads.map((item) => {
-              const publicUrl = supabase.storage.from('website-downloads').getPublicUrl(item.storage_path).data.publicUrl
+              const publicUrl = item.public_url || supabase.storage.from('website-downloads').getPublicUrl(item.storage_path).data.publicUrl
               return (
                 <article key={item.id} style={panelStyle}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
@@ -185,6 +234,16 @@ export default function DownloadsAdmin() {
                         {item.file_name} · {readableSize(item.file_size_bytes)}
                       </div>
                       {item.description && <p style={{ margin: '8px 0 0' }}>{item.description}</p>}
+                      <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginTop: 12 }}>
+                        <label style={checkLabelStyle}>
+                          <input type="checkbox" checked={item.allow_view} onChange={(e) => setAvailability(item, 'allow_view', e.target.checked)} style={checkStyle} />
+                          View
+                        </label>
+                        <label style={checkLabelStyle}>
+                          <input type="checkbox" checked={item.allow_download} onChange={(e) => setAvailability(item, 'allow_download', e.target.checked)} style={checkStyle} />
+                          Download
+                        </label>
+                      </div>
                     </div>
                     <span style={{ ...statusStyle, background: item.is_published ? '#E8F5EC' : '#F1F1F1', color: item.is_published ? '#176B3A' : '#555' }}>
                       {item.is_published ? 'Published' : 'Hidden'}
@@ -195,7 +254,7 @@ export default function DownloadsAdmin() {
                     <button onClick={() => setDownloadPublished(item, !item.is_published)} style={outlineButtonStyle}>
                       {item.is_published ? 'Hide' : 'Publish'}
                     </button>
-                    <button onClick={() => deleteDownload(item)} style={{ ...outlineButtonStyle, color: '#B3261E', borderColor: '#B3261E' }}>Delete</button>
+                    {!item.is_system_managed && <button onClick={() => deleteDownload(item)} style={{ ...outlineButtonStyle, color: '#B3261E', borderColor: '#B3261E' }}>Delete</button>}
                   </div>
                 </article>
               )
@@ -216,3 +275,5 @@ const fileInputStyle = { width: '100%', padding: 12, border: '1px dashed #999', 
 const buttonStyle = { padding: '12px 16px', border: 'none', borderRadius: 7, background: 'var(--ink)', color: '#fff', fontWeight: 800, fontSize: 16, cursor: 'pointer' }
 const outlineButtonStyle = { padding: '9px 13px', border: '1px solid var(--ink)', borderRadius: 6, background: '#fff', color: 'var(--ink)', fontWeight: 700, cursor: 'pointer' }
 const statusStyle = { alignSelf: 'flex-start', padding: '5px 9px', borderRadius: 999, fontSize: 13, fontWeight: 800 }
+const checkLabelStyle = { display: 'flex', gap: 8, alignItems: 'center', marginBottom: 9, fontWeight: 700 }
+const checkStyle = { width: 20, height: 20 }

@@ -232,11 +232,17 @@ export default function Downloads() {
     setWorking(`uploaded-${item.id}`)
     setError('')
     try {
-      const { data, error: downloadError } = await supabase.storage
-        .from('website-downloads')
-        .download(item.storage_path)
-      if (downloadError) throw downloadError
-      downloadFile(item.file_name, await data.arrayBuffer(), item.mime_type || 'application/octet-stream')
+      if (item.public_url) {
+        const response = await fetch(item.public_url)
+        if (!response.ok) throw new Error('The file could not be downloaded.')
+        downloadFile(item.file_name, await response.arrayBuffer(), item.mime_type || 'application/octet-stream')
+      } else {
+        const { data, error: downloadError } = await supabase.storage
+          .from('website-downloads')
+          .download(item.storage_path)
+        if (downloadError) throw downloadError
+        downloadFile(item.file_name, await data.arrayBuffer(), item.mime_type || 'application/octet-stream')
+      }
     } catch (err) {
       setError(err.message || 'The file could not be downloaded.')
     } finally {
@@ -247,7 +253,7 @@ export default function Downloads() {
   useEffect(() => {
     supabase
       .from('site_downloads')
-      .select('id, title, description, file_name, storage_path, mime_type, file_size_bytes, created_at')
+      .select('id, title, description, file_name, storage_path, public_url, mime_type, file_size_bytes, allow_view, allow_download, created_at')
       .eq('is_published', true)
       .order('created_at', { ascending: false })
       .then(({ data, error: loadError }) => {
@@ -314,8 +320,14 @@ export default function Downloads() {
           <h2 style={{ fontSize: 18, marginBottom: 10 }}>Latest downloads</h2>
           <div style={{ display: 'grid', gap: 12 }}>
             {uploadedDownloads.map((item) => {
-              const publicUrl = supabase.storage.from('website-downloads').getPublicUrl(item.storage_path).data.publicUrl
-              const canView = item.mime_type === 'application/pdf' || item.mime_type?.startsWith('image/') || item.mime_type === 'text/plain'
+              const publicUrl = item.public_url || supabase.storage.from('website-downloads').getPublicUrl(item.storage_path).data.publicUrl
+              const isOfficeFile = item.mime_type === 'application/msword'
+                || item.mime_type === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+                || item.mime_type === 'application/vnd.ms-excel'
+                || item.mime_type === 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+              const viewUrl = isOfficeFile
+                ? `https://view.officeapps.live.com/op/view.aspx?src=${encodeURIComponent(new URL(publicUrl, window.location.origin).href)}`
+                : publicUrl
               return (
                 <div key={item.id} style={cardStyle}>
                   <div style={{ flex: 1, minWidth: 220 }}>
@@ -324,10 +336,12 @@ export default function Downloads() {
                     <div style={{ fontSize: 12, color: 'var(--muted)', marginTop: 5, overflowWrap: 'anywhere' }}>{item.file_name}</div>
                   </div>
                   <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                    {canView && <a href={publicUrl} target="_blank" rel="noreferrer" style={{ ...buttonStyle, textDecoration: 'none' }}>View</a>}
-                    <button onClick={() => downloadUploaded(item)} disabled={!!working} style={buttonStyle}>
-                      {working === `uploaded-${item.id}` ? 'Downloading…' : 'Download'}
-                    </button>
+                    {item.allow_view && <a href={viewUrl} target="_blank" rel="noreferrer" style={{ ...buttonStyle, textDecoration: 'none' }}>View</a>}
+                    {item.allow_download && (
+                      <button onClick={() => downloadUploaded(item)} disabled={!!working} style={buttonStyle}>
+                        {working === `uploaded-${item.id}` ? 'Downloading…' : 'Download'}
+                      </button>
+                    )}
                   </div>
                 </div>
               )
