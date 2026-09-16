@@ -34,7 +34,10 @@ drop policy if exists "Iain can view admin audit log" on public.admin_audit_log;
 create policy "Iain can view admin audit log"
 on public.admin_audit_log for select
 to authenticated
-using ((select auth.uid()) = '28696bc6-2df2-4855-b259-3f156ad55748'::uuid);
+using (
+  (select auth.uid()) = '28696bc6-2df2-4855-b259-3f156ad55748'::uuid
+  or (select auth.jwt() -> 'app_metadata' ->> 'role') = 'owner'
+);
 
 create schema if not exists private;
 revoke all on schema private from public, anon, authenticated;
