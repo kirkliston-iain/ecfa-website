@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { supabase } from '../supabaseClient'
 
@@ -8,6 +8,8 @@ export default function AdminLogin() {
   const [showPassword, setShowPassword] = useState(false)
   const [error, setError] = useState(null)
   const [loading, setLoading] = useState(false)
+  const loginRef = useRef(null)
+  const passwordRef = useRef(null)
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
   const passwordChanged = searchParams.get('passwordChanged') === '1'
@@ -16,9 +18,16 @@ export default function AdminLogin() {
     setLoading(true)
     setError(null)
 
-    const cleanedLogin = login.trim().toLowerCase()
+    const enteredLogin = loginRef.current?.value || login
+    const enteredPassword = passwordRef.current?.value || password
+    const cleanedLogin = enteredLogin.trim().toLowerCase()
+    if (!cleanedLogin || !enteredPassword) {
+      setError('Enter your username and password, then tap Sign in.')
+      setLoading(false)
+      return
+    }
     const email = cleanedLogin.includes('@') ? cleanedLogin : `${cleanedLogin}@admin.ecfa.local`
-    const { data, error: signInError } = await supabase.auth.signInWithPassword({ email, password })
+    const { data, error: signInError } = await supabase.auth.signInWithPassword({ email, password: enteredPassword })
 
     setLoading(false)
     if (signInError) {
@@ -45,6 +54,7 @@ export default function AdminLogin() {
         <label style={labelStyle}>
           Username or email
           <input
+            ref={loginRef}
             type="text"
             autoCapitalize="none"
             autoComplete="username"
@@ -57,6 +67,7 @@ export default function AdminLogin() {
         <label style={labelStyle}>
           Password
           <input
+            ref={passwordRef}
             type={showPassword ? 'text' : 'password'}
             autoComplete="current-password"
             value={password}
@@ -70,7 +81,7 @@ export default function AdminLogin() {
           Show password
         </label>
         {error && <p style={{ color: 'var(--red-card)', fontSize: 14, margin: 0 }}>{error}</p>}
-        <button type="button" onClick={handleSubmit} disabled={loading || !login || !password} style={buttonStyle}>
+        <button type="button" onClick={handleSubmit} disabled={loading} style={buttonStyle}>
           {loading ? 'Signing in…' : 'Sign in'}
         </button>
       </form>
