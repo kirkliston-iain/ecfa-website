@@ -19,6 +19,9 @@ export default function AdminDashboard() {
 
   const [squadsByFixture, setSquadsByFixture] = useState({})
   const [scorersByFixture, setScorersByFixture] = useState({})
+  const [scorerChangesByFixture, setScorerChangesByFixture] = useState({})
+  const [savingScorers, setSavingScorers] = useState(null)
+  const [scorerSaveStatus, setScorerSaveStatus] = useState({})
   const [scorerForm, setScorerForm] = useState({ side: 'home', playerId: '', goals: 1 })
 
   const [disciplineByFixture, setDisciplineByFixture] = useState({})
@@ -315,9 +318,38 @@ export default function AdminDashboard() {
     refreshScorers(fixtureId)
   }
 
-  async function updateScorerGoals(fixtureId, scorerId, goals) {
-    await supabase.from('fixture_scorers').update({ goals: Number(goals) }).eq('id', scorerId)
-    refreshScorers(fixtureId)
+  function updateLocalScorerGoals(fixtureId, scorerId, goals) {
+    const value = Math.max(1, Number(goals) || 1)
+    setScorersByFixture((prev) => ({
+      ...prev,
+      [fixtureId]: (prev[fixtureId] || []).map((scorer) =>
+        scorer.id === scorerId ? { ...scorer, goals: value } : scorer
+      ),
+    }))
+    setScorerChangesByFixture((prev) => ({ ...prev, [fixtureId]: true }))
+    setScorerSaveStatus((prev) => ({ ...prev, [fixtureId]: '' }))
+  }
+
+  async function saveScorers(fixtureId) {
+    const rows = scorersByFixture[fixtureId] || []
+    setSavingScorers(fixtureId)
+    setScorerSaveStatus((prev) => ({ ...prev, [fixtureId]: '' }))
+
+    const results = await Promise.all(
+      rows.map((scorer) =>
+        supabase.from('fixture_scorers').update({ goals: Number(scorer.goals) }).eq('id', scorer.id)
+      )
+    )
+    const failed = results.find((result) => result.error)
+
+    if (failed) {
+      setScorerSaveStatus((prev) => ({ ...prev, [fixtureId]: 'Scorers could not be saved. Please try again.' }))
+    } else {
+      setScorerChangesByFixture((prev) => ({ ...prev, [fixtureId]: false }))
+      setScorerSaveStatus((prev) => ({ ...prev, [fixtureId]: 'Scorers saved.' }))
+      await refreshScorers(fixtureId)
+    }
+    setSavingScorers(null)
   }
 
   async function addDiscipline(fixture) {
@@ -843,10 +875,8 @@ export default function AdminDashboard() {
                           <input
                             type="number"
                             min="1"
-                            defaultValue={s.goals}
-                            onBlur={(e) => {
-                              if (Number(e.target.value) !== s.goals) updateScorerGoals(f.id, s.id, e.target.value)
-                            }}
+                            value={s.goals}
+                            onChange={(e) => updateLocalScorerGoals(f.id, s.id, e.target.value)}
                             style={{ ...scoreInputStyle, width: 50, padding: '4px 6px' }}
                           />
                           <button
@@ -859,6 +889,32 @@ export default function AdminDashboard() {
                       ))}
                       {(scorersByFixture[f.id] || []).length === 0 && (
                         <div style={{ fontSize: 13, color: '#8A8570' }}>No scorers recorded yet.</div>
+                      )}
+                    </div>
+                    <div style={{ marginBottom: 12 }}>
+                      <button
+                        onClick={() => saveScorers(f.id)}
+                        disabled={savingScorers === f.id || (scorersByFixture[f.id] || []).length === 0}
+                        style={{ ...saveButtonStyle, width: '100%', opacity: (scorersByFixture[f.id] || []).length === 0 ? 0.5 : 1 }}
+                      >
+                        {savingScorers === f.id
+                          ? 'Saving scorers…'
+                          : scorerChangesByFixture[f.id]
+                            ? 'Save scorer changes'
+                            : 'Save scorers'}
+                      </button>
+                      {scorerSaveStatus[f.id] && (
+                        <div
+                          role="status"
+                          style={{
+                            marginTop: 6,
+                            fontSize: 12,
+                            fontWeight: 700,
+                            color: scorerSaveStatus[f.id].includes('could not') ? '#B3261E' : '#1B8A4A',
+                          }}
+                        >
+                          {scorerSaveStatus[f.id]}
+                        </div>
                       )}
                     </div>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 20 }}>
