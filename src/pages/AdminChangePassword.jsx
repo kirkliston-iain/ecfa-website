@@ -16,8 +16,13 @@ export default function AdminChangePassword() {
     setError('')
     setStatus('')
 
-    if (password.length < 10) {
-      setError('Use at least 10 characters.')
+    if (password.length < 6) {
+      setError('Use at least 6 characters.')
+      return
+    }
+    const specialCharacterCount = (password.match(/[^A-Za-z0-9\\s]/g) || []).length
+    if (specialCharacterCount < 2) {
+      setError('Include at least 2 special characters, such as ! @ # $ %.')
       return
     }
     if (password !== confirmPassword) {
@@ -63,7 +68,7 @@ export default function AdminChangePassword() {
         Your username and temporary password were correct. Complete this one-time step before entering the admin area.
       </div>
       <p style={{ color: 'var(--muted)', fontSize: 14, lineHeight: 1.5, marginBottom: 24 }}>
-        Enter a new password of at least 10 characters. It must be different from the temporary password you just used. After saving, you will return to the login screen and sign in with the new password.
+        Enter a new password of at least 6 characters, including at least 2 special characters such as ! @ # $ %. It must be different from the temporary password you just used. After saving, you will return to the login screen and sign in with the new password.
       </p>
       <form onSubmit={handleSubmit} style={{ display: 'grid', gap: 14 }}>
         <label style={labelStyle}>
