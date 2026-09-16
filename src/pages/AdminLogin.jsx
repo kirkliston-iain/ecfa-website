@@ -1,13 +1,16 @@
 import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { supabase } from '../supabaseClient'
 
 export default function AdminLogin() {
   const [login, setLogin] = useState('')
   const [password, setPassword] = useState('')
+  const [showPassword, setShowPassword] = useState(false)
   const [error, setError] = useState(null)
   const [loading, setLoading] = useState(false)
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
+  const passwordChanged = searchParams.get('passwordChanged') === '1'
 
   async function handleSubmit(e) {
     e.preventDefault()
@@ -34,6 +37,11 @@ export default function AdminLogin() {
   return (
     <div className="container" style={{ padding: '64px 20px', maxWidth: 380 }}>
       <h1 style={{ fontSize: 26, marginBottom: 24, color: 'var(--pitch)' }}>Admin sign in</h1>
+      {passwordChanged && (
+        <div role="status" style={{ padding: 12, marginBottom: 16, border: '1px solid #1B6E3C', borderRadius: 6, background: '#EFFAF3', color: '#1B6E3C', fontWeight: 700 }}>
+          Password changed successfully. Sign in again using your username and new password.
+        </div>
+      )}
       <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
         <label style={labelStyle}>
           Username or email
@@ -50,13 +58,17 @@ export default function AdminLogin() {
         <label style={labelStyle}>
           Password
           <input
-            type="password"
+            type={showPassword ? 'text' : 'password'}
             autoComplete="current-password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             required
             style={inputStyle}
           />
+        </label>
+        <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 14 }}>
+          <input type="checkbox" checked={showPassword} onChange={(e) => setShowPassword(e.target.checked)} />
+          Show password
         </label>
         {error && <p style={{ color: 'var(--red-card)', fontSize: 14, margin: 0 }}>{error}</p>}
         <button type="submit" disabled={loading} style={buttonStyle}>
