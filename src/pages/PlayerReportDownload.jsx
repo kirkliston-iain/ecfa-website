@@ -11,6 +11,16 @@ function normalName(value) {
   return String(value || '').trim().replace(/\s+/g, ' ').toLocaleLowerCase('en-GB')
 }
 
+const PLAYER_SEARCH_ALIASES = {
+  'darran taylor': ['darran taylor', 'darron taylor', 'darron cairns'],
+}
+
+function playerNameMatches(name, query) {
+  const normalisedName = normalName(name)
+  if (normalisedName.includes(query)) return true
+  return (PLAYER_SEARCH_ALIASES[normalisedName] || []).some((alias) => alias.includes(query))
+}
+
 function seasonLabel(value) {
   return String(value || '').replace('-', '/')
 }
@@ -221,7 +231,7 @@ export default function PlayerReportDownload() {
   const filteredPlayers = useMemo(() => {
     const query = normalName(playerSearch)
     if (!query) return players.slice(0, 30)
-    return players.filter((player) => normalName(player.name).includes(query)).slice(0, 50)
+    return players.filter((player) => playerNameMatches(player.name, query)).slice(0, 50)
   }, [players, playerSearch])
 
   function choosePlayer(player) {
