@@ -20,6 +20,16 @@ function includes(value, query) {
   return String(value || '').toLowerCase().includes(query.toLowerCase())
 }
 
+const PLAYER_SEARCH_ALIASES = {
+  'darran taylor': ['darran taylor', 'darron taylor', 'darron cairns'],
+}
+
+function playerMatches(name, query) {
+  if (includes(name, query)) return true
+  const aliases = PLAYER_SEARCH_ALIASES[String(name || '').trim().toLowerCase()] || []
+  return aliases.some((alias) => includes(alias, query))
+}
+
 function ResultGroup({ title, rows }) {
   if (!rows.length) return null
   return (
@@ -77,7 +87,7 @@ export default function Search() {
       const playerMap = new Map()
       for (const player of playersResult.data || []) {
         const name = `${player.first_name || ''} ${player.last_name || ''}`.trim()
-        if (!includes(name, query)) continue
+        if (!playerMatches(name, query)) continue
         playerMap.set(name.toLowerCase(), {
           key: `current-${player.id}`,
           label: name,
