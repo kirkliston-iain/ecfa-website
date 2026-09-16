@@ -14,7 +14,7 @@ export default function AdminAudit() {
   useEffect(() => {
     async function load() {
       const { data: userData } = await supabase.auth.getUser()
-      const canView = userData.user?.id === IAIN_ID
+      const canView = userData.user?.id === IAIN_ID || userData.user?.app_metadata?.role === 'owner'
       setAllowed(canView)
       if (!canView) return
       const { data, error: loadError } = await supabase
