@@ -73,6 +73,41 @@ button {
   border-radius: 3px;
 }
 
+
+/* Fixture cards must remain readable on narrow screens and when Android/Samsung
+   display zoom or accessibility font scaling reduces the effective width. */
+.match-card-team,
+.match-card-team-name {
+  min-width: 0;
+}
+
+.match-card-team-name {
+  overflow-wrap: anywhere;
+  word-break: normal;
+}
+
+@media (max-width: 420px) {
+  .match-card {
+    padding-left: 10px !important;
+    padding-right: 10px !important;
+  }
+
+  .match-card-teams {
+    gap: 5px !important;
+  }
+
+  .match-card-team {
+    gap: 4px !important;
+    font-size: 14px !important;
+  }
+}
+
+@media (max-width: 350px) {
+  .match-card-team {
+    font-size: 13px !important;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
     animation-duration: 0.01ms !important;
