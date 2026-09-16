@@ -58,12 +58,12 @@ export default function AdminChangePassword() {
 
   return (
     <div className="container" style={{ padding: '48px 20px', maxWidth: 420 }}>
-      <h1 style={{ fontSize: 26, marginBottom: 10, color: 'var(--pitch)' }}>Choose a new password</h1>
-      <p style={{ color: 'var(--muted)', lineHeight: 1.5, marginBottom: 12 }}>
-        This is required the first time you sign in with a temporary password.
-      </p>
+      <h1 style={{ fontSize: 26, marginBottom: 10, color: 'var(--pitch)' }}>Create your permanent password</h1>
+      <div role="status" style={{ padding: 12, marginBottom: 16, border: '1px solid #1B6E3C', borderRadius: 6, background: '#EFFAF3', color: '#1B6E3C', fontWeight: 700, lineHeight: 1.45 }}>
+        Your username and temporary password were correct. Complete this one-time step before entering the admin area.
+      </div>
       <p style={{ color: 'var(--muted)', fontSize: 14, lineHeight: 1.5, marginBottom: 24 }}>
-        Use at least 10 characters and do not reuse the temporary password.
+        Enter a new password of at least 10 characters. It must be different from the temporary password you just used. After saving, you will return to the login screen and sign in with the new password.
       </p>
       <form onSubmit={handleSubmit} style={{ display: 'grid', gap: 14 }}>
         <label style={labelStyle}>
