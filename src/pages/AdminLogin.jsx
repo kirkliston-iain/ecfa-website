@@ -12,8 +12,7 @@ export default function AdminLogin() {
   const [searchParams] = useSearchParams()
   const passwordChanged = searchParams.get('passwordChanged') === '1'
 
-  async function handleSubmit(e) {
-    e.preventDefault()
+  async function handleSubmit() {
     setLoading(true)
     setError(null)
 
@@ -42,7 +41,7 @@ export default function AdminLogin() {
           Password changed successfully. Sign in again using your username and new password.
         </div>
       )}
-      <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+      <form onSubmit={(event) => event.preventDefault()} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
         <label style={labelStyle}>
           Username or email
           <input
@@ -71,7 +70,7 @@ export default function AdminLogin() {
           Show password
         </label>
         {error && <p style={{ color: 'var(--red-card)', fontSize: 14, margin: 0 }}>{error}</p>}
-        <button type="submit" disabled={loading} style={buttonStyle}>
+        <button type="button" onClick={handleSubmit} disabled={loading || !login || !password} style={buttonStyle}>
           {loading ? 'Signing in…' : 'Sign in'}
         </button>
       </form>
