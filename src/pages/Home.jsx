@@ -377,6 +377,7 @@ function MatchCard({ f }) {
   return (
     <Link
       to={`/fixtures/${f.id}`}
+      className="match-card"
       style={{
         display: 'block',
         border: '1px solid var(--line)',
@@ -393,9 +394,9 @@ function MatchCard({ f }) {
         {f.compName}
         {f.round_name ? ` — ${f.round_name}` : ''}
       </div>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-        <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 8, fontWeight: 600, fontSize: 15, textAlign: 'right' }}>
-          <span style={!f.home_team ? { color: 'var(--muted)', fontStyle: 'italic', fontWeight: 400 } : undefined}>
+      <div className="match-card-teams" style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) auto minmax(0, 1fr)', alignItems: 'center', gap: 8 }}>
+        <div className="match-card-team match-card-team-home" style={{ minWidth: 0, display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 6, fontWeight: 600, fontSize: 15, textAlign: 'right' }}>
+          <span className="match-card-team-name" style={{ minWidth: 0, overflowWrap: 'anywhere', lineHeight: 1.25, ...(!f.home_team ? { color: 'var(--muted)', fontStyle: 'italic', fontWeight: 400 } : {}) }}>
             {f.home_team?.name || f.home_placeholder || 'TBC'}
           </span>
           {f.home_team ? (
@@ -406,7 +407,7 @@ function MatchCard({ f }) {
         </div>
         <div
           style={{
-            minWidth: 60,
+            minWidth: played ? 62 : 24,
             textAlign: 'center',
             fontWeight: 800,
             fontSize: 17,
@@ -418,13 +419,13 @@ function MatchCard({ f }) {
         >
           {played ? `${f.home_score} - ${f.away_score}` : 'v'}
         </div>
-        <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 8, fontWeight: 600, fontSize: 15 }}>
+        <div className="match-card-team match-card-team-away" style={{ minWidth: 0, display: 'flex', alignItems: 'center', gap: 6, fontWeight: 600, fontSize: 15 }}>
           {f.away_team ? (
             <Badge logoUrl={f.away_team?.logo_url} name={f.away_team?.name} />
           ) : (
             <span style={tbcDotStyle}>?</span>
           )}
-          <span style={!f.away_team ? { color: 'var(--muted)', fontStyle: 'italic', fontWeight: 400 } : undefined}>
+          <span className="match-card-team-name" style={{ minWidth: 0, overflowWrap: 'anywhere', lineHeight: 1.25, ...(!f.away_team ? { color: 'var(--muted)', fontStyle: 'italic', fontWeight: 400 } : {}) }}>
             {f.away_team?.name || f.away_placeholder || 'TBC'}
           </span>
         </div>
