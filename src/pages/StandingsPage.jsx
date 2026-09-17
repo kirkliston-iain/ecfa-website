@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react'
 import { supabase } from '../supabaseClient'
 import StandingsTable from '../components/StandingsTable'
 
-const APPIN_LOGO = 'https://appinsports.com/wp-content/uploads/logo/logo-footer.png'
+const APPIN_LOGO = '/sponsors/appin-sports.png'
 
 const COMPETITIONS = [
   { slug: 'appin-league', name: 'Appin Sports League' },

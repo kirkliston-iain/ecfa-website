@@ -4,7 +4,7 @@ import { supabase } from '../supabaseClient'
 import MatchdayCarousel from '../components/MatchdayCarousel'
 import StandingsTable from '../components/StandingsTable'
 
-const APPIN_LOGO = 'https://appinsports.com/wp-content/uploads/logo/logo-footer.png'
+const APPIN_LOGO = '/sponsors/appin-sports.png'
 const MATCH_HUB_DATE_KEY = 'ecfa-match-hub-selected-date'
 
 const COMPETITIONS = [

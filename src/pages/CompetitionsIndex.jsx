@@ -1,6 +1,6 @@
 import { useNavigate } from 'react-router-dom'
 
-const APPIN_LOGO = 'https://appinsports.com/wp-content/uploads/logo/logo-footer.png'
+const APPIN_LOGO = '/sponsors/appin-sports.png'
 
 const COMPETITIONS = [
   {

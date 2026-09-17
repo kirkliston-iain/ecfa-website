@@ -101,7 +101,7 @@ export default function Competition() {
       <h1 style={{ fontSize: 30, marginBottom: 4, display: 'flex', alignItems: 'center', gap: 12 }}>
         {competition.slug === 'appin-league' && (
           <img
-            src="https://appinsports.com/wp-content/uploads/logo/logo-footer.png"
+            src="/sponsors/appin-sports.png"
             alt=""
             style={{ height: 30, width: 'auto', objectFit: 'contain' }}
           />
