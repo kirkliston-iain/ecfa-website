@@ -1,7 +1,8 @@
 const SUPABASE_URL='https://enzdsbzsgtwqoictiwam.supabase.co';
-const SUPABASE_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXAiLCJyZWYiOiJlbnpkc2J6c2d0d3FvaWN0aXdhbSIsInJvbGUiOiJhbm9uIiwiaWF0IjoxNzg5MTg5OTcyLCJleHAiOjIxMDQ3NjU5NzJ9.hm02pgtRZ1GoDihbXXZAgZ2-9LDpwkrc2GZnQjEtgNw';
-const H={apikey:SUPABASE_KEY,Authorization:`Bearer ${SUPABASE_KEY}`};
-async function q(path){const r=await fetch(`${SUPABASE_URL}/rest/v1/${path}`,{headers:H});if(!r.ok)throw new Error(`ECFA data ${r.status}`);return r.json()}
+const SUPABASE_KEY=process.env.SUPABASE_PUBLISHABLE_KEY;
+if(!SUPABASE_KEY) console.error('SUPABASE_PUBLISHABLE_KEY is not configured');
+const H={apikey:SUPABASE_KEY};
+async function q(path){if(!SUPABASE_KEY)throw new Error('ECFA feed authentication is not configured');const r=await fetch(`${SUPABASE_URL}/rest/v1/${path}`,{headers:H});if(!r.ok)throw new Error(`ECFA data ${r.status}`);return r.json()}
 function standings(teams,fixtures){const t={};teams.forEach(x=>t[x.id]={team:x.name,logoUrl:x.logo_url,played:0,won:0,drawn:0,lost:0,gf:0,ga:0,points:0});fixtures.forEach(f=>{if(f.status!=='played'||f.home_score==null||f.away_score==null)return;const h=t[f.home_team_id],a=t[f.away_team_id];if(!h||!a)return;h.played++;a.played++;h.gf+=f.home_score;h.ga+=f.away_score;a.gf+=f.away_score;a.ga+=f.home_score;if(f.home_score>f.away_score){h.won++;h.points+=3;a.lost++}else if(f.home_score<f.away_score){a.won++;a.points+=3;h.lost++}else{h.drawn++;a.drawn++;h.points++;a.points++}});return Object.values(t).map(x=>({...x,goalDiff:x.gf-x.ga})).sort((a,b)=>b.points-a.points||b.goalDiff-a.goalDiff||b.gf-a.gf||a.team.localeCompare(b.team)).map((x,i)=>({position:i+1,...x}))}
 export default async function handler(req,res){try{
  const teams=await q('teams?select=id,name,short_name,logo_url');
