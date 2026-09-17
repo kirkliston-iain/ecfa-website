@@ -32,25 +32,22 @@ const teamEvents = [
 
 export default function Charity() {
   return (
-    <div className="container" style={{ padding: '34px 20px 64px', maxWidth: 820 }}>
-      <div style={{ borderLeft: '5px solid var(--brass)', paddingLeft: 18, marginBottom: 34 }}>
-        <div style={eyebrowStyle}>ECFA CHARITY WORK</div>
-        <h1 style={{ fontSize: 38, margin: '5px 0 10px' }}>Football supporting our community</h1>
-        <p style={{ color: 'var(--muted)', fontSize: 17, margin: 0, maxWidth: 690 }}>
+    <div className="container" style={{ padding: '32px 20px 48px', maxWidth: 820 }}>
+      <h1 style={{ fontSize: 30, marginBottom: 4 }}>Charity</h1>
+      <p style={{ color: 'var(--muted)', margin: '0 0 30px' }}>
           Each season, the ECFA nominates a charity and brings teams together to raise funds. Clubs also organise their own events for causes close to their communities.
-        </p>
-      </div>
+      </p>
 
-      <section style={{ marginBottom: 42 }}>
+      <section style={{ marginBottom: 34 }}>
         <h2 style={sectionHeadingStyle}>League charity events by season</h2>
         <div style={{ display: 'grid', gap: 18 }}>
-          {leagueSeasons.map((item, index) => (
-            <article key={item.season} style={{ ...cardStyle, borderTop: index === 0 ? '5px solid var(--brass)' : '1px solid var(--line)' }}>
+          {leagueSeasons.map((item) => (
+            <article key={item.season} style={cardStyle}>
               <div style={{ display: 'flex', justifyContent: 'space-between', gap: 14, alignItems: 'flex-start', flexWrap: 'wrap' }}>
                 <div>
                   <div style={seasonStyle}>{item.season} SEASON</div>
-                  <h3 style={{ fontSize: 26, margin: '7px 0 4px' }}>{item.charity}</h3>
-                  {index === 0 && <div style={{ color: 'var(--brass)', fontWeight: 800 }}>ECFA nominated charity</div>}
+                  <h3 style={{ fontSize: 20, margin: '4px 0 3px' }}>{item.charity}</h3>
+                  {item.season === '2026/27' && <div style={{ color: 'var(--brass)', fontSize: 13, fontWeight: 800 }}>ECFA nominated charity</div>}
                 </div>
                 {item.raised && (
                   <div style={amountStyle}>
@@ -60,7 +57,7 @@ export default function Charity() {
                 )}
               </div>
 
-              <p style={{ margin: '18px 0 14px', lineHeight: 1.65 }}>{item.summary}</p>
+              <p style={{ margin: '14px 0 10px', color: 'var(--muted)', fontSize: 14, lineHeight: 1.5 }}>{item.summary}</p>
               <a href={item.charityUrl} target="_blank" rel="noreferrer" style={textLinkStyle}>
                 Visit {item.charity}'s website →
               </a>
@@ -75,27 +72,27 @@ export default function Charity() {
         </div>
       </section>
 
-      <section style={{ marginBottom: 42 }}>
+      <section style={{ marginBottom: 34 }}>
         <h2 style={sectionHeadingStyle}>Team charity events by season</h2>
         <div style={{ display: 'grid', gap: 16 }}>
           {teamEvents.map((item) => (
             <article key={`${item.season}-${item.team}`} style={cardStyle}>
               <div style={seasonStyle}>{item.season} SEASON</div>
-              <h3 style={{ fontSize: 23, margin: '7px 0 2px' }}>{item.team}</h3>
-              <div style={{ color: 'var(--muted)', fontWeight: 700 }}>{item.title}</div>
-              <p style={{ margin: '14px 0', lineHeight: 1.65 }}>{item.summary}</p>
+              <h3 style={{ fontSize: 20, margin: '4px 0 2px' }}>{item.team}</h3>
+              <div style={{ color: 'var(--muted)', fontSize: 13, fontWeight: 700 }}>{item.title}</div>
+              <p style={{ margin: '12px 0', color: 'var(--muted)', fontSize: 14, lineHeight: 1.5 }}>{item.summary}</p>
               <a href={item.url} target="_blank" rel="noreferrer" style={buttonLinkStyle}>View fundraiser</a>
             </article>
           ))}
         </div>
       </section>
 
-      <aside style={{ background: 'var(--ink)', color: '#fff', padding: 22, borderRadius: 10 }}>
-        <h2 style={{ fontSize: 21, marginBottom: 8 }}>Charity enquiries</h2>
-        <p style={{ margin: '0 0 12px', color: '#E5E5E5' }}>
+      <aside style={{ border: '1px solid var(--line)', padding: 16, borderRadius: 10 }}>
+        <h2 style={{ fontSize: 18, marginBottom: 6 }}>Charity enquiries</h2>
+        <p style={{ margin: '0 0 10px', color: 'var(--muted)', fontSize: 14 }}>
           To ask about the league charity, the November tournament or adding a team event, send a charity enquiry through Contact Us.
         </p>
-        <Link to="/contact?type=Charity Enquiry" style={{ color: 'var(--brass-light)', fontWeight: 800 }}>
+        <Link to="/contact?type=Charity Enquiry" style={textLinkStyle}>
           Send a charity enquiry →
         </Link>
       </aside>
@@ -103,11 +100,10 @@ export default function Charity() {
   )
 }
 
-const eyebrowStyle = { color: 'var(--brass)', fontWeight: 900, letterSpacing: 1, fontSize: 13 }
-const sectionHeadingStyle = { fontSize: 25, marginBottom: 16, paddingBottom: 10, borderBottom: '3px solid var(--brass)' }
-const cardStyle = { background: '#fff', border: '1px solid var(--line)', borderRadius: 10, padding: 22, boxShadow: '0 3px 14px rgba(0,0,0,0.04)' }
-const seasonStyle = { color: 'var(--brass)', fontWeight: 900, letterSpacing: 0.7, fontSize: 13 }
-const amountStyle = { background: 'var(--ink)', color: '#fff', padding: '10px 15px', borderRadius: 8, fontWeight: 900, fontSize: 23, textAlign: 'center' }
-const eventPanelStyle = { background: '#F6F3EA', borderLeft: '4px solid var(--brass)', borderRadius: 6, padding: 16, marginTop: 20 }
-const textLinkStyle = { color: 'var(--brass)', fontWeight: 800, textDecoration: 'underline', textUnderlineOffset: 3 }
-const buttonLinkStyle = { display: 'inline-block', background: 'var(--ink)', color: '#fff', padding: '10px 15px', borderRadius: 6, fontWeight: 800 }
+const sectionHeadingStyle = { fontSize: 18, marginBottom: 12 }
+const cardStyle = { background: '#fff', border: '1px solid var(--line)', borderRadius: 10, padding: 16 }
+const seasonStyle = { color: 'var(--brass)', fontWeight: 700, letterSpacing: 0.6, fontSize: 11 }
+const amountStyle = { background: 'var(--ink)', color: '#fff', padding: '8px 12px', borderRadius: 7, fontWeight: 900, fontSize: 19, textAlign: 'center' }
+const eventPanelStyle = { background: '#F6F3EA', borderLeft: '3px solid var(--brass)', borderRadius: 6, padding: 13, marginTop: 16, fontSize: 14 }
+const textLinkStyle = { color: 'var(--ink)', fontSize: 13, fontWeight: 700, textDecoration: 'underline', textUnderlineOffset: 3 }
+const buttonLinkStyle = { display: 'inline-block', background: 'var(--ink)', color: '#fff', padding: '8px 12px', borderRadius: 6, fontSize: 13, fontWeight: 700 }
