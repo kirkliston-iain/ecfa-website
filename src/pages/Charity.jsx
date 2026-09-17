@@ -4,6 +4,7 @@ const leagueSeasons = [
   {
     season: '2026/27',
     charity: 'Forget Me Notes Project',
+    logo: '/charities/forget-me-notes.webp',
     charityUrl: 'https://www.forgetmenotes.org.uk/',
     summary: 'An Edinburgh-based charity that uses music to build inclusive communities, encourage self-expression and combat social isolation. Its work is rooted in dementia-friendly values and is open to everyone.',
     eventTitle: 'ECFA Charity Tournament',
@@ -13,6 +14,7 @@ const leagueSeasons = [
   {
     season: '2025/26',
     charity: "Don't Screen Us Out",
+    logo: '/charities/dont-screen-us-out.svg',
     charityUrl: 'https://dontscreenusout.org/',
     summary: "A campaign working towards a society in which people with Down's syndrome are equally valued, including reform of legislation, policy and practice affecting people with Down's syndrome and their families.",
     raised: '£4,204',
@@ -44,10 +46,15 @@ export default function Charity() {
           {leagueSeasons.map((item) => (
             <article key={item.season} style={cardStyle}>
               <div style={{ display: 'flex', justifyContent: 'space-between', gap: 14, alignItems: 'flex-start', flexWrap: 'wrap' }}>
-                <div>
-                  <div style={seasonStyle}>{item.season} SEASON</div>
-                  <h3 style={{ fontSize: 20, margin: '4px 0 3px' }}>{item.charity}</h3>
-                  {item.season === '2026/27' && <div style={{ color: 'var(--brass)', fontSize: 13, fontWeight: 800 }}>ECFA nominated charity</div>}
+                <div style={charityIdentityStyle}>
+                  <div style={logoPanelStyle}>
+                    <img src={item.logo} alt={`${item.charity} logo`} style={logoStyle} />
+                  </div>
+                  <div>
+                    <div style={seasonStyle}>{item.season} SEASON</div>
+                    <h3 style={{ fontSize: 20, margin: '4px 0 3px' }}>{item.charity}</h3>
+                    {item.season === '2026/27' && <div style={{ color: 'var(--brass)', fontSize: 13, fontWeight: 800 }}>ECFA nominated charity</div>}
+                  </div>
                 </div>
                 {item.raised && (
                   <div style={amountStyle}>
@@ -102,6 +109,9 @@ export default function Charity() {
 
 const sectionHeadingStyle = { fontSize: 18, marginBottom: 12 }
 const cardStyle = { background: '#fff', border: '1px solid var(--line)', borderRadius: 10, padding: 16 }
+const charityIdentityStyle = { display: 'grid', gridTemplateColumns: '76px minmax(0, 1fr)', gap: 13, alignItems: 'center', minWidth: 0, flex: '1 1 320px' }
+const logoPanelStyle = { width: 76, height: 64, padding: 6, border: '1px solid var(--line)', borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#fff' }
+const logoStyle = { display: 'block', width: '100%', maxHeight: 52, objectFit: 'contain' }
 const seasonStyle = { color: 'var(--brass)', fontWeight: 700, letterSpacing: 0.6, fontSize: 11 }
 const amountStyle = { background: 'var(--ink)', color: '#fff', padding: '8px 12px', borderRadius: 7, fontWeight: 900, fontSize: 19, textAlign: 'center' }
 const eventPanelStyle = { background: '#F6F3EA', borderLeft: '3px solid var(--brass)', borderRadius: 6, padding: 13, marginTop: 16, fontSize: 14 }

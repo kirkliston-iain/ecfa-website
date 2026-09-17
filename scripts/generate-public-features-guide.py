@@ -98,7 +98,7 @@ cover = Table([[p('ECFA WEBSITE', 'CoverSub')], [p('Public Features Guide', 'Cov
               ]))
 story += [Spacer(1, 35*mm), cover, Spacer(1, 18*mm)]
 story.append(Table([[p('WEBSITE', 'Smallx'), p('https://ecfa-website.vercel.app', 'CardTitle')],
-                    [p('GUIDE UPDATED', 'Smallx'), p('16 September 2026', 'CardTitle')]],
+                    [p('GUIDE UPDATED', 'Smallx'), p('17 September 2026', 'CardTitle')]],
                    colWidths=[35*mm, 125*mm], style=TableStyle([
                        ('BOX', (0,0), (-1,-1), 0.7, LINE), ('INNERGRID', (0,0), (-1,-1), 0.5, LINE),
                        ('BACKGROUND', (0,0), (0,-1), PALE), ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
@@ -176,7 +176,7 @@ story.append(p('The sponsors page groups sponsors beneath the competitions they 
 
 story += [Spacer(1, 10)] + section_title('9. Charity')
 story.append(card_grid([
-    ('League charities by season', 'See the ECFA nominated charity for each season, information about its work and links to its website.'),
+    ('League charities by season', 'See each nominated charity with its logo, a concise summary of its work and a link to its website.'),
     ('League charity events', 'Review planned and completed league fundraising events, dates, formats and confirmed totals.'),
     ('Team events by season', 'Discover fundraising organised by individual ECFA clubs and follow links to supported campaigns.'),
     ('Charity enquiries', 'Use the Charity Enquiry option in Contact Us for questions about the league charity, forthcoming events or adding a team fundraiser.'),
