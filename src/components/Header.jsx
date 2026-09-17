@@ -5,17 +5,17 @@ import { supabase } from '../supabaseClient'
 const TABS = [
   { to: '/', label: 'Match Hub', end: true },
   { to: '/standings', label: 'Competitions' },
+  { to: '/teams', label: 'Teams' },
   { to: '/scorers', label: 'Scorers' },
+  { to: '/referees', label: 'Referees' },
   { to: '/honours', label: 'Honours' },
   { to: '/history', label: 'History' },
-  { to: '/teams', label: 'Teams' },
-  { to: '/referees', label: 'Referees' },
   { to: '/sponsors', label: 'Sponsors' },
   { to: '/charity', label: 'Charity' },
   { to: '/downloads', label: 'Downloads' },
-  { to: '/web-stats', label: 'Web Stats' },
   { to: '/search', label: 'Search' },
   { to: '/contact', label: 'Contact Us' },
+  { to: '/web-stats', label: 'Web Stats' },
 ]
 
 export default function Header() {
@@ -29,7 +29,9 @@ export default function Header() {
     return () => listener.subscription.unsubscribe()
   }, [])
 
-  const tabs = signedIn ? [...TABS, { to: '/discipline', label: 'Discipline' }] : TABS
+  const tabs = signedIn
+    ? [...TABS.slice(0, 5), { to: '/discipline', label: 'Discipline' }, ...TABS.slice(5)]
+    : TABS
 
   return (
     <header>
