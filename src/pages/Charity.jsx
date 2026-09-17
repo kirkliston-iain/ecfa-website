@@ -4,7 +4,7 @@ const leagueSeasons = [
   {
     season: '2026/27',
     charity: 'Forget Me Notes Project',
-    logo: '/charities/forget-me-notes.png',
+    logo: '/charities/forget-me-notes-v2.png',
     charityUrl: 'https://www.forgetmenotes.org.uk/',
     summary: 'An Edinburgh-based charity that uses music to build inclusive communities, encourage self-expression and combat social isolation. Its work is rooted in dementia-friendly values and is open to everyone.',
     eventTitle: 'ECFA Charity Tournament',
@@ -14,7 +14,7 @@ const leagueSeasons = [
   {
     season: '2025/26',
     charity: "Don't Screen Us Out",
-    logo: '/charities/dont-screen-us-out-full.svg',
+    logo: '/charities/dont-screen-us-out-v2.svg',
     charityUrl: 'https://dontscreenusout.org/',
     summary: "A campaign working towards a society in which people with Down's syndrome are equally valued, including reform of legislation, policy and practice affecting people with Down's syndrome and their families.",
     raised: '£4,204',
