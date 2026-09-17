@@ -4,6 +4,11 @@ if(!SUPABASE_KEY) console.error('SUPABASE_PUBLISHABLE_KEY is not configured');
 const H={apikey:SUPABASE_KEY};
 async function q(path){if(!SUPABASE_KEY)throw new Error('ECFA feed authentication is not configured');const r=await fetch(`${SUPABASE_URL}/rest/v1/${path}`,{headers:H});if(!r.ok)throw new Error(`ECFA data ${r.status}`);return r.json()}
 function standings(teams,fixtures){const t={};teams.forEach(x=>t[x.id]={team:x.name,logoUrl:x.logo_url,played:0,won:0,drawn:0,lost:0,gf:0,ga:0,points:0});fixtures.forEach(f=>{if(f.status!=='played'||f.home_score==null||f.away_score==null)return;const h=t[f.home_team_id],a=t[f.away_team_id];if(!h||!a)return;h.played++;a.played++;h.gf+=f.home_score;h.ga+=f.away_score;a.gf+=f.away_score;a.ga+=f.home_score;if(f.home_score>f.away_score){h.won++;h.points+=3;a.lost++}else if(f.home_score<f.away_score){a.won++;a.points+=3;h.lost++}else{h.drawn++;a.drawn++;h.points++;a.points++}});return Object.values(t).map(x=>({...x,goalDiff:x.gf-x.ga})).sort((a,b)=>b.points-a.points||b.goalDiff-a.goalDiff||b.gf-a.gf||a.team.localeCompare(b.team)).map((x,i)=>({position:i+1,...x}))}
+function fixtureTime(value){
+ if(!value)return '';
+ const match=String(value).match(/T(\d{2}):(\d{2})/);
+ return match?`${match[1]}:${match[2]}`:'';
+}
 export default async function handler(req,res){try{
  const teams=await q('teams?select=id,name,short_name,logo_url');
  const kirk=teams.find(t=>t.name==='Kirkliston Community Church');if(!kirk)throw new Error('Kirkliston team not found');
@@ -19,7 +24,7 @@ export default async function handler(req,res){try{
  const stageMap=Object.fromEntries(stages.map(s=>[s.id,s])),compMap=Object.fromEntries(comps.map(c=>[c.id,c])),teamMap=Object.fromEntries(teams.map(t=>[t.id,t]));
  const enriched=fixtures.map(f=>{const c=compMap[stageMap[f.stage_id]?.competition_id];return {...f,competition:c?.name||'',competitionSlug:c?.slug||'',stageType:stageMap[f.stage_id]?.stage_type||'',homeTeam:teamMap[f.home_team_id]?.name||'',awayTeam:teamMap[f.away_team_id]?.name||''}});
  const own=enriched.filter(f=>f.home_team_id===kirk.id||f.away_team_id===kirk.id);
- const upcoming=own.filter(f=>f.status!=='played').map(f=>({date:f.fixture_date.slice(0,10),time:new Date(f.fixture_date).toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit',timeZone:'Europe/London'}),opponent:f.home_team_id===kirk.id?f.awayTeam:f.homeTeam,homeAway:f.home_team_id===kirk.id?'Home':'Away',venue:f.venue,competition:f.competition,round:f.round_name||'',type:'fixture'}));
+ const upcoming=own.filter(f=>f.status!=='played').map(f=>({date:f.fixture_date.slice(0,10),time:fixtureTime(f.fixture_date),opponent:f.home_team_id===kirk.id?f.awayTeam:f.homeTeam,homeAway:f.home_team_id===kirk.id?'Home':'Away',venue:f.venue,competition:f.competition,round:f.round_name||'',type:'fixture'}));
  const lastFixtureDate=upcoming.reduce((m,f)=>f.date>m?f.date:m,'');
  const events=calendarEvents.filter(e=>!lastFixtureDate||e.event_date<=lastFixtureDate).map(e=>({date:e.event_date,time:'',opponent:e.title,homeAway:'Event',venue:e.description||'',competition:'',round:'',type:'event',title:e.title,description:e.description||''}));
  const ownDates=new Set(upcoming.map(f=>f.date));
