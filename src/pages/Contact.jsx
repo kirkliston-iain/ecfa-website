@@ -21,7 +21,7 @@ export default function Contact() {
   const [searchParams] = useSearchParams()
   const navigate = useNavigate()
   const requestedType = searchParams.get('type')
-  const startingType = ['Website Error', 'Feature Request', 'Apply to Join the League'].includes(requestedType)
+  const startingType = ['Website Error', 'Feature Request', 'Apply to Join the League', 'Charity Enquiry'].includes(requestedType)
     ? requestedType
     : initialForm.enquiryType
   const [form, setForm] = useState({ ...initialForm, enquiryType: startingType })
@@ -117,7 +117,7 @@ export default function Contact() {
           ? 'Read the ECFA criteria before starting a new-team application.'
           : isWebsiteReport
             ? 'Tell us what is wrong or suggest something you would like added. Your name and contact details are optional.'
-            : 'Send the ECFA a general question, ask about sponsorship or apply to join the league.'}
+            : 'Send the ECFA a general question, ask about sponsorship or charity activity, or apply to join the league.'}
       </p>
 
       {sent && <div role="status" style={successStyle}>
@@ -132,7 +132,7 @@ export default function Contact() {
           <fieldset style={fieldsetStyle}>
             <legend style={legendStyle}>What is your enquiry about?</legend>
             <div style={{ display: 'grid', gap: 10 }}>
-              {['General Query', 'Sponsorship Enquiry', 'Apply to Join the League', 'Website Error', 'Feature Request'].map((type) => (
+              {['General Query', 'Sponsorship Enquiry', 'Charity Enquiry', 'Apply to Join the League', 'Website Error', 'Feature Request'].map((type) => (
                 <label key={type} style={optionStyle}>
                   <input type="radio" name="enquiryType" value={type} checked={form.enquiryType === type} onChange={(event) => update('enquiryType', event.target.value)} />
                   <span>{type}</span>

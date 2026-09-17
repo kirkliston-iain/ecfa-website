@@ -35,6 +35,7 @@ import AdminChangePassword from './pages/AdminChangePassword'
 import AdminAccounts from './pages/AdminAccounts'
 import AdminAudit from './pages/AdminAudit'
 import DownloadsAdmin from './pages/DownloadsAdmin'
+import Charity from './pages/Charity'
 
 export default function App() {
   return (
@@ -59,6 +60,7 @@ export default function App() {
           <Route path="/web-stats" element={<WebStats />} />
           <Route path="/contact" element={<Contact />} />
           <Route path="/sponsors" element={<Sponsors />} />
+          <Route path="/charity" element={<Charity />} />
           <Route path="/search" element={<Search />} />
           <Route path="/players/:id" element={<PlayerDetail />} />
           <Route

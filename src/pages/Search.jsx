@@ -11,6 +11,7 @@ const SITE_PAGES = [
   { label: 'Teams', description: 'Team pages, squads, managers and fixtures', to: '/teams' },
   { label: 'Referees', description: 'Officials, games, venues and cards', to: '/referees' },
   { label: 'Sponsors', description: 'ECFA competition sponsors', to: '/sponsors' },
+  { label: 'Charity', description: 'League and team charity events by season', to: '/charity' },
   { label: 'Downloads', description: 'Download ECFA statistics and the league handbook', to: '/downloads' },
   { label: 'Web Stats', description: 'Website page-view statistics', to: '/web-stats' },
   { label: 'Contact Us', description: 'General queries and sponsorship enquiries', to: '/contact' },

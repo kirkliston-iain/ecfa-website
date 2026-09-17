@@ -174,8 +174,16 @@ story.append(card_grid([
 story += [Spacer(1, 10)] + section_title('8. Sponsors')
 story.append(p('The sponsors page groups sponsors beneath the competitions they support. Each entry includes a logo badge, a short summary, a link to the sponsor’s website and a direct route to the sponsored competition.'))
 
+story += [Spacer(1, 10)] + section_title('9. Charity')
+story.append(card_grid([
+    ('League charities by season', 'See the ECFA nominated charity for each season, information about its work and links to its website.'),
+    ('League charity events', 'Review planned and completed league fundraising events, dates, formats and confirmed totals.'),
+    ('Team events by season', 'Discover fundraising organised by individual ECFA clubs and follow links to supported campaigns.'),
+    ('Charity enquiries', 'Use the Charity Enquiry option in Contact Us for questions about the league charity, forthcoming events or adding a team fundraiser.'),
+]))
+
 # downloads
-story += section_title('9. Public downloads and reports', 'The Downloads area makes ECFA information reusable without requiring administrator access. Published league files can be viewed online, downloaded, or offered with both choices. Availability depends on the records held for each season.')
+story += section_title('10. Public downloads and reports', 'The Downloads area makes ECFA information reusable without requiring administrator access. Published league files can be viewed online, downloaded, or offered with both choices. Availability depends on the records held for each season.')
 download_rows = [
     ['Download', 'What it contains', 'Formats'],
     ['Current-season scorers', 'Each scorer and their current-season goal total', 'CSV / Excel'],
@@ -197,7 +205,7 @@ tbl.setStyle(TableStyle([
     ('TOPPADDING', (0,0), (-1,-1), 7), ('BOTTOMPADDING', (0,0), (-1,-1), 7),
 ]))
 story += [tbl, Spacer(1, 10), p('<b>Using downloads:</b> Where available, select <b>View</b> to read a file without saving it to the device, or <b>Download</b> to keep a copy. CSV files suit data analysis and imports; Excel files open as formatted workbooks; PDF and Word reports are designed for viewing and sharing.')]
-story += [Spacer(1, 8)] + section_title('10. Whole-site search')
+story += [Spacer(1, 8)] + section_title('11. Whole-site search')
 story.append(card_grid([
     ('Partial-name searching', 'Enter part of a player, referee, team or manager name to receive matching results.'),
     ('Pages and competitions', 'Search also returns relevant website pages and competition links.'),
@@ -207,17 +215,18 @@ story.append(card_grid([
 story.append(PageBreak())
 
 # stats and contact
-story += section_title('11. Website statistics')
+story += section_title('12. Website statistics')
 story.append(card_grid([
     ('Seven-day activity', 'A daily chart shows today and the previous six days of actual recorded page views.'),
     ('Headline totals', 'Summary cards show recent and longer-term website usage.'),
     ('Popular pages', 'Tables identify the most visited match, competition, team, player and other pages.'),
     ('Public transparency', 'Visitors can see how the ECFA website is being used without accessing private administration data.'),
 ]))
-story += [Spacer(1, 10)] + section_title('12. Contacting the ECFA')
+story += [Spacer(1, 10)] + section_title('13. Contacting the ECFA')
 story.append(card_grid([
     ('General query', 'Send a question with a name, message and either an email address or mobile number.'),
     ('Sponsorship enquiry', 'Contact the league about supporting ECFA competitions and activities.'),
+    ('Charity enquiry', 'Ask about the nominated charity, league fundraising events or adding a team-led charity event.'),
     ('Apply to join the league', 'Read the registration criteria, confirm suitability and submit team, church, minister and mission information.'),
     ('Report an error', 'Tell the ECFA about incorrect information, a broken page or another website problem. Contact details are optional.'),
     ('Request a feature', 'Suggest an improvement or new website facility through the same reporting form.'),

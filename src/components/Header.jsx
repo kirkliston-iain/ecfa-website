@@ -11,6 +11,7 @@ const TABS = [
   { to: '/teams', label: 'Teams' },
   { to: '/referees', label: 'Referees' },
   { to: '/sponsors', label: 'Sponsors' },
+  { to: '/charity', label: 'Charity' },
   { to: '/downloads', label: 'Downloads' },
   { to: '/web-stats', label: 'Web Stats' },
   { to: '/search', label: 'Search' },
