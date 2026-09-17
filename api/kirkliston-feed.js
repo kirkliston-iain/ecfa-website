@@ -25,7 +25,7 @@ export default async function handler(req,res){try{
  const eventDates=new Set(events.map(e=>e.date));
  const cupRoundDates=[];
  const seenRounds=new Set();
- enriched.filter(f=>f.status!=='played'&&f.stageType==='knockout'&&f.round_name).forEach(f=>{
+ enriched.filter(f=>f.status!=='played'&&f.round_name&&(!f.home_team_id||!f.away_team_id)&&(f.home_placeholder||f.away_placeholder)).forEach(f=>{
    const date=f.fixture_date.slice(0,10);
    if(ownDates.has(date)||eventDates.has(date))return;
    const key=`${date}|${f.competition}|${f.round_name}`;
