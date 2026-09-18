@@ -6,6 +6,10 @@ const emptyForm = {
   name: '', summary: '', websiteUrl: '', competitionName: '', competitionPath: '', sortOrder: 50, published: true,
 }
 
+const emptyFundraiser = {
+  teamName: '', title: '', summary: '', fundraiserUrl: '', season: '2026/27', amountRaisedText: '', sortOrder: 50, published: true,
+}
+
 function safeFileName(name) {
   return name.normalize('NFKD').replace(/[^a-zA-Z0-9._-]+/g, '-').replace(/^-+|-+$/g, '')
 }
@@ -14,16 +18,24 @@ export default function SponsorsAdmin() {
   const [sponsors, setSponsors] = useState([])
   const [form, setForm] = useState(emptyForm)
   const [logo, setLogo] = useState(null)
+  const [fundraisers, setFundraisers] = useState([])
+  const [fundraiserForm, setFundraiserForm] = useState(emptyFundraiser)
   const [working, setWorking] = useState(false)
   const [message, setMessage] = useState('')
   const [error, setError] = useState('')
 
-  useEffect(() => { loadSponsors() }, [])
+  useEffect(() => { loadSponsors(); loadFundraisers() }, [])
 
   async function loadSponsors() {
     const { data, error: loadError } = await supabase.from('sponsors').select('*').order('sort_order').order('name')
     if (loadError) setError(loadError.message)
     else setSponsors(data || [])
+  }
+
+  async function loadFundraisers() {
+    const { data, error: loadError } = await supabase.from('team_fundraisers').select('*').order('sort_order').order('team_name')
+    if (loadError) setError(loadError.message)
+    else setFundraisers(data || [])
   }
 
   async function addSponsor(event) {
@@ -97,6 +109,55 @@ export default function SponsorsAdmin() {
     }
   }
 
+  async function addFundraiser(event) {
+    event.preventDefault()
+    setError('')
+    setMessage('')
+    if (!fundraiserForm.teamName.trim() || !fundraiserForm.title.trim() || !fundraiserForm.summary.trim()) {
+      setError('Add the team name, fundraiser title and a short description.')
+      return
+    }
+    setWorking(true)
+    const { error: rowError } = await supabase.from('team_fundraisers').insert({
+      team_name: fundraiserForm.teamName.trim(),
+      title: fundraiserForm.title.trim(),
+      summary: fundraiserForm.summary.trim(),
+      fundraiser_url: fundraiserForm.fundraiserUrl.trim() || null,
+      season: fundraiserForm.season.trim(),
+      amount_raised_text: fundraiserForm.amountRaisedText.trim() || null,
+      sort_order: Number(fundraiserForm.sortOrder) || 50,
+      is_published: fundraiserForm.published,
+    })
+    if (rowError) setError(rowError.message)
+    else {
+      setFundraiserForm(emptyFundraiser)
+      setMessage('Team fundraiser saved.')
+      event.currentTarget.reset()
+      loadFundraisers()
+    }
+    setWorking(false)
+  }
+
+  async function updateFundraiser(id, values) {
+    setError('')
+    const { error: updateError } = await supabase.from('team_fundraisers').update(values).eq('id', id)
+    if (updateError) setError(updateError.message)
+    else {
+      setMessage('Team fundraiser updated.')
+      loadFundraisers()
+    }
+  }
+
+  async function deleteFundraiser(item) {
+    if (!window.confirm(`Delete “${item.title}”?`)) return
+    const { error: deleteError } = await supabase.from('team_fundraisers').delete().eq('id', item.id)
+    if (deleteError) setError(deleteError.message)
+    else {
+      setMessage('Team fundraiser deleted.')
+      loadFundraisers()
+    }
+  }
+
   return (
     <div className="container" style={{ padding: '28px 20px 48px', maxWidth: 720 }}>
       <Link to="/admin/dashboard" style={backStyle}>&larr; Back to admin</Link>
@@ -135,6 +196,39 @@ export default function SponsorsAdmin() {
               <button type="button" onClick={() => updateSponsor(item.id, { sort_order: Math.max(1, item.sort_order - 10) })} style={outlineButtonStyle}>Move up</button>
               <button type="button" onClick={() => updateSponsor(item.id, { sort_order: item.sort_order + 10 })} style={outlineButtonStyle}>Move down</button>
               <button type="button" onClick={() => deleteSponsor(item)} style={{ ...outlineButtonStyle, color: '#B3261E', borderColor: '#B3261E' }}>Delete</button>
+            </div>
+          </article>
+        ))}
+      </div>
+
+      <hr style={{ border: 0, borderTop: '1px solid var(--line)', margin: '36px 0' }} />
+      <h2 style={{ fontSize: 22, marginBottom: 6 }}>Teams’ own fundraisers</h2>
+      <p style={{ color: 'var(--muted)', marginTop: 0 }}>Add fundraising organised by an individual ECFA team.</p>
+
+      <form onSubmit={addFundraiser} style={cardStyle}>
+        <h3 style={headingStyle}>Add team fundraiser</h3>
+        <label style={labelStyle}>Team name *<input required value={fundraiserForm.teamName} onChange={(e) => setFundraiserForm({ ...fundraiserForm, teamName: e.target.value })} style={inputStyle} /></label>
+        <label style={labelStyle}>Fundraiser title *<input required value={fundraiserForm.title} onChange={(e) => setFundraiserForm({ ...fundraiserForm, title: e.target.value })} style={inputStyle} /></label>
+        <label style={labelStyle}>Short description *<textarea required rows={4} value={fundraiserForm.summary} onChange={(e) => setFundraiserForm({ ...fundraiserForm, summary: e.target.value })} style={inputStyle} /></label>
+        <label style={labelStyle}>Fundraiser link<input type="url" value={fundraiserForm.fundraiserUrl} onChange={(e) => setFundraiserForm({ ...fundraiserForm, fundraiserUrl: e.target.value })} placeholder="https://…" style={inputStyle} /></label>
+        <label style={labelStyle}>Season *<input required value={fundraiserForm.season} onChange={(e) => setFundraiserForm({ ...fundraiserForm, season: e.target.value })} placeholder="2026/27" style={inputStyle} /></label>
+        <label style={labelStyle}>Amount raised<input value={fundraiserForm.amountRaisedText} onChange={(e) => setFundraiserForm({ ...fundraiserForm, amountRaisedText: e.target.value })} placeholder="e.g. Almost £2,000 raised" style={inputStyle} /></label>
+        <label style={labelStyle}>Display order<input type="number" min="1" value={fundraiserForm.sortOrder} onChange={(e) => setFundraiserForm({ ...fundraiserForm, sortOrder: e.target.value })} style={inputStyle} /></label>
+        <label style={checkStyle}><input type="checkbox" checked={fundraiserForm.published} onChange={(e) => setFundraiserForm({ ...fundraiserForm, published: e.target.checked })} /> Show on public sponsors page</label>
+        <button disabled={working} style={buttonStyle}>{working ? 'Saving…' : 'Add team fundraiser'}</button>
+      </form>
+
+      <div style={{ display: 'grid', gap: 12, marginTop: 18 }}>
+        {fundraisers.map((item) => (
+          <article key={item.id} style={cardStyle}>
+            <strong>{item.team_name}</strong>
+            <div>{item.title}</div>
+            <div style={helpStyle}>{item.season}{item.amount_raised_text ? ` · ${item.amount_raised_text}` : ''}</div>
+            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 14 }}>
+              <button type="button" onClick={() => updateFundraiser(item.id, { is_published: !item.is_published })} style={outlineButtonStyle}>{item.is_published ? 'Hide' : 'Publish'}</button>
+              <button type="button" onClick={() => updateFundraiser(item.id, { sort_order: Math.max(1, item.sort_order - 10) })} style={outlineButtonStyle}>Move up</button>
+              <button type="button" onClick={() => updateFundraiser(item.id, { sort_order: item.sort_order + 10 })} style={outlineButtonStyle}>Move down</button>
+              <button type="button" onClick={() => deleteFundraiser(item)} style={{ ...outlineButtonStyle, color: '#B3261E', borderColor: '#B3261E' }}>Delete</button>
             </div>
           </article>
         ))}

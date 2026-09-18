@@ -4,6 +4,7 @@ import { supabase } from '../supabaseClient'
 
 export default function Sponsors() {
   const [sponsors, setSponsors] = useState([])
+  const [fundraisers, setFundraisers] = useState([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -17,6 +18,14 @@ export default function Sponsors() {
         setSponsors(data || [])
         setLoading(false)
       })
+
+    supabase
+      .from('team_fundraisers')
+      .select('id, team_name, title, summary, fundraiser_url, season, amount_raised_text, sort_order')
+      .eq('is_published', true)
+      .order('sort_order')
+      .order('team_name')
+      .then(({ data }) => setFundraisers(data || []))
   }, [])
 
   return (
@@ -63,6 +72,33 @@ export default function Sponsors() {
           </section>
         ))}
       </div>
+
+      <section style={{ marginTop: 38 }}>
+        <h2 style={{ fontSize: 24, margin: '0 0 6px' }}>Teams’ own fundraisers</h2>
+        <p style={{ color: 'var(--muted)', margin: '0 0 18px', lineHeight: 1.5 }}>
+          Fundraising organised by ECFA teams for causes important to their communities.
+        </p>
+        {fundraisers.length === 0 ? (
+          <p style={{ color: 'var(--muted)' }}>No team fundraisers are currently listed.</p>
+        ) : (
+          <div style={{ display: 'grid', gap: 16 }}>
+            {fundraisers.map((item) => (
+              <article key={item.id} style={{ ...competitionStyle, padding: 18 }}>
+                <div style={eyebrowStyle}>{item.season} · Team fundraiser</div>
+                <h3 style={{ fontSize: 19, margin: '5px 0 2px' }}>{item.team_name}</h3>
+                <div style={{ fontWeight: 700, marginBottom: 9 }}>{item.title}</div>
+                {item.amount_raised_text && <div style={amountStyle}>{item.amount_raised_text}</div>}
+                <p style={{ color: 'var(--muted)', lineHeight: 1.5, fontSize: 14 }}>{item.summary}</p>
+                {item.fundraiser_url && (
+                  <a href={item.fundraiser_url} target="_blank" rel="noopener noreferrer" style={websiteLinkStyle}>
+                    View fundraiser &rarr;
+                  </a>
+                )}
+              </article>
+            ))}
+          </div>
+        )}
+      </section>
     </div>
   )
 }
@@ -128,4 +164,14 @@ const websiteLinkStyle = {
   fontWeight: 700,
   textDecoration: 'underline',
   textUnderlineOffset: 3,
+}
+
+const amountStyle = {
+  display: 'inline-block',
+  padding: '7px 10px',
+  borderRadius: 6,
+  background: '#111',
+  color: '#fff',
+  fontSize: 13,
+  fontWeight: 700,
 }
