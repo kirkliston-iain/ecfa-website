@@ -19,6 +19,7 @@ export default function AdminDashboard() {
   const [contactEnquiries, setContactEnquiries] = useState([])
   const [showContactEnquiries, setShowContactEnquiries] = useState(false)
   const [expandedEnquiry, setExpandedEnquiry] = useState(null)
+  const [attachmentUrls, setAttachmentUrls] = useState({})
   const newContactCount = contactEnquiries.filter((enquiry) => enquiry.status === 'new').length
 
   const [squadsByFixture, setSquadsByFixture] = useState({})
@@ -397,13 +398,21 @@ export default function AdminDashboard() {
   async function loadContactEnquiries() {
     const { data, error } = await supabase
       .from('contact_enquiries')
-      .select('id, enquiry_type, name, email, mobile, message, status, created_at')
+      .select('id, enquiry_type, name, email, mobile, message, status, created_at, attachment_path, attachment_name, attachment_mime_type, attachment_size_bytes')
       .order('created_at', { ascending: false })
     if (!error) setContactEnquiries(data || [])
   }
 
   async function viewContactEnquiry(enquiry) {
     setExpandedEnquiry((current) => (current === enquiry.id ? null : enquiry.id))
+    if (enquiry.attachment_path && !attachmentUrls[enquiry.id]) {
+      const { data } = await supabase.storage
+        .from('contact-attachments')
+        .createSignedUrl(enquiry.attachment_path, 600)
+      if (data?.signedUrl) {
+        setAttachmentUrls((current) => ({ ...current, [enquiry.id]: data.signedUrl }))
+      }
+    }
     if (enquiry.status !== 'new') return
     const { error } = await supabase
       .from('contact_enquiries')
@@ -433,6 +442,10 @@ export default function AdminDashboard() {
       `Delete the message from ${enquiry.name}? This cannot be undone.`
     )
     if (!confirmed) return
+
+    if (enquiry.attachment_path) {
+      await supabase.storage.from('contact-attachments').remove([enquiry.attachment_path])
+    }
 
     const { error } = await supabase
       .from('contact_enquiries')
@@ -545,6 +558,24 @@ export default function AdminDashboard() {
                       <div style={{ whiteSpace: 'pre-wrap', lineHeight: 1.5, marginBottom: 12 }}>
                         {enquiry.message}
                       </div>
+                      {enquiry.attachment_path && (
+                        <div style={{ marginBottom: 12 }}>
+                          {enquiry.attachment_mime_type?.startsWith('image/') && attachmentUrls[enquiry.id] && (
+                            <img
+                              src={attachmentUrls[enquiry.id]}
+                              alt={`Attachment from ${enquiry.name}`}
+                              style={{ display: 'block', width: '100%', maxHeight: 320, objectFit: 'contain', border: '1px solid var(--line)', borderRadius: 6, marginBottom: 8 }}
+                            />
+                          )}
+                          {attachmentUrls[enquiry.id] ? (
+                            <a href={attachmentUrls[enquiry.id]} target="_blank" rel="noreferrer" style={outlineButtonStyle}>
+                              View attachment: {enquiry.attachment_name || 'attached file'}
+                            </a>
+                          ) : (
+                            <div style={{ color: 'var(--muted)', fontSize: 13 }}>Loading attachment…</div>
+                          )}
+                        </div>
+                      )}
                       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                         {enquiry.status !== 'closed' && (
                           <button

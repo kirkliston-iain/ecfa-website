@@ -21,7 +21,7 @@ export default function Contact() {
   const [searchParams] = useSearchParams()
   const navigate = useNavigate()
   const requestedType = searchParams.get('type')
-  const startingType = ['Website Error', 'Feature Request', 'Apply to Join the League', 'Charity Enquiry'].includes(requestedType)
+  const startingType = ['Website Error', 'Feature Request', 'Apply to Join the League'].includes(requestedType)
     ? requestedType
     : initialForm.enquiryType
   const [form, setForm] = useState({ ...initialForm, enquiryType: startingType })
@@ -29,6 +29,8 @@ export default function Contact() {
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState('')
   const [sent, setSent] = useState(false)
+  const [attachment, setAttachment] = useState(null)
+  const [fileInputKey, setFileInputKey] = useState(0)
 
   function update(field, value) {
     setForm((current) => ({ ...current, [field]: value }))
@@ -56,8 +58,8 @@ export default function Contact() {
         return
       }
     } else {
-      if (!form.message.trim()) {
-        setError('Please enter your message.')
+      if (!form.message.trim() && !(isWebsiteReport && attachment)) {
+        setError(isWebsiteReport ? 'Please enter a message or attach a file.' : 'Please enter your message.')
         return
       }
       if (!isWebsiteReport && !form.name.trim()) {
@@ -82,15 +84,51 @@ export default function Contact() {
           form.teamMission.trim(),
           form.message.trim() ? `\nADDITIONAL INFORMATION:\n${form.message.trim()}` : '',
         ].filter(Boolean).join('\n')
-      : form.message.trim()
+      : form.message.trim() || 'Attachment provided.'
+
+    const allowedAttachmentTypes = [
+      'image/jpeg',
+      'image/png',
+      'image/webp',
+      'image/heic',
+      'application/pdf',
+      'text/plain',
+      'application/msword',
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    ]
+    if (attachment && (!allowedAttachmentTypes.includes(attachment.type) || attachment.size > 10 * 1024 * 1024)) {
+      setError('Please attach a JPG, PNG, WebP, HEIC, PDF, text or Word file no larger than 10 MB.')
+      return
+    }
 
     setSubmitting(true)
+    let attachmentDetails = {}
+    if (attachment) {
+      const safeName = attachment.name.replace(/[^a-zA-Z0-9._-]+/g, '-').slice(-120)
+      const attachmentPath = `enquiries/${crypto.randomUUID()}/${safeName}`
+      const { error: uploadError } = await supabase.storage
+        .from('contact-attachments')
+        .upload(attachmentPath, attachment, { contentType: attachment.type, upsert: false })
+      if (uploadError) {
+        setSubmitting(false)
+        setError('The attachment could not be uploaded. Please check its file type and size, then try again.')
+        return
+      }
+      attachmentDetails = {
+        attachment_path: attachmentPath,
+        attachment_name: attachment.name,
+        attachment_mime_type: attachment.type,
+        attachment_size_bytes: attachment.size,
+      }
+    }
+
     const { error: submitError } = await supabase.from('contact_enquiries').insert({
       enquiry_type: isLeagueApplication ? 'League Application' : form.enquiryType,
       name: form.name.trim() || 'Anonymous website report',
       email: form.email.trim() || null,
       mobile: form.mobile.trim() || null,
       message,
+      ...attachmentDetails,
     })
     setSubmitting(false)
 
@@ -100,6 +138,8 @@ export default function Contact() {
     }
 
     setForm({ ...initialForm, enquiryType: startingType })
+    setAttachment(null)
+    setFileInputKey((current) => current + 1)
     setJoinStep('criteria')
     setSent(true)
   }
@@ -117,7 +157,7 @@ export default function Contact() {
           ? 'Read the ECFA criteria before starting a new-team application.'
           : isWebsiteReport
             ? 'Tell us what is wrong or suggest something you would like added. Your name and contact details are optional.'
-            : 'Send the ECFA a general question, ask about sponsorship or charity activity, or apply to join the league.'}
+            : 'Send the ECFA a general question, ask about sponsorship or apply to join the league.'}
       </p>
 
       {sent && <div role="status" style={successStyle}>
@@ -132,7 +172,7 @@ export default function Contact() {
           <fieldset style={fieldsetStyle}>
             <legend style={legendStyle}>What is your enquiry about?</legend>
             <div style={{ display: 'grid', gap: 10 }}>
-              {['General Query', 'Sponsorship Enquiry', 'Charity Enquiry', 'Apply to Join the League', 'Website Error', 'Feature Request'].map((type) => (
+              {['General Query', 'Sponsorship Enquiry', 'Apply to Join the League', 'Website Error', 'Feature Request'].map((type) => (
                 <label key={type} style={optionStyle}>
                   <input type="radio" name="enquiryType" value={type} checked={form.enquiryType === type} onChange={(event) => update('enquiryType', event.target.value)} />
                   <span>{type}</span>
@@ -147,9 +187,9 @@ export default function Contact() {
               onExit={() => navigate('/')}
             />
           ) : isLeagueApplication ? (
-            <LeagueApplicationFields form={form} update={update} submitting={submitting} onExit={() => navigate('/')} />
+            <LeagueApplicationFields form={form} update={update} submitting={submitting} onExit={() => navigate('/')} attachment={attachment} setAttachment={setAttachment} fileInputKey={fileInputKey} />
           ) : (
-            <StandardFields form={form} update={update} isWebsiteReport={isWebsiteReport} submitting={submitting} />
+            <StandardFields form={form} update={update} isWebsiteReport={isWebsiteReport} submitting={submitting} attachment={attachment} setAttachment={setAttachment} fileInputKey={fileInputKey} />
           )}
 
           <label style={honeypotStyle} aria-hidden="true">
@@ -197,7 +237,7 @@ function Criteria({ onApply, onExit }) {
   )
 }
 
-function LeagueApplicationFields({ form, update, submitting, onExit }) {
+function LeagueApplicationFields({ form, update, submitting, onExit, attachment, setAttachment, fileInputKey }) {
   return (
     <section style={{ display: 'grid', gap: 18 }}>
       <div style={{ padding: 12, borderRadius: 6, background: '#f5f8fa', color: 'var(--muted)', fontSize: 13 }}>
@@ -222,6 +262,7 @@ function LeagueApplicationFields({ form, update, submitting, onExit }) {
       <label style={labelStyle}>Anything else you would like us to know (optional)
         <textarea value={form.message} onChange={(e) => update('message', e.target.value)} rows={4} maxLength={3000} style={{ ...inputStyle, resize: 'vertical', fontFamily: 'inherit' }} />
       </label>
+      <AttachmentField attachment={attachment} setAttachment={setAttachment} fileInputKey={fileInputKey} />
       <div style={actionRowStyle}>
         <button type="submit" disabled={submitting} style={buttonStyle}>{submitting ? 'Sending…' : 'Send application'}</button>
         <button type="button" onClick={onExit} style={secondaryButtonStyle}>Exit without sending</button>
@@ -231,7 +272,7 @@ function LeagueApplicationFields({ form, update, submitting, onExit }) {
   )
 }
 
-function StandardFields({ form, update, isWebsiteReport, submitting }) {
+function StandardFields({ form, update, isWebsiteReport, submitting, attachment, setAttachment, fileInputKey }) {
   return (
     <>
       <label style={labelStyle}>Your name {!isWebsiteReport && '*'} {isWebsiteReport && <span style={{ color: 'var(--muted)', fontWeight: 400 }}>(optional)</span>}
@@ -242,12 +283,31 @@ function StandardFields({ form, update, isWebsiteReport, submitting }) {
         <label style={labelStyle}>Mobile number<input type="tel" value={form.mobile} onChange={(e) => update('mobile', e.target.value)} maxLength={40} autoComplete="tel" style={inputStyle} /></label>
       </div>
       <p style={helpStyle}>{isWebsiteReport ? 'Email and mobile are optional.' : 'Please provide at least one: email address or mobile number.'}</p>
-      <label style={labelStyle}>{isWebsiteReport ? 'What happened, or what would you like added?' : 'Message'} *
-        <textarea value={form.message} onChange={(e) => update('message', e.target.value)} rows={7} minLength={5} maxLength={5000} required style={{ ...inputStyle, resize: 'vertical', fontFamily: 'inherit' }} />
+      <label style={labelStyle}>{isWebsiteReport ? 'What happened, or what would you like added?' : 'Message'} {isWebsiteReport ? '(or attach a file)' : '*'}
+        <textarea value={form.message} onChange={(e) => update('message', e.target.value)} rows={7} minLength={attachment && isWebsiteReport ? undefined : 5} maxLength={5000} required={!isWebsiteReport} style={{ ...inputStyle, resize: 'vertical', fontFamily: 'inherit' }} />
       </label>
+      <AttachmentField attachment={attachment} setAttachment={setAttachment} fileInputKey={fileInputKey} />
       <button type="submit" disabled={submitting} style={buttonStyle}>{submitting ? 'Sending…' : isWebsiteReport ? 'Submit website report' : 'Send enquiry'}</button>
       <p style={{ color: 'var(--muted)', fontSize: 12, margin: 0 }}>Your details will only be used to respond to this enquiry.</p>
     </>
+  )
+}
+
+function AttachmentField({ attachment, setAttachment, fileInputKey }) {
+  return (
+    <label style={labelStyle}>Attach an image or file <span style={{ color: 'var(--muted)', fontWeight: 400 }}>(optional)</span>
+      <input
+        key={fileInputKey}
+        type="file"
+        accept="image/jpeg,image/png,image/webp,image/heic,.pdf,.txt,.doc,.docx"
+        onChange={(event) => setAttachment(event.target.files?.[0] || null)}
+        style={inputStyle}
+      />
+      <span style={{ color: 'var(--muted)', fontSize: 12, fontWeight: 400 }}>
+        JPG, PNG, WebP, HEIC, PDF, text or Word · maximum 10 MB
+        {attachment ? ` · Selected: ${attachment.name}` : ''}
+      </span>
+    </label>
   )
 }
 
