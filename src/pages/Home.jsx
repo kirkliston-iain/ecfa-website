@@ -749,7 +749,9 @@ export default function Home() {
             return <p style={{ color: 'var(--muted)', fontSize: 14 }}>No matches on this date.</p>
           })()
         ) : (
-          matchesForDate.map((f) => <MatchCard key={f.id} f={f} />)
+          <div className="desktop-card-grid">
+            {matchesForDate.map((f) => <MatchCard key={f.id} f={f} />)}
+          </div>
         )}
       </section>
 

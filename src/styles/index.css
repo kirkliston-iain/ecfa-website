@@ -40,35 +40,6 @@ h1, h2, h3 {
   letter-spacing: -0.01em;
 }
 
-/* Keep prominent page headings clear without letting them dominate compact
-   public pages. Smaller functional headings retain their own component sizes. */
-h1[style*="font-size: 38px"],
-h1[style*="font-size: 34px"] {
-  font-size: 30px !important;
-}
-
-h2[style*="font-size: 25px"],
-h2[style*="font-size: 24px"] {
-  font-size: 22px !important;
-}
-
-@media (max-width: 600px) {
-  h1[style*="font-size: 30px"],
-  h1[style*="font-size: 34px"],
-  h1[style*="font-size: 38px"] {
-    font-size: 26px !important;
-  }
-
-  h1[style*="font-size: 28px"] {
-    font-size: 25px !important;
-  }
-
-  h2[style*="font-size: 24px"],
-  h2[style*="font-size: 25px"] {
-    font-size: 20px !important;
-  }
-}
-
 a {
   color: inherit;
   text-decoration: none;
@@ -84,7 +55,8 @@ button {
 }
 
 .container {
-  max-width: 960px;
+  width: 100%;
+  max-width: 1280px;
   margin: 0 auto;
   padding: 0 20px;
 }
@@ -100,6 +72,40 @@ button {
 .hscroll::-webkit-scrollbar-thumb {
   background: var(--line);
   border-radius: 3px;
+}
+
+.desktop-card-grid {
+  display: grid;
+  gap: 16px;
+}
+
+@media (min-width: 1024px) {
+  .container {
+    padding-left: 40px;
+    padding-right: 40px;
+  }
+
+  /* Public pages should use the available laptop/desktop width even where an
+     older mobile-first page added a narrower inline maximum. Admin forms keep
+     their deliberately compact editing widths. */
+  .site-main--public > .container {
+    max-width: 1280px !important;
+  }
+
+  .site-navigation {
+    gap: 20px !important;
+    justify-content: space-between;
+    overflow-x: visible !important;
+  }
+
+  .desktop-card-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-items: stretch;
+  }
+
+  .desktop-card-grid > * {
+    margin-bottom: 0 !important;
+  }
 }
 
 

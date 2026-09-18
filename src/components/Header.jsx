@@ -55,7 +55,7 @@ export default function Header() {
 
       <div style={{ background: '#fff', borderBottom: '1px solid var(--line)' }}>
         <nav
-          className="container hscroll"
+          className="container hscroll site-navigation"
           style={{ display: 'flex', gap: 28, overflowX: 'auto' }}
         >
           {tabs.map((t) => (

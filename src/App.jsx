@@ -1,4 +1,4 @@
-import { Routes, Route } from 'react-router-dom'
+import { Routes, Route, useLocation } from 'react-router-dom'
 import Header from './components/Header'
 import Footer from './components/Footer'
 import ManagerGate from './components/ManagerGate'
@@ -39,10 +39,13 @@ import SponsorsAdmin from './pages/SponsorsAdmin'
 import Charity from './pages/Charity'
 
 export default function App() {
+  const location = useLocation()
+  const isAdminArea = location.pathname.startsWith('/admin') || location.pathname.startsWith('/discipline')
+
   return (
     <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
       <Header />
-      <main style={{ flex: 1 }}>
+      <main className={isAdminArea ? 'site-main site-main--admin' : 'site-main site-main--public'} style={{ flex: 1 }}>
         <Routes>
           <Route path="/" element={<Home />} />
           <Route path="/competitions" element={<CompetitionsIndex />} />

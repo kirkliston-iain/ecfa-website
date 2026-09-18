@@ -34,7 +34,7 @@ export default function Sponsors() {
         The businesses supporting the ECFA and its competitions during the 2026/27 season.
       </p>
 
-      <div style={{ display: 'grid', gap: 22 }}>
+      <div className="desktop-card-grid" style={{ display: 'grid', gap: 22 }}>
         {loading && <p style={{ color: 'var(--muted)' }}>Loading sponsors…</p>}
         {!loading && sponsors.length === 0 && <p style={{ color: 'var(--muted)' }}>Sponsor details will be added soon.</p>}
         {sponsors.map((item) => (
