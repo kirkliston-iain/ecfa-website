@@ -147,12 +147,23 @@ export default function AdminDashboard() {
       setStageId('')
       return
     }
+    let cancelled = false
+    setStageId('')
+    setStages([])
     supabase
       .from('stages')
       .select('id, name')
       .eq('competition_id', competitionId)
       .order('sort_order')
-      .then(({ data }) => setStages(data || []))
+      .then(({ data }) => {
+        if (cancelled) return
+        const nextStages = data || []
+        setStages(nextStages)
+        setStageId(nextStages[0]?.id || '')
+      })
+    return () => {
+      cancelled = true
+    }
   }, [competitionId])
 
   useEffect(() => {
@@ -181,7 +192,7 @@ export default function AdminDashboard() {
     const { data } = await supabase
       .from('fixtures')
       .select(
-        'id, fixture_date, venue, status, hidden_from_public, week_off_requested, week_off_requested_team_id, updated_at, home_team:home_team_id(id, name), away_team:away_team_id(id, name), stage:stage_id(name, competition:competition_id(name))'
+        'id, fixture_date, venue, status, hidden_from_public, week_off_requested, week_off_requested_team_id, updated_at, home_team:home_team_id(id, name), away_team:away_team_id(id, name), stage:stage_id(id, name, competition:competition_id(id, name))'
       )
       .eq('status', 'postponed')
       .order('fixture_date')
@@ -491,6 +502,12 @@ export default function AdminDashboard() {
     await supabase.auth.signOut()
     window.location.href = '/admin'
   }
+
+  const visiblePostponedFixtures = postponedFixtures.filter((fixture) => {
+    if (stageId) return fixture.stage?.id === stageId
+    if (competitionId) return fixture.stage?.competition?.id === competitionId
+    return true
+  })
 
   return (
     <div className="container" style={{ padding: '24px 16px', maxWidth: 480 }}>
@@ -1142,7 +1159,7 @@ export default function AdminDashboard() {
           once sorted, and it moves back to its normal fixture list.
         </p>
 
-        {postponedFixtures.map((f) => (
+        {visiblePostponedFixtures.map((f) => (
           <div key={f.id} style={cardStyle}>
             <div style={{ fontWeight: 600, marginBottom: 2 }}>
               {f.home_team?.name} v {f.away_team?.name}
@@ -1226,8 +1243,10 @@ export default function AdminDashboard() {
             )}
           </div>
         ))}
-        {postponedFixtures.length === 0 && (
-          <p style={{ color: '#8A8570', fontSize: 14 }}>No postponed games right now.</p>
+        {visiblePostponedFixtures.length === 0 && (
+          <p style={{ color: '#8A8570', fontSize: 14 }}>
+            {competitionId ? 'No postponed games in this selection.' : 'No postponed games right now.'}
+          </p>
         )}
       </div>
     </div>
