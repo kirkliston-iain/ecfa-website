@@ -11,6 +11,7 @@ export default function AdminDashboard() {
   const [dateFilter, setDateFilter] = useState('')
   const [statusFilter, setStatusFilter] = useState('')
   const [fixtures, setFixtures] = useState([])
+  const [weekOffRequests, setWeekOffRequests] = useState([])
   const [saving, setSaving] = useState(null)
   const [fixtureSaveStatus, setFixtureSaveStatus] = useState({})
   const [currentProfile, setCurrentProfile] = useState(null)
@@ -66,7 +67,7 @@ export default function AdminDashboard() {
 
     supabase
       .from('competitions')
-      .select('id, name')
+      .select('id, name, season')
       .order('sort_order')
       .then(({ data }) => setCompetitions(data || []))
 
@@ -89,7 +90,19 @@ export default function AdminDashboard() {
       .then(({ data }) => setVenues(data || []))
 
     loadContactEnquiries()
+    loadWeekOffRequests()
   }, [])
+
+  async function loadWeekOffRequests() {
+    const { data } = await supabase
+      .from('team_week_off_requests')
+      .select(
+        'id, season, source_fixture_id, original_fixture_date, recorded_at, team:team_id(id, name), fixture:source_fixture_id(id, status, fixture_date, home_team:home_team_id(name), away_team:away_team_id(name))'
+      )
+      .order('season', { ascending: false })
+      .order('recorded_at')
+    setWeekOffRequests(data || [])
+  }
 
   useEffect(() => {
     if (!stageId) {
@@ -244,7 +257,10 @@ export default function AdminDashboard() {
     setSaving(null)
 
     if (error) {
-      setFixtureSaveStatus((current) => ({ ...current, [fixture.id]: 'Could not save. Please try again.' }))
+      const message = error.message?.includes('already used its week-off request')
+        ? 'This team has already used its one week-off request for this season.'
+        : 'Could not save. Please try again.'
+      setFixtureSaveStatus((current) => ({ ...current, [fixture.id]: message }))
       return
     }
     if (!data) {
@@ -258,6 +274,7 @@ export default function AdminDashboard() {
 
     setFixtures((current) => current.map((item) => item.id === fixture.id ? { ...item, updated_at: data.updated_at } : item))
     setFixtureSaveStatus((current) => ({ ...current, [fixture.id]: 'Saved.' }))
+    await loadWeekOffRequests()
 
   }
 
@@ -447,6 +464,8 @@ export default function AdminDashboard() {
     .filter((fixture) => !teamFilter || fixture.home_team?.id === teamFilter || fixture.away_team?.id === teamFilter)
     .filter((fixture) => !dateFilter || (fixture.fixture_date ? fixture.fixture_date.slice(0, 10) : 'tbc') === dateFilter)
     .filter((fixture) => !statusFilter || fixture.status === statusFilter)
+  const currentSeason = competitions[0]?.season || ''
+  const currentSeasonWeekOffRequests = weekOffRequests.filter((request) => request.season === currentSeason)
 
   return (
     <div className="container" style={{ padding: '24px 16px', maxWidth: 480 }}>
@@ -590,6 +609,31 @@ export default function AdminDashboard() {
           </Link>
         </>
       )}
+
+      <section style={{ ...cardStyle, marginTop: 20, marginBottom: 20 }}>
+        <h2 style={{ fontSize: 17, color: 'var(--pitch)', margin: '0 0 4px' }}>Week-off request tracker</h2>
+        <p style={{ fontSize: 13, color: '#8A8570', margin: '0 0 12px' }}>
+          {currentSeason ? currentSeason.replace('-', '/') : 'Current season'} · one request allowed per team
+        </p>
+        {currentSeasonWeekOffRequests.length === 0 ? (
+          <div style={{ color: '#8A8570', fontSize: 13 }}>No teams have used their request.</div>
+        ) : (
+          <div style={{ display: 'grid', gap: 10 }}>
+            {currentSeasonWeekOffRequests.map((request) => (
+              <div key={request.id} style={{ borderTop: '1px solid var(--line)', paddingTop: 10 }}>
+                <div style={{ fontWeight: 700 }}>{request.team?.name}</div>
+                <div style={{ color: '#8A8570', fontSize: 12, lineHeight: 1.45 }}>
+                  Used for {request.fixture?.home_team?.name || 'Home team TBC'} v {request.fixture?.away_team?.name || 'Away team TBC'}
+                  {request.original_fixture_date
+                    ? ` · ${new Date(request.original_fixture_date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}`
+                    : ''}
+                  {request.fixture?.status ? ` · Now ${request.fixture.status}` : ''}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </section>
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 24 }}>
         <select
@@ -899,9 +943,15 @@ export default function AdminDashboard() {
                         style={{ ...fullSelectStyle, marginTop: 8 }}
                       >
                         <option value="">Which team asked?</option>
-                        {allTeams.map((team) => (
-                          <option key={team.id} value={team.id}>{team.name}</option>
-                        ))}
+                        {allTeams.map((team) => {
+                          const existingRequest = currentSeasonWeekOffRequests.find((request) => request.team?.id === team.id)
+                          const alreadyUsedElsewhere = existingRequest && existingRequest.source_fixture_id !== f.id
+                          return (
+                            <option key={team.id} value={team.id} disabled={alreadyUsedElsewhere}>
+                              {team.name}{alreadyUsedElsewhere ? ' — already used' : ''}
+                            </option>
+                          )
+                        })}
                       </select>
                     )}
                   </div>
