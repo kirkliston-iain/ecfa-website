@@ -1,63 +1,63 @@
+import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-
-const SPONSORED_COMPETITIONS = [
-  {
-    competition: 'Appin Sports League',
-    competitionPath: '/competitions/appin-league',
-    sponsor: 'Appin Sports',
-    logo: '/sponsors/appin-sports.png',
-    website: 'https://appinsports.com/',
-    summary:
-      'Edinburgh-based specialists in custom teamwear for football clubs, sports teams and events.',
-  },
-  {
-    competition: 'ECFA League Cup',
-    competitionPath: '/competitions/league-cup',
-    sponsor: 'Kwik Fit',
-    logo: '/sponsors/kwik-fit.png',
-    website: 'https://www.kwik-fit.com/',
-    summary:
-      'UK vehicle-care specialists providing tyres, MOT testing, servicing, brakes, batteries and exhausts.',
-  },
-]
+import { supabase } from '../supabaseClient'
 
 export default function Sponsors() {
+  const [sponsors, setSponsors] = useState([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    supabase
+      .from('sponsors')
+      .select('id, name, summary, website_url, logo_url, competition_name, competition_path, sort_order')
+      .eq('is_published', true)
+      .order('sort_order')
+      .order('name')
+      .then(({ data }) => {
+        setSponsors(data || [])
+        setLoading(false)
+      })
+  }, [])
+
   return (
     <div className="container" style={{ padding: '32px 20px 48px', maxWidth: 820 }}>
       <h1 style={{ fontSize: 30, marginBottom: 4 }}>Our Sponsors</h1>
       <p style={{ color: 'var(--muted)', marginBottom: 30 }}>
-        The businesses supporting ECFA competitions during the 2026/27 season.
+        The businesses supporting the ECFA and its competitions during the 2026/27 season.
       </p>
 
       <div style={{ display: 'grid', gap: 22 }}>
-        {SPONSORED_COMPETITIONS.map((item) => (
-          <section key={item.competition} style={competitionStyle}>
-            <div style={competitionHeaderStyle}>
-              <div style={eyebrowStyle}>Competition</div>
-              <h2 style={{ fontSize: 19, margin: '3px 0 6px' }}>{item.competition}</h2>
-              <Link to={item.competitionPath} style={competitionLinkStyle}>
-                View competition &rarr;
-              </Link>
-            </div>
+        {loading && <p style={{ color: 'var(--muted)' }}>Loading sponsors…</p>}
+        {!loading && sponsors.length === 0 && <p style={{ color: 'var(--muted)' }}>Sponsor details will be added soon.</p>}
+        {sponsors.map((item) => (
+          <section key={item.id} style={competitionStyle}>
+            {item.competition_name && (
+              <div style={competitionHeaderStyle}>
+                <div style={eyebrowStyle}>Competition</div>
+                <h2 style={{ fontSize: 19, margin: '3px 0 6px' }}>{item.competition_name}</h2>
+                {item.competition_path && (
+                  <Link to={item.competition_path} style={competitionLinkStyle}>
+                    View competition &rarr;
+                  </Link>
+                )}
+              </div>
+            )}
 
             <div style={sponsorStyle}>
               <div style={logoPanelStyle}>
-                <img src={item.logo} alt={`${item.sponsor} logo`} style={logoStyle} />
+                {item.logo_url ? <img src={item.logo_url} alt={`${item.name} logo`} style={logoStyle} /> : <span style={{ color: 'var(--muted)', fontSize: 12 }}>Logo</span>}
               </div>
               <div style={{ minWidth: 0 }}>
-                <div style={eyebrowStyle}>Competition sponsor</div>
-                <h3 style={{ fontSize: 17, margin: '2px 0 5px' }}>{item.sponsor}</h3>
+                <div style={eyebrowStyle}>{item.competition_name ? 'Competition sponsor' : 'League sponsor'}</div>
+                <h3 style={{ fontSize: 17, margin: '2px 0 5px' }}>{item.name}</h3>
                 <p style={{ margin: '0 0 9px', color: 'var(--muted)', lineHeight: 1.45, fontSize: 14 }}>
                   {item.summary}
                 </p>
-                <a
-                  href={item.website}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  style={websiteLinkStyle}
-                >
-                  Visit website &rarr;
-                </a>
+                {item.website_url && (
+                  <a href={item.website_url} target="_blank" rel="noopener noreferrer" style={websiteLinkStyle}>
+                    Visit website &rarr;
+                  </a>
+                )}
               </div>
             </div>
           </section>

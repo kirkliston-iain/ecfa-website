@@ -630,6 +630,10 @@ export default function AdminDashboard() {
         Manage downloads &rarr;
       </Link>
 
+      <Link to="/admin/sponsors" style={{ ...linkButtonStyle, display: 'block', marginBottom: 8 }}>
+        Manage sponsors &rarr;
+      </Link>
+
       {(currentProfile?.id === '28696bc6-2df2-4855-b259-3f156ad55748' || currentProfile?.role === 'owner') && (
         <>
           <Link to="/admin/accounts" style={{ ...linkButtonStyle, display: 'block', marginBottom: 8 }}>
