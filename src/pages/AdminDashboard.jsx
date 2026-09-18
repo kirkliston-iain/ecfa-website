@@ -685,10 +685,12 @@ export default function AdminDashboard() {
                 <option value="">All teams</option>
                 {Array.from(
                   new Map(
-                    fixtures.flatMap((f) => [
-                      [f.home_team.id, f.home_team.name],
-                      [f.away_team.id, f.away_team.name],
-                    ])
+                    fixtures.flatMap((f) =>
+                      [
+                        f.home_team ? [f.home_team.id, f.home_team.name] : null,
+                        f.away_team ? [f.away_team.id, f.away_team.name] : null,
+                      ].filter(Boolean)
+                    )
                   ).entries()
                 )
                   .sort((a, b) => a[1].localeCompare(b[1]))
@@ -819,7 +821,7 @@ export default function AdminDashboard() {
           )}
 
           {fixtures
-            .filter((f) => !teamFilter || f.home_team.id === teamFilter || f.away_team.id === teamFilter)
+            .filter((f) => !teamFilter || f.home_team?.id === teamFilter || f.away_team?.id === teamFilter)
             .filter((f) => !dateFilter || (f.fixture_date ? f.fixture_date.slice(0, 10) : 'tbc') === dateFilter)
             .map((f) => {
             const squads = squadsByFixture[f.id]
@@ -832,7 +834,7 @@ export default function AdminDashboard() {
                   {competitions.find((c) => c.id === competitionId)?.name}
                 </div>
                 <div style={{ fontWeight: 600, marginBottom: 2 }}>
-                  {f.home_team?.name} v {f.away_team?.name}
+                  {f.home_team?.name || 'Home team TBC'} v {f.away_team?.name || 'Away team TBC'}
                 </div>
                 <div style={{ fontSize: 12, color: '#8A8570', marginBottom: 10 }}>
                   {f.fixture_date
