@@ -2,9 +2,10 @@ import { useEffect, useState } from 'react'
 import { Navigate, useLocation } from 'react-router-dom'
 import { supabase } from '../supabaseClient'
 
-export default function ProtectedRoute({ children }) {
+export default function ProtectedRoute({ children, requireAdmin = false }) {
   const [session, setSession] = useState(undefined)
   const [mustChangePassword, setMustChangePassword] = useState(undefined)
+  const [isAdmin, setIsAdmin] = useState(undefined)
   const location = useLocation()
 
   useEffect(() => {
@@ -12,14 +13,16 @@ export default function ProtectedRoute({ children }) {
       setSession(nextSession)
       if (!nextSession) {
         setMustChangePassword(false)
+        setIsAdmin(false)
         return
       }
       const { data } = await supabase
         .from('admin_profiles')
-        .select('must_change_password')
+        .select('id, must_change_password')
         .eq('id', nextSession.user.id)
         .maybeSingle()
       setMustChangePassword(!!data?.must_change_password)
+      setIsAdmin(!!data?.id)
     }
 
     supabase.auth.getSession().then(({ data }) => applySession(data.session))
@@ -29,8 +32,9 @@ export default function ProtectedRoute({ children }) {
     return () => listener.subscription.unsubscribe()
   }, [])
 
-  if (session === undefined || mustChangePassword === undefined) return null
+  if (session === undefined || mustChangePassword === undefined || isAdmin === undefined) return null
   if (!session) return <Navigate to="/admin" replace />
+  if (requireAdmin && !isAdmin) return <Navigate to="/" replace />
   if (mustChangePassword && location.pathname !== '/admin/change-password') {
     return <Navigate to="/admin/change-password" replace />
   }
