@@ -4,6 +4,7 @@ function Badge({ logoUrl, name, size = 26 }) {
   if (logoUrl) {
     return (
       <img
+        className="standings-badge"
         src={logoUrl}
         alt=""
         style={{
@@ -25,6 +26,7 @@ function Badge({ logoUrl, name, size = 26 }) {
     .toUpperCase()
   return (
     <span
+      className="standings-badge"
       style={{
         width: size,
         height: size,
@@ -93,8 +95,8 @@ export default function StandingsTable({ groupName, rows }) {
       {groupName && (
         <h3 style={{ fontSize: 16, marginBottom: 10, fontWeight: 700 }}>{groupName}</h3>
       )}
-      <div style={{ width: '100%', overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
-        <table style={{ width: '100%', minWidth: 560, borderCollapse: 'collapse', fontSize: 14 }}>
+      <div className="standings-table-scroll" style={{ width: '100%', overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
+        <table className="standings-table" style={{ width: '100%', minWidth: 560, borderCollapse: 'collapse', fontSize: 14 }}>
         <thead>
           <tr style={{ color: 'var(--muted)' }}>
             <th style={{ ...thStyle('left'), width: 30 }}>Pos</th>
@@ -115,8 +117,8 @@ export default function StandingsTable({ groupName, rows }) {
               <td style={{ padding: '14px 8px 14px 12px', fontWeight: 700, color: 'var(--muted)' }}>
                 {i + 1}
               </td>
-              <td style={{ padding: '14px 8px' }}>
-                <Link to={`/teams/${row.teamId}`} style={{ display: 'flex', alignItems: 'center', gap: 10, fontWeight: 700, color: 'var(--ink)' }}>
+              <td className="standings-team-cell" style={{ padding: '14px 8px' }}>
+                <Link className="standings-team-link" to={`/teams/${row.teamId}`} style={{ display: 'flex', alignItems: 'center', gap: 10, fontWeight: 700, color: 'var(--ink)' }}>
                   <Badge logoUrl={row.teamLogo} name={row.teamName} />
                   <span>{row.teamName}</span>
                 </Link>
