@@ -248,6 +248,9 @@ export default function AdminDashboard() {
       setFixtureSaveStatus((current) => ({ ...current, [fixture.id]: 'A penalty shootout must have a winner.' }))
       return
     }
+    const hasResult = fixture.home_score !== '' && fixture.home_score != null && fixture.away_score !== '' && fixture.away_score != null
+    const fixtureHasStarted = fixture.fixture_date && new Date(fixture.fixture_date).getTime() <= Date.now()
+    const savedStatus = fixture.status === 'scheduled' && hasResult && fixtureHasStarted ? 'played' : fixture.status
     setSaving(fixture.id)
     setFixtureSaveStatus((current) => ({ ...current, [fixture.id]: '' }))
     const { data, error } = await supabase
@@ -261,7 +264,7 @@ export default function AdminDashboard() {
         decided_by_penalties: !!fixture.decided_by_penalties,
         home_penalty_score: fixture.decided_by_penalties ? Number(fixture.home_penalty_score) : null,
         away_penalty_score: fixture.decided_by_penalties ? Number(fixture.away_penalty_score) : null,
-        status: fixture.status,
+        status: savedStatus,
         hidden_from_public: fixture.hidden_from_public,
         venue: fixture.venue || null,
         referee_name: fixture.referee_name || null,
@@ -292,7 +295,10 @@ export default function AdminDashboard() {
     }
 
     setFixtures((current) => current.map((item) => item.id === fixture.id ? { ...item, updated_at: data.updated_at } : item))
-    setFixtureSaveStatus((current) => ({ ...current, [fixture.id]: 'Saved.' }))
+    setFixtureSaveStatus((current) => ({
+      ...current,
+      [fixture.id]: savedStatus !== fixture.status ? 'Saved as Played.' : 'Saved.',
+    }))
     await loadWeekOffRequests()
 
   }
@@ -1087,7 +1093,7 @@ export default function AdminDashboard() {
                       marginTop: 8,
                       fontSize: 12,
                       fontWeight: 700,
-                      color: fixtureSaveStatus[f.id] === 'Saved.' ? '#1B8A4A' : '#B3261E',
+                      color: fixtureSaveStatus[f.id].startsWith('Saved') ? '#1B8A4A' : '#B3261E',
                     }}
                   >
                     {fixtureSaveStatus[f.id]}
