@@ -121,7 +121,78 @@ button {
   word-break: normal;
 }
 
+.honours-short-label {
+  display: none;
+}
+
 @media (max-width: 420px) {
+  .honours-season-scroll,
+  .honours-total-scroll {
+    overflow-x: hidden !important;
+  }
+
+  .honours-season-table,
+  .honours-total-table {
+    width: 100% !important;
+    min-width: 0 !important;
+    table-layout: fixed;
+  }
+
+  .honours-long-label {
+    display: none;
+  }
+
+  .honours-short-label {
+    display: inline;
+  }
+
+  .honours-season-table {
+    font-size: 9px !important;
+  }
+
+  .honours-season-table th,
+  .honours-season-table td {
+    padding: 6px 2px !important;
+    line-height: 1.15;
+    overflow-wrap: anywhere;
+  }
+
+  .honours-season-table th {
+    font-size: 8px !important;
+    letter-spacing: 0 !important;
+  }
+
+  .honours-season-table th:first-child,
+  .honours-season-table td:first-child {
+    width: 15%;
+  }
+
+  .honours-total-table {
+    font-size: 9px !important;
+  }
+
+  .honours-total-table th,
+  .honours-total-table td {
+    padding: 7px 2px !important;
+    line-height: 1.15;
+    overflow-wrap: anywhere;
+  }
+
+  .honours-total-table th {
+    font-size: 8px !important;
+    letter-spacing: 0 !important;
+  }
+
+  .honours-total-table th:first-child,
+  .honours-total-table td:first-child {
+    width: 6%;
+  }
+
+  .honours-total-table th:nth-child(2),
+  .honours-total-table td:nth-child(2) {
+    width: 34%;
+  }
+
   .discipline-points-scroll {
     overflow-x: hidden !important;
   }
