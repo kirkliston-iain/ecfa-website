@@ -826,6 +826,19 @@ export default function Home() {
       .sort((a, b) => b.fixture_date.localeCompare(a.fixture_date))
   }, [featuredCompetition])
 
+  const featuredCupResultGroups = useMemo(() => {
+    return featuredCupResults.reduce((groups, fixture) => {
+      const stage = fixture.round_name || 'Other results'
+      const currentGroup = groups[groups.length - 1]
+      if (!currentGroup || currentGroup.stage !== stage) {
+        groups.push({ stage, fixtures: [fixture] })
+      } else {
+        currentGroup.fixtures.push(fixture)
+      }
+      return groups
+    }, [])
+  }, [featuredCupResults])
+
   if (loading) {
     return (
       <div className="container" style={{ padding: '48px 20px' }}>
@@ -929,9 +942,16 @@ export default function Home() {
           <h2 style={{ fontSize: 13, textTransform: 'uppercase', letterSpacing: 0.5, color: 'var(--muted)', marginBottom: 12 }}>
             {featuredCompetition.name} Results
           </h2>
-          <div className="desktop-card-grid">
-            {featuredCupResults.map((fixture) => <MatchCard key={fixture.id} f={fixture} />)}
-          </div>
+          {featuredCupResultGroups.map((group, index) => (
+            <div
+              key={group.stage}
+              style={index > 0 ? { borderTop: '2px solid var(--line)', marginTop: 24, paddingTop: 24 } : undefined}
+            >
+              <div className="desktop-card-grid">
+                {group.fixtures.map((fixture) => <MatchCard key={fixture.id} f={fixture} />)}
+              </div>
+            </div>
+          ))}
         </section>
       )}
 
