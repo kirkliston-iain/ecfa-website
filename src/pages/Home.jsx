@@ -353,7 +353,7 @@ function fixtureWinner(fixture) {
   return home > away ? fixture.home_team : fixture.away_team
 }
 
-function buildRecapHighlights(competitions, selectedDate, scorerRows, historicFixtures, historicScorers, disciplineRows) {
+function buildRecapHighlights(competitions, selectedDate, scorerRows, historicFixtures, disciplineRows) {
   const allFixtures = competitions.flatMap((comp) => comp.fixtures)
   const playedToday = allFixtures.filter((f) => dateKey(f.fixture_date) === selectedDate && f.status === 'played')
   const todayIds = new Set(playedToday.map((f) => f.id))
@@ -366,32 +366,9 @@ function buildRecapHighlights(competitions, selectedDate, scorerRows, historicFi
     scorers.set(name, (scorers.get(name) || 0) + Number(row.goals || 0))
   }
   const leadingScorers = [...scorers.entries()].sort((a, b) => b[1] - a[1])
-  if (leadingScorers[0]) {
+  if (leadingScorers[0]?.[1] >= 2) {
     const [topName, topToday] = leadingScorers[0]
-    const topRows = scorerRows.filter((row) => todayIds.has(row.fixture_id) && [row.player?.first_name, row.player?.last_name].filter(Boolean).join(' ') === topName)
-    const topRow = topRows[0]
-    const fixture = playedToday.find((f) => f.id === topRow?.fixture_id)
-    const opponent = fixture && (topRow.team_id === fixture.home_team?.id ? fixture.away_team : fixture.home_team)
-    if (fixture && opponent) {
-      const meetingIds = new Set(allFixtures.filter((f) =>
-        (f.home_team?.id === topRow.team_id && f.away_team?.id === opponent.id) ||
-        (f.away_team?.id === topRow.team_id && f.home_team?.id === opponent.id)
-      ).map((f) => f.id))
-      const historicMeetingIds = new Set(historicFixtures.filter((f) =>
-        (f.home_team_id === topRow.team_id && f.away_team_id === opponent.id) ||
-        (f.away_team_id === topRow.team_id && f.home_team_id === opponent.id)
-      ).map((f) => f.id))
-      const currentGoals = scorerRows.filter((row) => row.player_id === topRow.player_id && meetingIds.has(row.fixture_id))
-        .reduce((sum, row) => sum + Number(row.goals || 0), 0)
-      const oldGoals = historicScorers.filter((row) => row.player_name?.toLowerCase() === topName.toLowerCase() && historicMeetingIds.has(row.historic_fixture_id))
-        .reduce((sum, row) => sum + Number(row.goals || 0), 0)
-      const opponentGoals = currentGoals + oldGoals
-      if (opponentGoals >= 3) {
-        highlights.push(`${topName} clearly enjoys this fixture: ${topToday} ${topToday === 1 ? 'goal' : 'goals'} today took their recorded total against ${opponent.name} to ${opponentGoals}.`)
-      } else if (topToday >= 2) {
-        highlights.push(`${topName} supplied the weekend’s standout individual performance with ${topToday} goals.`)
-      }
-    }
+    highlights.push(`${topName} supplied the weekend’s standout individual performance with ${topToday} goals.`)
   }
 
   const league = competitions.find((comp) => comp.slug === 'appin-league')
@@ -437,14 +414,9 @@ function buildRecapHighlights(competitions, selectedDate, scorerRows, historicFi
     const oldMeetings = historicFixtures.filter((f) =>
       (f.home_team_id === winner.id && f.away_team_id === opponent.id) || (f.home_team_id === opponent.id && f.away_team_id === winner.id))
     const meetings = [fixture, ...currentMeetings, ...oldMeetings].sort((a, b) => String(b.fixture_date || '').localeCompare(String(a.fixture_date || '')))
-    let unbeaten = 0
-    for (const meeting of meetings) {
-      const result = resultForTeam(meeting, winner.id)
-      if (result === 'L' || !result) break
-      unbeaten += 1
-    }
-    if (unbeaten >= 3) {
-      highlights.push(`${winner.name} extended their unbeaten run against ${opponent.name} to ${unbeaten} meetings.`)
+    const wins = meetings.filter((meeting) => resultForTeam(meeting, winner.id) === 'W').length
+    if (meetings.length >= 3 && wins >= 2) {
+      highlights.push(`${winner.name} now have ${wins} wins from ${meetings.length} available meetings with ${opponent.name}.`)
       break
     }
   }
@@ -609,7 +581,6 @@ export default function Home() {
   const [calendarEvents, setCalendarEvents] = useState([])
   const [scorerRows, setScorerRows] = useState([])
   const [historicFixtures, setHistoricFixtures] = useState([])
-  const [historicScorers, setHistoricScorers] = useState([])
   const [disciplineRows, setDisciplineRows] = useState([])
   useEffect(() => {
     supabase
@@ -622,18 +593,16 @@ export default function Home() {
     let cancelled = false
 
     async function load() {
-      const [results, scorerResult, historyResult, historicScorerResult, disciplineResult] = await Promise.all([
+      const [results, scorerResult, historyResult, disciplineResult] = await Promise.all([
         Promise.all(COMPETITIONS.map((c) => loadCompetition(c))),
         supabase.from('fixture_scorers').select('fixture_id, player_id, team_id, goals, player:player_id(first_name, last_name)'),
         supabase.from('historic_fixtures').select('id, fixture_date, home_team_id, away_team_id, home_goals, away_goals'),
-        supabase.from('historic_scorers').select('historic_fixture_id, player_name, goals'),
         supabase.from('discipline_records').select('fixture_id, card_type, card_count'),
       ])
       if (cancelled) return
       setCompetitions(results)
       setScorerRows(scorerResult.data || [])
       setHistoricFixtures(historyResult.data || [])
-      setHistoricScorers(historicScorerResult.data || [])
       setDisciplineRows(disciplineResult.data || [])
 
       const dateMap = new Map()
@@ -700,10 +669,10 @@ export default function Home() {
 
   const recapParagraphs = useMemo(() => {
     if (!selectedDate) return []
-    const highlights = buildRecapHighlights(competitions, selectedDate, scorerRows, historicFixtures, historicScorers, disciplineRows)
+    const highlights = buildRecapHighlights(competitions, selectedDate, scorerRows, historicFixtures, disciplineRows)
     if (!highlights.length) return []
     return [{ compName: 'Analysis', text: highlights.join(' ') }]
-  }, [competitions, selectedDate, scorerRows, historicFixtures, historicScorers, disciplineRows])
+  }, [competitions, selectedDate, scorerRows, historicFixtures, disciplineRows])
 
   const hasResultsToday = matchesForDate.some((f) => f.status === 'played')
 
