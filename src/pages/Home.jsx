@@ -801,6 +801,31 @@ export default function Home() {
     )
   }, [competitions])
 
+  const featuredCompetition = useMemo(() => {
+    if (!selectedDate || matchesForDate.length === 0) return null
+
+    const gameCounts = matchesForDate.reduce((counts, fixture) => {
+      counts[fixture.compSlug] = (counts[fixture.compSlug] || 0) + 1
+      return counts
+    }, {})
+    const competitionOrder = new Map(COMPETITIONS.map((competition, index) => [competition.slug, index]))
+
+    return [...competitions]
+      .filter((competition) => gameCounts[competition.slug])
+      .sort((a, b) =>
+        gameCounts[b.slug] - gameCounts[a.slug]
+        || Number(a.slug === 'appin-league') - Number(b.slug === 'appin-league')
+        || competitionOrder.get(a.slug) - competitionOrder.get(b.slug)
+      )[0] || null
+  }, [competitions, matchesForDate, selectedDate])
+
+  const featuredCupResults = useMemo(() => {
+    if (!featuredCompetition || featuredCompetition.slug === 'appin-league') return []
+    return featuredCompetition.fixtures
+      .filter((fixture) => fixture.status === 'played')
+      .sort((a, b) => b.fixture_date.localeCompare(a.fixture_date))
+  }, [featuredCompetition])
+
   if (loading) {
     return (
       <div className="container" style={{ padding: '48px 20px' }}>
@@ -890,12 +915,23 @@ export default function Home() {
         )}
       </section>
 
-      {appinStandings.length > 0 && (
+      {featuredCompetition?.slug === 'appin-league' && appinStandings.length > 0 && (
         <section style={{ marginBottom: 40 }}>
           <h2 style={{ fontSize: 13, textTransform: 'uppercase', letterSpacing: 0.5, color: 'var(--muted)', marginBottom: 12 }}>
             League Table
           </h2>
           <StandingsTable rows={appinStandings} />
+        </section>
+      )}
+
+      {featuredCompetition?.slug !== 'appin-league' && featuredCupResults.length > 0 && (
+        <section style={{ marginBottom: 40 }}>
+          <h2 style={{ fontSize: 13, textTransform: 'uppercase', letterSpacing: 0.5, color: 'var(--muted)', marginBottom: 12 }}>
+            {featuredCompetition.name} Results
+          </h2>
+          <div className="desktop-card-grid">
+            {featuredCupResults.map((fixture) => <MatchCard key={fixture.id} f={fixture} />)}
+          </div>
         </section>
       )}
 
