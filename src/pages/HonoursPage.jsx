@@ -7,6 +7,12 @@ const SEASONS = [
   '2019/20', '2020/21', '2021/22', '2022/23', '2023/24', '2024/25', '2025/26',
 ]
 const COMPETITIONS = ['League', 'League Cup', 'Knockout Cup', 'Brian Latto Cup']
+const SHORT_COMPETITIONS = {
+  League: 'Lge',
+  'League Cup': 'LC',
+  'Knockout Cup': 'KC',
+  'Brian Latto Cup': 'BLC',
+}
 
 function Cell({ row }) {
   if (!row || row.status === 'not_existing') return <span style={{ color: 'var(--line)' }}>**</span>
@@ -86,14 +92,15 @@ export default function HonoursPage() {
       <h2 style={{ fontSize: 13, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 16 }}>
         Season by Season
       </h2>
-      <div style={{ overflowX: 'auto', marginBottom: 12 }}>
-        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13.5 }}>
+      <div className="honours-season-scroll" style={{ overflowX: 'auto', marginBottom: 12 }}>
+        <table className="honours-season-table" style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13.5 }}>
           <thead>
             <tr style={{ borderBottom: '3px solid var(--brass)' }}>
               <th style={thStyle('left')}>Season</th>
               {COMPETITIONS.map((c) => (
                 <th key={c} style={thStyle('left')}>
-                  {c}
+                  <span className="honours-long-label">{c}</span>
+                  <span className="honours-short-label">{SHORT_COMPETITIONS[c]}</span>
                 </th>
               ))}
             </tr>
@@ -119,17 +126,17 @@ export default function HonoursPage() {
       <h2 style={{ fontSize: 13, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 16 }}>
         Total Honours
       </h2>
-      <div style={{ overflowX: 'auto' }}>
-        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 14 }}>
+      <div className="honours-total-scroll" style={{ overflowX: 'auto' }}>
+        <table className="honours-total-table" style={{ width: '100%', borderCollapse: 'collapse', fontSize: 14 }}>
           <thead>
             <tr style={{ borderBottom: '3px solid var(--brass)' }}>
               <th style={thStyle('left')}>#</th>
               <th style={thStyle('left')}>Team</th>
-              <th style={thStyle()}>League</th>
-              <th style={thStyle()}>League Cup</th>
-              <th style={thStyle()}>Knockout Cup</th>
-              <th style={thStyle()}>Brian Latto Cup</th>
-              <th style={thStyle()}>Total</th>
+              <th style={thStyle()}><span className="honours-long-label">League</span><span className="honours-short-label">Lge</span></th>
+              <th style={thStyle()}><span className="honours-long-label">League Cup</span><span className="honours-short-label">LC</span></th>
+              <th style={thStyle()}><span className="honours-long-label">Knockout Cup</span><span className="honours-short-label">KC</span></th>
+              <th style={thStyle()}><span className="honours-long-label">Brian Latto Cup</span><span className="honours-short-label">BLC</span></th>
+              <th style={thStyle()}><span className="honours-long-label">Total</span><span className="honours-short-label">Tot</span></th>
             </tr>
           </thead>
           <tbody>
