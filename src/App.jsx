@@ -159,7 +159,7 @@ export default function App() {
           <Route
             path="/discipline/weekly"
             element={
-              <ProtectedRoute>
+              <ProtectedRoute requireAdmin>
                 <WeeklyDisciplineReport />
               </ProtectedRoute>
             }
