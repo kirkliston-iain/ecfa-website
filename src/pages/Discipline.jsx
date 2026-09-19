@@ -159,13 +159,50 @@ export default function Discipline() {
   }
 
   async function loadPointsOverview() {
-    const { data: rawRows, error: cardError } = await supabase
-      .from('discipline_records')
-      .select('fixture_id, player_id, team_id, card_type, card_count, serious_offence')
-      .order('created_at')
-    if (cardError) throw cardError
+    const [playerTotalsResult, teamTotalsResult, cardsResult] = await Promise.all([
+      supabase
+        .from('discipline_player_totals')
+        .select('player_id, first_name, last_name, team_id, team_name, points, threshold_start_date')
+        .order('points', { ascending: false }),
+      supabase
+        .from('discipline_team_totals')
+        .select('team_id, team_name, points, yellow_count, red_count')
+        .order('points', { ascending: false }),
+      supabase
+        .from('discipline_records')
+        .select('fixture_id, player_id, team_id, card_type, card_count, serious_offence'),
+    ])
+    if (playerTotalsResult.error) throw playerTotalsResult.error
+    if (teamTotalsResult.error) throw teamTotalsResult.error
 
-    const cardRows = rawRows || []
+    const playerList = (playerTotalsResult.data || []).map((row) => ({
+      player: { id: row.player_id, first_name: row.first_name, last_name: row.last_name },
+      team: { id: row.team_id, name: row.team_name || 'No team' },
+      points: Number(row.points || 0),
+      ban: banForPoints(Number(row.points || 0)),
+      thresholdStartDate: row.threshold_start_date,
+    }))
+    const teamList = (teamTotalsResult.data || []).map((row) => ({
+      team: { id: row.team_id, name: row.team_name },
+      points: Number(row.points || 0),
+    }))
+    setPlayerRows(playerList)
+    setTeamRows(teamList)
+    setTeamCardRows((teamTotalsResult.data || []).map((row) => ({
+      team: { id: row.team_id, name: row.team_name },
+      yellow: Number(row.yellow_count || 0),
+      red: Number(row.red_count || 0),
+    })))
+
+    // Serious-offence bans use the card-level records, but a failure here must
+    // never hide the independently calculated points totals above.
+    if (cardsResult.error) {
+      console.error('Could not load serious-offence records', cardsResult.error)
+      setSeriousRows([])
+      return
+    }
+
+    const cardRows = cardsResult.data || []
     const fixtureIds = Array.from(new Set(cardRows.filter((r) => r.fixture_id).map((r) => r.fixture_id)))
     const playerIds = Array.from(new Set(cardRows.filter((r) => r.player_id).map((r) => r.player_id)))
     const teamIds = Array.from(new Set(cardRows.filter((r) => r.team_id).map((r) => r.team_id)))
@@ -215,66 +252,6 @@ export default function Discipline() {
       else entry.yellow += r.card_count
     }
 
-    const cardsByTeam = new Map()
-    for (const row of rows) {
-      if (!row.team?.id || !row.card_type) continue
-      if (!cardsByTeam.has(row.team.id)) {
-        cardsByTeam.set(row.team.id, { team: row.team, yellow: 0, red: 0 })
-      }
-      const entry = cardsByTeam.get(row.team.id)
-      const count = Number(row.card_count || 0)
-      if (row.card_type === 'red') entry.red += count
-      else if (row.card_type === 'yellow') entry.yellow += count
-    }
-    setTeamCardRows(Array.from(cardsByTeam.values()))
-
-    const totals = new Map()
-    for (const { player, team, fixtureDate, yellow, red } of byPlayerFixture.values()) {
-      const matchPoints = red > 0 ? red * RED_POINTS : yellow * YELLOW_POINTS
-      if (!totals.has(player.id)) {
-        totals.set(player.id, { player, team, points: 0, matches: [] })
-      }
-      totals.get(player.id).points += matchPoints
-      totals.get(player.id).matches.push({ fixtureDate, points: matchPoints })
-    }
-
-    const { data: adjustments } = await supabase
-      .from('point_adjustments')
-      .select('points, player:player_id(id, first_name, last_name), team:team_id(id, name)')
-
-    for (const adj of adjustments || []) {
-      if (!totals.has(adj.player.id)) {
-        totals.set(adj.player.id, { player: adj.player, team: adj.team, points: 0, matches: [] })
-      }
-      totals.get(adj.player.id).points += adj.points
-    }
-
-    const playerList = Array.from(totals.values())
-      .map((row) => {
-        const ban = banForPoints(row.points)
-        let runningPoints = 0
-        let thresholdStartDate = null
-        for (const match of [...row.matches].sort((a, b) => String(a.fixtureDate).localeCompare(String(b.fixtureDate)))) {
-          runningPoints += match.points
-          if (ban && runningPoints >= ban.points) {
-            thresholdStartDate = match.fixtureDate
-            break
-          }
-        }
-        return { ...row, ban, thresholdStartDate }
-      })
-      .filter((row) => row.points > 0)
-      .sort((a, b) => b.points - a.points)
-
-    const teamTotals = new Map()
-    for (const row of totals.values()) {
-      if (!teamTotals.has(row.team.id)) {
-        teamTotals.set(row.team.id, { team: row.team, points: 0 })
-      }
-      teamTotals.get(row.team.id).points += row.points
-    }
-    const teamList = Array.from(teamTotals.values()).sort((a, b) => b.points - a.points)
-
     const seriousCounts = new Map()
     for (const r of rows) {
       if (!r.serious_offence) continue
@@ -316,8 +293,6 @@ export default function Discipline() {
       .filter(Boolean)
       .sort((a, b) => b.count - a.count)
 
-    setPlayerRows(playerList)
-    setTeamRows(teamList)
     setSeriousRows(seriousList)
     setLoading(false)
   }
