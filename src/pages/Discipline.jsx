@@ -162,20 +162,18 @@ export default function Discipline() {
     const { data } = await supabase
       .from('discipline_records')
       .select(
-        'fixture_id, card_type, card_count, serious_offence, fixture:fixture_id(id, fixture_date), player:player_id(id, first_name, last_name), team:team_id(id, name)'
+        'fixture_id, card_type, card_count, serious_offence, player:player_id(id, first_name, last_name), team:team_id(id, name)'
       )
       .order('created_at')
 
     const rows = data || []
-    const seriousFixtureIds = Array.from(
-      new Set(rows.filter((r) => r.serious_offence && r.fixture_id).map((r) => r.fixture_id))
-    )
+    const fixtureIds = Array.from(new Set(rows.filter((r) => r.fixture_id).map((r) => r.fixture_id)))
     const fixtureDates = {}
-    if (seriousFixtureIds.length > 0) {
+    if (fixtureIds.length > 0) {
       const { data: offenceFixtures } = await supabase
         .from('fixtures')
         .select('id, fixture_date')
-        .in('id', seriousFixtureIds)
+        .in('id', fixtureIds)
       for (const fixture of offenceFixtures || []) fixtureDates[fixture.id] = fixture.fixture_date
     }
 
@@ -186,7 +184,7 @@ export default function Discipline() {
         byPlayerFixture.set(key, {
           player: r.player,
           team: r.team,
-          fixtureDate: r.fixture?.fixture_date || null,
+          fixtureDate: fixtureDates[r.fixture_id] || null,
           yellow: 0,
           red: 0,
         })
@@ -1007,9 +1005,8 @@ export default function Discipline() {
         Ban Thresholds
       </h2>
       <p style={{ fontSize: 13, color: 'var(--muted)', marginBottom: 12 }}>
-        Reference guide only. Crossing a threshold is a prompt to add a ban above — it isn't a
-        ban by itself. Yellow = 2 pts, red = 4 pts (two yellows in the same match that make a red
-        only count as 4, not 8).
+        Bans are added automatically when a player crosses a threshold. Yellow = 2 pts, red = 4
+        pts (two yellows in the same match that make a red only count as 4, not 8).
       </p>
 
       <div style={{ ...cardStyle, marginBottom: 32 }}>
