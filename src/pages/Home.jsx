@@ -449,6 +449,7 @@ function Badge({ logoUrl, name, size = 24 }) {
   if (logoUrl) {
     return (
       <img
+        className="match-team-badge"
         src={logoUrl}
         alt=""
         style={{ width: size, height: size, borderRadius: '50%', objectFit: 'cover', background: '#fff', flexShrink: 0 }}
@@ -463,6 +464,7 @@ function Badge({ logoUrl, name, size = 24 }) {
     .toUpperCase()
   return (
     <span
+      className="match-team-badge"
       style={{
         width: size,
         height: size,
@@ -526,7 +528,7 @@ function MatchCard({ f }) {
           {f.home_team ? (
             <Badge logoUrl={f.home_team?.logo_url} name={f.home_team?.name} />
           ) : (
-            <span style={tbcDotStyle}>?</span>
+            <span className="match-team-badge" style={tbcDotStyle}>?</span>
           )}
         </div>
         <div
@@ -547,7 +549,7 @@ function MatchCard({ f }) {
           {f.away_team ? (
             <Badge logoUrl={f.away_team?.logo_url} name={f.away_team?.name} />
           ) : (
-            <span style={tbcDotStyle}>?</span>
+            <span className="match-team-badge" style={tbcDotStyle}>?</span>
           )}
           <span className="match-card-team-name" style={{ minWidth: 0, overflowWrap: 'anywhere', lineHeight: 1.25, ...(!f.away_team ? { color: 'var(--muted)', fontStyle: 'italic', fontWeight: 400 } : {}) }}>
             {f.away_team?.name || f.away_placeholder || 'TBC'}
