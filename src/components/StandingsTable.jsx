@@ -93,13 +93,16 @@ export default function StandingsTable({ groupName, rows }) {
       {groupName && (
         <h3 style={{ fontSize: 16, marginBottom: 10, fontWeight: 700 }}>{groupName}</h3>
       )}
-      <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 14 }}>
+      <div style={{ width: '100%', overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
+        <table style={{ width: '100%', minWidth: 560, borderCollapse: 'collapse', fontSize: 14 }}>
         <thead>
           <tr style={{ color: 'var(--muted)' }}>
             <th style={{ ...thStyle('left'), width: 30 }}>Pos</th>
             <th style={thStyle('left')}>Team</th>
             <th style={{ ...thStyle(), width: 34 }}>Pl</th>
             <th style={{ ...thStyle(), width: 34 }}>W</th>
+            <th style={{ ...thStyle(), width: 34 }}>D</th>
+            <th style={{ ...thStyle(), width: 34 }}>L</th>
             <th style={{ ...thStyle(), width: 36 }}>GF</th>
             <th style={{ ...thStyle(), width: 36 }}>GA</th>
             <th style={{ ...thStyle(), width: 40 }}>GD</th>
@@ -120,6 +123,8 @@ export default function StandingsTable({ groupName, rows }) {
               </td>
               <td style={tdStyle()}>{row.played}</td>
               <td style={tdStyle()}>{row.won}</td>
+              <td style={tdStyle()}>{row.drawn}</td>
+              <td style={tdStyle()}>{row.lost}</td>
               <td style={tdStyle()}>{row.goalsFor}</td>
               <td style={tdStyle()}>{row.goalsAgainst}</td>
               <td style={tdStyle()}>{row.goalDifference}</td>
@@ -128,13 +133,14 @@ export default function StandingsTable({ groupName, rows }) {
           ))}
           {rows.length === 0 && (
             <tr>
-              <td colSpan={8} style={{ padding: '24px 8px', textAlign: 'center', color: 'var(--muted)' }}>
+              <td colSpan={10} style={{ padding: '24px 8px', textAlign: 'center', color: 'var(--muted)' }}>
                 No standings yet — check back once fixtures have been played.
               </td>
             </tr>
           )}
         </tbody>
-      </table>
+        </table>
+      </div>
     </div>
   )
 }
