@@ -500,9 +500,13 @@ const tbcDotStyle = {
 
 function MatchCard({ f }) {
   const played = f.status === 'played'
+  const kickoff = f.fixture_date && f.fixture_date.slice(11, 16) !== '00:00'
+    ? f.fixture_date.slice(11, 16)
+    : null
+  const detailsBeforeReferee = [kickoff, f.venue || null].filter(Boolean)
+
   return (
-    <Link
-      to={`/fixtures/${f.id}`}
+    <div
       className="match-card"
       style={{
         display: 'block',
@@ -513,66 +517,71 @@ function MatchCard({ f }) {
         background: '#fff',
       }}
     >
-      <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11, fontWeight: 700, color: 'var(--brass)', textTransform: 'uppercase', letterSpacing: 0.4, marginBottom: 6 }}>
-        {f.compSlug === 'appin-league' && (
-          <img src={APPIN_LOGO} alt="" style={{ height: 14, width: 'auto', objectFit: 'contain' }} />
+      <Link to={`/fixtures/${f.id}`} style={{ display: 'block' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11, fontWeight: 700, color: 'var(--brass)', textTransform: 'uppercase', letterSpacing: 0.4, marginBottom: 6 }}>
+          {f.compSlug === 'appin-league' && (
+            <img src={APPIN_LOGO} alt="" style={{ height: 14, width: 'auto', objectFit: 'contain' }} />
+          )}
+          {f.compName}
+          {f.round_name ? ` — ${f.round_name}` : ''}
+        </div>
+        <div className="match-card-teams" style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) auto minmax(0, 1fr)', alignItems: 'center', gap: 8 }}>
+          <div className="match-card-team match-card-team-home" style={{ minWidth: 0, display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 6, fontWeight: 600, fontSize: 15, textAlign: 'right' }}>
+            <span className="match-card-team-name" style={{ minWidth: 0, overflowWrap: 'anywhere', lineHeight: 1.25, ...(!f.home_team ? { color: 'var(--muted)', fontStyle: 'italic', fontWeight: 400 } : {}) }}>
+              {f.home_team?.name || f.home_placeholder || 'TBC'}
+            </span>
+            {f.home_team ? (
+              <Badge logoUrl={f.home_team?.logo_url} name={f.home_team?.name} />
+            ) : (
+              <span className="match-team-badge" style={tbcDotStyle}>?</span>
+            )}
+          </div>
+          <div
+            style={{
+              minWidth: played ? 62 : 24,
+              textAlign: 'center',
+              fontWeight: 800,
+              fontSize: 17,
+              color: played ? '#fff' : 'var(--muted)',
+              background: played ? 'var(--ink)' : 'transparent',
+              borderRadius: 4,
+              padding: played ? '4px 10px' : 0,
+            }}
+          >
+            {played ? displayedScore(f) : 'v'}
+          </div>
+          <div className="match-card-team match-card-team-away" style={{ minWidth: 0, display: 'flex', alignItems: 'center', gap: 6, fontWeight: 600, fontSize: 15 }}>
+            {f.away_team ? (
+              <Badge logoUrl={f.away_team?.logo_url} name={f.away_team?.name} />
+            ) : (
+              <span className="match-team-badge" style={tbcDotStyle}>?</span>
+            )}
+            <span className="match-card-team-name" style={{ minWidth: 0, overflowWrap: 'anywhere', lineHeight: 1.25, ...(!f.away_team ? { color: 'var(--muted)', fontStyle: 'italic', fontWeight: 400 } : {}) }}>
+              {f.away_team?.name || f.away_placeholder || 'TBC'}
+            </span>
+          </div>
+        </div>
+        {played && outcomeNote(f) && (
+          <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 6, textAlign: 'center', fontWeight: 600 }}>
+            {outcomeNote(f)}
+          </div>
         )}
-        {f.compName}
-        {f.round_name ? ` — ${f.round_name}` : ''}
-      </div>
-      <div className="match-card-teams" style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) auto minmax(0, 1fr)', alignItems: 'center', gap: 8 }}>
-        <div className="match-card-team match-card-team-home" style={{ minWidth: 0, display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 6, fontWeight: 600, fontSize: 15, textAlign: 'right' }}>
-          <span className="match-card-team-name" style={{ minWidth: 0, overflowWrap: 'anywhere', lineHeight: 1.25, ...(!f.home_team ? { color: 'var(--muted)', fontStyle: 'italic', fontWeight: 400 } : {}) }}>
-            {f.home_team?.name || f.home_placeholder || 'TBC'}
-          </span>
-          {f.home_team ? (
-            <Badge logoUrl={f.home_team?.logo_url} name={f.home_team?.name} />
-          ) : (
-            <span className="match-team-badge" style={tbcDotStyle}>?</span>
-          )}
-        </div>
-        <div
-          style={{
-            minWidth: played ? 62 : 24,
-            textAlign: 'center',
-            fontWeight: 800,
-            fontSize: 17,
-            color: played ? '#fff' : 'var(--muted)',
-            background: played ? 'var(--ink)' : 'transparent',
-            borderRadius: 4,
-            padding: played ? '4px 10px' : 0,
-          }}
-        >
-          {played ? displayedScore(f) : 'v'}
-        </div>
-        <div className="match-card-team match-card-team-away" style={{ minWidth: 0, display: 'flex', alignItems: 'center', gap: 6, fontWeight: 600, fontSize: 15 }}>
-          {f.away_team ? (
-            <Badge logoUrl={f.away_team?.logo_url} name={f.away_team?.name} />
-          ) : (
-            <span className="match-team-badge" style={tbcDotStyle}>?</span>
-          )}
-          <span className="match-card-team-name" style={{ minWidth: 0, overflowWrap: 'anywhere', lineHeight: 1.25, ...(!f.away_team ? { color: 'var(--muted)', fontStyle: 'italic', fontWeight: 400 } : {}) }}>
-            {f.away_team?.name || f.away_placeholder || 'TBC'}
-          </span>
-        </div>
-      </div>
-      {played && outcomeNote(f) && (
-        <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 6, textAlign: 'center', fontWeight: 600 }}>
-          {outcomeNote(f)}
-        </div>
-      )}
-      {(f.venue || f.referee_name || (f.fixture_date && f.fixture_date.slice(11, 16) !== '00:00')) && (
+      </Link>
+      {(detailsBeforeReferee.length > 0 || f.referee_name) && (
         <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 6, textAlign: 'center' }}>
-          {[
-            f.fixture_date && f.fixture_date.slice(11, 16) !== '00:00' ? f.fixture_date.slice(11, 16) : null,
-            f.venue || null,
-            f.referee_name ? `Ref: ${f.referee_name}` : null,
-          ]
-            .filter(Boolean)
-            .join(' · ')}
+          {detailsBeforeReferee.join(' · ')}
+          {detailsBeforeReferee.length > 0 && f.referee_name ? ' · ' : ''}
+          {f.referee_name && (
+            <Link
+              to={`/referees?ref=${encodeURIComponent(f.referee_name)}`}
+              style={{ color: 'inherit', fontWeight: 600, textDecoration: 'underline', textUnderlineOffset: 2 }}
+            >
+              Ref: {f.referee_name}
+            </Link>
+          )}
         </div>
       )}
-    </Link>
+    </div>
   )
 }
 
