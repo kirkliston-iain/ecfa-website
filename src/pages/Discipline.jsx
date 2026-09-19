@@ -973,8 +973,8 @@ export default function Discipline() {
       {filteredPlayerRows.length === 0 ? (
         <p style={{ color: 'var(--muted)', fontSize: 14, marginBottom: 32 }}>No player points recorded yet.</p>
       ) : (
-        <div style={{ overflowX: 'auto', marginBottom: 32 }}>
-          <table style={{ width: '100%', minWidth: 520, borderCollapse: 'collapse', fontSize: 13 }}>
+        <div className="discipline-points-scroll" style={{ overflowX: 'auto', marginBottom: 32 }}>
+          <table className="discipline-points-table" style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
             <thead>
               <tr>
                 <th style={tableHeaderStyle}>Player</th>
