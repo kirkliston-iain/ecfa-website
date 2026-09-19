@@ -261,6 +261,14 @@ function recapSentenceForFixture(f, allFixturesForComp, groupTeams, selectedDate
   const as = f.away_score
 
   if (!f.isGroupStage || !f.group_id || !groupTeams[f.group_id]) {
+    const cupWinner = fixtureWinner(f)
+    if (cupWinner && (f.went_to_extra_time || f.decided_by_penalties)) {
+      const loser = cupWinner.id === f.home_team?.id ? awayName : homeName
+      const method = f.decided_by_penalties
+        ? `${f.home_penalty_score}-${f.away_penalty_score} on penalties after ${displayedScore(f)}`
+        : `${displayedScore(f)} after extra time`
+      return `${cupWinner.name} beat ${loser} ${method} in the ${f.compName}.`
+    }
     if (hs === as) return `${homeName} and ${awayName} drew ${hs}-${as} in the ${f.compName}.`
     const winner = hs > as ? homeName : awayName
     const loser = hs > as ? awayName : homeName
@@ -320,6 +328,110 @@ function recapSentenceForFixture(f, allFixturesForComp, groupTeams, selectedDate
     }
   }
   return `${winnerName} beat ${loserName} ${ws}-${ls}${movement}.`
+}
+
+function resultForTeam(fixture, teamId) {
+  const isHome = fixture.home_team?.id === teamId || fixture.home_team_id === teamId
+  const us = isHome ? (fixture.home_score ?? fixture.home_goals) : (fixture.away_score ?? fixture.away_goals)
+  const them = isHome ? (fixture.away_score ?? fixture.away_goals) : (fixture.home_score ?? fixture.home_goals)
+  if (us == null || them == null) return null
+  return us > them ? 'W' : us === them ? 'D' : 'L'
+}
+
+function fixtureWinner(fixture) {
+  let home = fixture.home_score
+  let away = fixture.away_score
+  if (fixture.went_to_extra_time) {
+    home = fixture.home_extra_time_score
+    away = fixture.away_extra_time_score
+  }
+  if (fixture.decided_by_penalties) {
+    home = fixture.home_penalty_score
+    away = fixture.away_penalty_score
+  }
+  if (home == null || away == null || home === away) return null
+  return home > away ? fixture.home_team : fixture.away_team
+}
+
+function buildRecapHighlights(competitions, selectedDate, scorerRows, historicFixtures) {
+  const allFixtures = competitions.flatMap((comp) => comp.fixtures)
+  const playedToday = allFixtures.filter((f) => dateKey(f.fixture_date) === selectedDate && f.status === 'played')
+  const todayIds = new Set(playedToday.map((f) => f.id))
+  const highlights = []
+
+  const scorers = new Map()
+  for (const row of scorerRows.filter((s) => todayIds.has(s.fixture_id))) {
+    const name = [row.player?.first_name, row.player?.last_name].filter(Boolean).join(' ')
+    if (!name) continue
+    scorers.set(name, (scorers.get(name) || 0) + Number(row.goals || 0))
+  }
+  const leadingScorers = [...scorers.entries()].sort((a, b) => b[1] - a[1])
+  if (leadingScorers[0]?.[1] >= 2) {
+    const topTotal = leadingScorers[0][1]
+    const names = leadingScorers.filter(([, goals]) => goals === topTotal).map(([name]) => name)
+    highlights.push(`${names.join(names.length > 1 ? ' and ' : '')} ${names.length > 1 ? 'led' : 'was'} the individual headlines with ${topTotal} goals.`)
+  }
+
+  const league = competitions.find((comp) => comp.slug === 'appin-league')
+  if (league) {
+    const leagueTeams = [...new Map(league.fixtures.flatMap((f) => [f.home_team, f.away_team]).filter(Boolean).map((t) => [t.id, t])).values()]
+    const form = leagueTeams.map((team) => {
+      const recent = league.fixtures
+        .filter((f) => f.status === 'played' && dateKey(f.fixture_date) <= selectedDate && (f.home_team?.id === team.id || f.away_team?.id === team.id))
+        .sort((a, b) => b.fixture_date.localeCompare(a.fixture_date))
+        .slice(0, 5)
+      const points = recent.reduce((sum, f) => sum + ({ W: 3, D: 1, L: 0 }[resultForTeam(f, team.id)] || 0), 0)
+      const wins = recent.filter((f) => resultForTeam(f, team.id) === 'W').length
+      return { team, recent, points, wins }
+    }).filter((row) => row.recent.length >= 3).sort((a, b) => b.points - a.points || b.wins - a.wins)
+    if (form[0] && form[0].points >= 7) {
+      highlights.push(`${form[0].team.name} are the form side, taking ${form[0].points} points from their last ${form[0].recent.length} league games.`)
+    }
+
+    const teams = league.groupTeams[Object.keys(league.groupTeams)[0]] || leagueTeams
+    const before = computeStandings(teams, league.fixtures.filter((f) => f.status === 'played' && dateKey(f.fixture_date) < selectedDate))
+    const after = computeStandings(teams, league.fixtures.filter((f) => f.status === 'played' && dateKey(f.fixture_date) <= selectedDate))
+    const beforeRanks = new Map(before.map((row, index) => [row.teamId, index + 1]))
+    const climbers = after.map((row, index) => ({ ...row, rank: index + 1, climbed: (beforeRanks.get(row.teamId) || index + 1) - (index + 1) }))
+      .filter((row) => row.climbed > 0)
+      .sort((a, b) => b.climbed - a.climbed)
+    if (climbers[0]) highlights.push(`${climbers[0].teamName} made the biggest move in the table, climbing ${climbers[0].climbed} ${climbers[0].climbed === 1 ? 'place' : 'places'} to ${ordinal(climbers[0].rank)}.`)
+  }
+
+  for (const fixture of playedToday) {
+    if (!fixture.home_team?.id || !fixture.away_team?.id || fixture.home_score === fixture.away_score) continue
+    const winner = fixture.home_score > fixture.away_score ? fixture.home_team : fixture.away_team
+    const opponent = fixture.home_score > fixture.away_score ? fixture.away_team : fixture.home_team
+    const currentMeetings = allFixtures.filter((f) => f.id !== fixture.id && f.status === 'played' && dateKey(f.fixture_date) < selectedDate &&
+      ((f.home_team?.id === winner.id && f.away_team?.id === opponent.id) || (f.home_team?.id === opponent.id && f.away_team?.id === winner.id)))
+    const oldMeetings = historicFixtures.filter((f) =>
+      (f.home_team_id === winner.id && f.away_team_id === opponent.id) || (f.home_team_id === opponent.id && f.away_team_id === winner.id))
+    const meetings = [fixture, ...currentMeetings, ...oldMeetings].sort((a, b) => String(b.fixture_date || '').localeCompare(String(a.fixture_date || '')))
+    let unbeaten = 0
+    for (const meeting of meetings) {
+      const result = resultForTeam(meeting, winner.id)
+      if (result === 'L' || !result) break
+      unbeaten += 1
+    }
+    if (unbeaten >= 3) {
+      highlights.push(`${winner.name} extended their unbeaten run against ${opponent.name} to ${unbeaten} meetings.`)
+      break
+    }
+  }
+
+  const cupWinners = playedToday.filter((f) => !f.isGroupStage && f.compSlug !== 'appin-league')
+    .map((f) => fixtureWinner(f)?.name)
+    .filter(Boolean)
+  if (cupWinners.length) highlights.push(`Congratulations to ${cupWinners.join(cupWinners.length > 1 ? ' and ' : '')} on progressing in the cup.`)
+
+  const referees = playedToday.map((f) => f.referee_name).filter(Boolean)
+  const busiest = [...new Set(referees)].map((name) => ({
+    name,
+    appointments: allFixtures.filter((f) => f.referee_name === name && dateKey(f.fixture_date) <= selectedDate).length,
+  })).sort((a, b) => b.appointments - a.appointments)[0]
+  if (busiest?.appointments >= 4) highlights.push(`${busiest.name} completed their ${ordinal(busiest.appointments)} ECFA appointment of the season.`)
+
+  return highlights.slice(0, 4)
 }
 
 function Badge({ logoUrl, name, size = 24 }) {
@@ -456,6 +568,8 @@ export default function Home() {
   const [competitions, setCompetitions] = useState([])
   const [selectedDate, setSelectedDate] = useState(null)
   const [calendarEvents, setCalendarEvents] = useState([])
+  const [scorerRows, setScorerRows] = useState([])
+  const [historicFixtures, setHistoricFixtures] = useState([])
   useEffect(() => {
     supabase
       .from('calendar_events')
@@ -467,9 +581,15 @@ export default function Home() {
     let cancelled = false
 
     async function load() {
-      const results = await Promise.all(COMPETITIONS.map((c) => loadCompetition(c)))
+      const [results, scorerResult, historyResult] = await Promise.all([
+        Promise.all(COMPETITIONS.map((c) => loadCompetition(c))),
+        supabase.from('fixture_scorers').select('fixture_id, goals, player:player_id(first_name, last_name)'),
+        supabase.from('historic_fixtures').select('fixture_date, home_team_id, away_team_id, home_goals, away_goals'),
+      ])
       if (cancelled) return
       setCompetitions(results)
+      setScorerRows(scorerResult.data || [])
+      setHistoricFixtures(historyResult.data || [])
 
       const dateMap = new Map()
       for (const comp of results) {
@@ -544,8 +664,10 @@ export default function Home() {
       const sentences = playedToday.map((f) => recapSentenceForFixture(f, comp.fixtures, comp.groupTeams, selectedDate))
       paragraphs.push({ compName: comp.name, text: sentences.join(' ') })
     }
+    const highlights = buildRecapHighlights(competitions, selectedDate, scorerRows, historicFixtures)
+    if (highlights.length) paragraphs.push({ compName: 'Highlights', text: highlights.join(' ') })
     return paragraphs
-  }, [competitions, selectedDate])
+  }, [competitions, selectedDate, scorerRows, historicFixtures])
 
   const hasResultsToday = matchesForDate.some((f) => f.status === 'played')
 
