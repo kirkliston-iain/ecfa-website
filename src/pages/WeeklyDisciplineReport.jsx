@@ -309,7 +309,7 @@ export default function WeeklyDisciplineReport() {
     }
 
     const weekendMap = new Map()
-    for (const row of records.filter((record) => dateKey(record.fixture?.fixture_date) === reportDate && !record.serious_offence)) {
+    for (const row of records.filter((record) => dateKey(record.fixture?.fixture_date) === reportDate)) {
       const key = row.player?.id || normalName(fullName(row.player))
       if (!weekendMap.has(key)) weekendMap.set(key, { player: fullName(row.player), team: row.team?.name || 'No team', yellow: 0, red: 0 })
       const item = weekendMap.get(key)
