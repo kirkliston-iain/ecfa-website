@@ -6,11 +6,11 @@ const YELLOW_POINTS = 2
 const RED_POINTS = 4
 
 const THRESHOLDS = [
-  { points: 10, ban: '1-match suspension' },
-  { points: 18, ban: '3-match suspension' },
-  { points: 24, ban: '5-match suspension' },
-  { points: 28, ban: '7-match suspension' },
-  { points: 30, ban: '10-match suspension' },
+  { points: 10, games: 1, ban: '1-match suspension' },
+  { points: 18, games: 3, ban: '3-match suspension' },
+  { points: 24, games: 5, ban: '5-match suspension' },
+  { points: 28, games: 7, ban: '7-match suspension' },
+  { points: 30, games: 10, ban: '10-match suspension' },
 ]
 
 const SERIOUS_OFFENCE_RULES = {
@@ -162,7 +162,7 @@ export default function Discipline() {
     const { data } = await supabase
       .from('discipline_records')
       .select(
-        'fixture_id, card_type, card_count, serious_offence, player:player_id(id, first_name, last_name), team:team_id(id, name)'
+        'fixture_id, card_type, card_count, serious_offence, fixture:fixture_id(id, fixture_date), player:player_id(id, first_name, last_name), team:team_id(id, name)'
       )
       .order('created_at')
 
@@ -181,10 +181,15 @@ export default function Discipline() {
 
     const byPlayerFixture = new Map()
     for (const r of rows) {
-      if (r.serious_offence) continue
       const key = `${r.player.id}::${r.fixture_id}`
       if (!byPlayerFixture.has(key)) {
-        byPlayerFixture.set(key, { player: r.player, team: r.team, yellow: 0, red: 0 })
+        byPlayerFixture.set(key, {
+          player: r.player,
+          team: r.team,
+          fixtureDate: r.fixture?.fixture_date || null,
+          yellow: 0,
+          red: 0,
+        })
       }
       const entry = byPlayerFixture.get(key)
       if (r.card_type === 'red') entry.red += r.card_count
@@ -205,12 +210,13 @@ export default function Discipline() {
     setTeamCardRows(Array.from(cardsByTeam.values()))
 
     const totals = new Map()
-    for (const { player, team, yellow, red } of byPlayerFixture.values()) {
+    for (const { player, team, fixtureDate, yellow, red } of byPlayerFixture.values()) {
       const matchPoints = red > 0 ? red * RED_POINTS : yellow * YELLOW_POINTS
       if (!totals.has(player.id)) {
-        totals.set(player.id, { player, team, points: 0 })
+        totals.set(player.id, { player, team, points: 0, matches: [] })
       }
       totals.get(player.id).points += matchPoints
+      totals.get(player.id).matches.push({ fixtureDate, points: matchPoints })
     }
 
     const { data: adjustments } = await supabase
@@ -219,13 +225,25 @@ export default function Discipline() {
 
     for (const adj of adjustments || []) {
       if (!totals.has(adj.player.id)) {
-        totals.set(adj.player.id, { player: adj.player, team: adj.team, points: 0 })
+        totals.set(adj.player.id, { player: adj.player, team: adj.team, points: 0, matches: [] })
       }
       totals.get(adj.player.id).points += adj.points
     }
 
     const playerList = Array.from(totals.values())
-      .map((row) => ({ ...row, ban: banForPoints(row.points) }))
+      .map((row) => {
+        const ban = banForPoints(row.points)
+        let runningPoints = 0
+        let thresholdStartDate = null
+        for (const match of [...row.matches].sort((a, b) => String(a.fixtureDate).localeCompare(String(b.fixtureDate)))) {
+          runningPoints += match.points
+          if (ban && runningPoints >= ban.points) {
+            thresholdStartDate = match.fixtureDate
+            break
+          }
+        }
+        return { ...row, ban, thresholdStartDate }
+      })
       .filter((row) => row.points > 0)
       .sort((a, b) => b.points - a.points)
 
@@ -453,15 +471,7 @@ export default function Discipline() {
     loadSuspensions()
   }
 
-  // Merge computed team totals with manual overrides. A team with an override
-  // but no cards logged this season yet still needs to show up.
-  const teamRowIds = new Set(teamRows.map((r) => r.team.id))
-  const overrideOnlyTeams = teams
-    .filter((t) => teamOverrides[t.id] !== undefined && !teamRowIds.has(t.id))
-    .map((t) => ({ team: t, points: teamOverrides[t.id] }))
-  const displayTeamRows = [...teamRows, ...overrideOnlyTeams].sort(
-    (a, b) => (teamOverrides[b.team.id] ?? b.points) - (teamOverrides[a.team.id] ?? a.points)
-  )
+  const displayTeamRows = [...teamRows].sort((a, b) => b.points - a.points)
 
   const manualSuspensions = suspensions.map((s) => ({
     ...s,
@@ -494,7 +504,24 @@ export default function Discipline() {
       isAutomatic: true,
     }))
 
-  const activeSuspensions = [...manualSuspensions, ...automaticSeriousSuspensions]
+  const automaticThresholdSuspensions = playerRows
+    .filter((row) => {
+      if (!row.ban || !row.thresholdStartDate || manuallyCoveredPlayers.has(row.player?.id)) return false
+      return gamesPlayedSince(row.team?.id, row.thresholdStartDate) < row.ban.games
+    })
+    .map((row) => ({
+      id: `threshold-${row.player.id}-${row.ban.points}`,
+      player: row.player,
+      team: row.team,
+      reason: `Points threshold — ${row.ban.points} points`,
+      games_banned: row.ban.games,
+      is_lifetime: false,
+      available_from: null,
+      automaticGamesServed: gamesPlayedSince(row.team?.id, row.thresholdStartDate),
+      isAutomatic: true,
+    }))
+
+  const activeSuspensions = [...manualSuspensions, ...automaticSeriousSuspensions, ...automaticThresholdSuspensions]
     .filter((s) => {
       if (s.status && s.status !== 'active') return false
       if (s.is_lifetime) return true
@@ -910,98 +937,22 @@ export default function Discipline() {
       <h2 style={{ fontSize: 15, textTransform: 'uppercase', letterSpacing: 0.4, color: 'var(--brass)', marginBottom: 12 }}>
         Total Points by Team
       </h2>
-
-      {isAdmin && (
-        <div style={{ ...cardStyle, marginBottom: 20 }}>
-          <div style={{ fontWeight: 600, marginBottom: 10, fontSize: 14 }}>
-            Set points for a team (including ones with none yet)
-          </div>
-          <select
-            value={newOverrideTeamId}
-            onChange={(e) => setNewOverrideTeamId(e.target.value)}
-            style={{ ...fullSelectStyle, marginBottom: 8 }}
-          >
-            <option value="">Select team…</option>
-            {teams.map((t) => (
-              <option key={t.id} value={t.id}>
-                {t.name}
-              </option>
-            ))}
-          </select>
-          <div style={{ display: 'flex', gap: 8 }}>
-            <input
-              type="number"
-              placeholder="Points"
-              value={newOverridePoints}
-              onChange={(e) => setNewOverridePoints(e.target.value)}
-              style={{ ...fullSelectStyle, flex: 1 }}
-            />
-            <button onClick={saveNewTeamOverride} style={{ ...smallButtonStyle, flex: 1 }}>
-              Save
-            </button>
-          </div>
-        </div>
-      )}
+      <p style={{ fontSize: 13, color: 'var(--muted)', marginBottom: 12 }}>
+        Calculated automatically from every recorded player card.
+      </p>
 
       {displayTeamRows.length === 0 ? (
         <p style={{ color: 'var(--muted)', fontSize: 14, marginBottom: 32 }}>No cards recorded yet.</p>
       ) : (
         <div style={{ marginBottom: 32 }}>
-          {displayTeamRows.map((row) => {
-            const hasOverride = teamOverrides[row.team.id] !== undefined
-            const displayPoints = hasOverride ? teamOverrides[row.team.id] : row.points
-            const isEditing = editingTeamOverride === row.team.id
-            return (
+          {displayTeamRows.map((row) => (
               <div key={row.team.id} style={{ padding: '8px 0', borderBottom: '1px solid var(--line)' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 14 }}>
-                  <span>
-                    {row.team.name}
-                    {hasOverride && (
-                      <span style={{ fontSize: 11, color: 'var(--muted)' }}> (manually set)</span>
-                    )}
-                  </span>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                    <strong>{displayPoints}</strong>
-                    {isAdmin && !isEditing && (
-                      <button
-                        onClick={() => {
-                          setEditingTeamOverride(row.team.id)
-                          setEditTeamOverrideValue(String(displayPoints))
-                        }}
-                        style={{ ...smallOutlineStyle, padding: '4px 8px', fontSize: 12 }}
-                      >
-                        Edit
-                      </button>
-                    )}
-                  </div>
+                  <span>{row.team.name}</span>
+                  <strong>{row.points}</strong>
                 </div>
-                {isAdmin && isEditing && (
-                  <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
-                    <input
-                      type="number"
-                      value={editTeamOverrideValue}
-                      onChange={(e) => setEditTeamOverrideValue(e.target.value)}
-                      style={{ ...fullSelectStyle, flex: 1 }}
-                    />
-                    <button onClick={() => saveTeamOverride(row.team.id)} style={{ ...smallButtonStyle, flex: 1 }}>
-                      Save
-                    </button>
-                    {hasOverride && (
-                      <button
-                        onClick={() => clearTeamOverride(row.team.id)}
-                        style={{ ...smallOutlineStyle, flex: 1 }}
-                      >
-                        Reset to calculated
-                      </button>
-                    )}
-                    <button onClick={() => setEditingTeamOverride(null)} style={{ ...smallOutlineStyle, flex: 1 }}>
-                      Cancel
-                    </button>
-                  </div>
-                )}
               </div>
-            )
-          })}
+          ))}
         </div>
       )}
 
@@ -1009,7 +960,8 @@ export default function Discipline() {
         Individual Player Points (2026/27)
       </h2>
       <p style={{ fontSize: 13, color: 'var(--muted)', marginBottom: 12 }}>
-        All recorded players are shown. Use the team filter below to narrow the list.
+        Calculated automatically from recorded cards. One yellow is 2 points; two yellows in the
+        same match or a red card are 4 points.
       </p>
       <select
         value={teamFilter}
@@ -1024,42 +976,7 @@ export default function Discipline() {
           </option>
         ))}
       </select>
-      {isAdmin && (
-        <div style={{ ...cardStyle, marginBottom: 16 }}>
-          <div style={{ fontWeight: 600, marginBottom: 10, fontSize: 14 }}>Add / correct a player</div>
-          <select
-            value={newPlayerPoint.teamId}
-            onChange={(e) => setNewPlayerPoint((p) => ({ ...p, teamId: e.target.value }))}
-            style={{ ...fullSelectStyle, marginBottom: 8 }}
-          >
-            <option value="">Select team…</option>
-            {teams.map((t) => (
-              <option key={t.id} value={t.id}>
-                {t.name}
-              </option>
-            ))}
-          </select>
-          <input
-            placeholder="Player name"
-            value={newPlayerPoint.playerName}
-            onChange={(e) => setNewPlayerPoint((p) => ({ ...p, playerName: e.target.value }))}
-            style={{ ...fullSelectStyle, marginBottom: 8 }}
-          />
-          <div style={{ display: 'flex', gap: 8 }}>
-            <input
-              type="number"
-              placeholder="Points"
-              value={newPlayerPoint.points}
-              onChange={(e) => setNewPlayerPoint((p) => ({ ...p, points: e.target.value }))}
-              style={{ ...fullSelectStyle, flex: 1 }}
-            />
-            <button onClick={addPlayerPoint} style={{ ...smallButtonStyle, flex: 1 }}>
-              Add
-            </button>
-          </div>
-        </div>
-      )}
-      {playerPoints.filter((p) => !teamFilter || p.team_id === teamFilter).length === 0 ? (
+      {filteredPlayerRows.length === 0 ? (
         <p style={{ color: 'var(--muted)', fontSize: 14, marginBottom: 32 }}>No player points recorded yet.</p>
       ) : (
         <div style={{ overflowX: 'auto', marginBottom: 32 }}>
@@ -1069,64 +986,18 @@ export default function Discipline() {
                 <th style={tableHeaderStyle}>Player</th>
                 <th style={tableHeaderStyle}>Team</th>
                 <th style={{ ...tableHeaderStyle, textAlign: 'center' }}>Points</th>
-                {isAdmin && <th style={tableHeaderStyle}>Actions</th>}
               </tr>
             </thead>
             <tbody>
-              {playerPoints
-                .filter((p) => !teamFilter || p.team_id === teamFilter)
-                .map((p) => {
-                  const isEditing = editingPlayerPoint === p.id
-                  return (
-                    <tr key={p.id}>
-                      <td style={{ ...tableCellStyle, fontWeight: 600 }}>{p.player_name}</td>
-                      <td style={{ ...tableCellStyle, color: 'var(--muted)' }}>
-                        {p.team?.name || p.team_name_raw}
-                      </td>
-                      <td style={{ ...tableCellStyle, textAlign: 'center', fontWeight: 700 }}>
-                        {isEditing ? (
-                          <input
-                            type="number"
-                            value={editPlayerPointValue}
-                            onChange={(e) => setEditPlayerPointValue(e.target.value)}
-                            style={{ ...fullSelectStyle, width: 76, padding: '6px 8px' }}
-                          />
-                        ) : (
-                          p.points
-                        )}
-                      </td>
-                      {isAdmin && (
-                        <td style={tableCellStyle}>
-                          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-                            {isEditing ? (
-                              <>
-                                <button onClick={() => savePlayerPoint(p.id)} style={smallButtonStyle}>
-                                  Save
-                                </button>
-                                <button onClick={() => removePlayerPoint(p.id)} style={smallOutlineStyle}>
-                                  Remove
-                                </button>
-                                <button onClick={() => setEditingPlayerPoint(null)} style={smallOutlineStyle}>
-                                  Cancel
-                                </button>
-                              </>
-                            ) : (
-                              <button
-                                onClick={() => {
-                                  setEditingPlayerPoint(p.id)
-                                  setEditPlayerPointValue(String(p.points))
-                                }}
-                                style={smallOutlineStyle}
-                              >
-                                Edit
-                              </button>
-                            )}
-                          </div>
-                        </td>
-                      )}
-                    </tr>
-                  )
-                })}
+              {filteredPlayerRows.map((row) => (
+                <tr key={row.player.id}>
+                  <td style={{ ...tableCellStyle, fontWeight: 600 }}>
+                    {row.player.first_name} {row.player.last_name}
+                  </td>
+                  <td style={{ ...tableCellStyle, color: 'var(--muted)' }}>{row.team?.name || 'No team'}</td>
+                  <td style={{ ...tableCellStyle, textAlign: 'center', fontWeight: 700 }}>{row.points}</td>
+                </tr>
+              ))}
             </tbody>
           </table>
         </div>
