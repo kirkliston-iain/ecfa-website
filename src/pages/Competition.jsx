@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useParams } from 'react-router-dom'
 import { supabase } from '../supabaseClient'
 import StandingsTable, { TopScorersTable } from '../components/StandingsTable'
@@ -11,6 +11,7 @@ export default function Competition() {
   const [competition, setCompetition] = useState(null)
   const [stages, setStages] = useState([])
   const [topScorers, setTopScorers] = useState([])
+  const [tableDate, setTableDate] = useState('current')
 
   useEffect(() => {
     let cancelled = false
@@ -18,6 +19,7 @@ export default function Competition() {
     async function load() {
       setLoading(true)
       setError(null)
+      setTableDate('current')
 
       const { data: comp, error: compErr } = await supabase
         .from('competitions')
@@ -53,6 +55,7 @@ export default function Competition() {
             .order('fixture_date', { ascending: true })
 
           let standingsByGroup = {}
+          let teamsByGroup = {}
 
           if (stage.stage_type === 'group') {
             const { data: stageTeams } = await supabase
@@ -62,14 +65,15 @@ export default function Competition() {
 
             for (const group of stage.groups || []) {
               const teamsInGroup = (stageTeams || []).filter((st) => st.group_id === group.id)
+              teamsByGroup[group.id] = teamsInGroup.map((st) => st.team)
               standingsByGroup[group.id] = computeStandings(
-                teamsInGroup.map((st) => st.team),
+                teamsByGroup[group.id],
                 (fixtures || []).filter((f) => f.group_id === group.id)
               )
             }
           }
 
-          return { ...stage, fixtures: fixtures || [], standingsByGroup }
+          return { ...stage, fixtures: fixtures || [], standingsByGroup, teamsByGroup }
         })
       )
 
@@ -92,6 +96,24 @@ export default function Competition() {
       cancelled = true
     }
   }, [slug])
+
+  const leagueMatchdays = useMemo(() => {
+    if (competition?.slug !== 'appin-league') return []
+    return [...new Set(
+      stages
+        .flatMap((stage) => stage.fixtures)
+        .filter((fixture) => fixture.status === 'played' && fixture.fixture_date)
+        .map((fixture) => fixture.fixture_date.slice(0, 10))
+    )].sort((a, b) => b.localeCompare(a))
+  }, [competition, stages])
+
+  function rowsForDate(stage, groupId) {
+    if (tableDate === 'current') return stage.standingsByGroup[groupId] || []
+    const fixturesToDate = stage.fixtures.filter(
+      (fixture) => fixture.group_id === groupId && fixture.fixture_date?.slice(0, 10) <= tableDate
+    )
+    return computeStandings(stage.teamsByGroup[groupId] || [], fixturesToDate)
+  }
 
   if (loading) return <div className="container" style={{ padding: 48 }}>Loading…</div>
   if (error) return <div className="container" style={{ padding: 48 }}>{error}</div>
@@ -126,6 +148,47 @@ export default function Competition() {
             {stage.name}
           </h2>
 
+          {competition.slug === 'appin-league' && stage.stage_type === 'group' && leagueMatchdays.length > 0 && (
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                gap: 12,
+                flexWrap: 'wrap',
+                padding: 14,
+                marginBottom: 18,
+                border: '1px solid var(--line)',
+                borderRadius: 6,
+                background: '#f7f8f9',
+              }}
+            >
+              <div>
+                <div style={{ fontWeight: 700, fontSize: 14 }}>Table history</div>
+                <div style={{ color: 'var(--muted)', fontSize: 12 }}>
+                  {tableDate === 'current'
+                    ? 'Showing the current league table.'
+                    : `Showing the table after ${new Date(`${tableDate}T12:00:00`).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}.`}
+                </div>
+              </div>
+              <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, fontWeight: 600 }}>
+                Table after
+                <select
+                  value={tableDate}
+                  onChange={(event) => setTableDate(event.target.value)}
+                  style={{ minHeight: 42, padding: '8px 34px 8px 10px', border: '1px solid var(--line)', borderRadius: 5, background: '#fff', color: 'var(--ink)', font: 'inherit' }}
+                >
+                  <option value="current">Current table</option>
+                  {leagueMatchdays.map((date) => (
+                    <option key={date} value={date}>
+                      {new Date(`${date}T12:00:00`).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' })}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            </div>
+          )}
+
           {stage.stage_type === 'group' &&
             (stage.groups || [])
               .sort((a, b) => a.sort_order - b.sort_order)
@@ -133,7 +196,7 @@ export default function Competition() {
                 <StandingsTable
                   key={group.id}
                   groupName={stage.groups.length > 1 ? group.name : null}
-                  rows={stage.standingsByGroup[group.id] || []}
+                  rows={rowsForDate(stage, group.id)}
                 />
               ))}
 
