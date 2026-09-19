@@ -159,23 +159,44 @@ export default function Discipline() {
   }
 
   async function loadPointsOverview() {
-    const { data } = await supabase
+    const { data: rawRows, error: cardError } = await supabase
       .from('discipline_records')
-      .select(
-        'fixture_id, card_type, card_count, serious_offence, player:player_id(id, first_name, last_name), team:team_id(id, name)'
-      )
+      .select('fixture_id, player_id, team_id, card_type, card_count, serious_offence')
       .order('created_at')
+    if (cardError) throw cardError
 
-    const rows = data || []
-    const fixtureIds = Array.from(new Set(rows.filter((r) => r.fixture_id).map((r) => r.fixture_id)))
+    const cardRows = rawRows || []
+    const fixtureIds = Array.from(new Set(cardRows.filter((r) => r.fixture_id).map((r) => r.fixture_id)))
+    const playerIds = Array.from(new Set(cardRows.filter((r) => r.player_id).map((r) => r.player_id)))
+    const teamIds = Array.from(new Set(cardRows.filter((r) => r.team_id).map((r) => r.team_id)))
+
+    const [fixtureResult, playerResult, teamResult] = await Promise.all([
+      fixtureIds.length
+        ? supabase.from('fixtures').select('id, fixture_date').in('id', fixtureIds)
+        : Promise.resolve({ data: [], error: null }),
+      playerIds.length
+        ? supabase.from('players').select('id, first_name, last_name').in('id', playerIds)
+        : Promise.resolve({ data: [], error: null }),
+      teamIds.length
+        ? supabase.from('teams').select('id, name').in('id', teamIds)
+        : Promise.resolve({ data: [], error: null }),
+    ])
+    if (fixtureResult.error) throw fixtureResult.error
+    if (playerResult.error) throw playerResult.error
+    if (teamResult.error) throw teamResult.error
+
+    const playersById = new Map((playerResult.data || []).map((player) => [player.id, player]))
+    const teamsById = new Map((teamResult.data || []).map((team) => [team.id, team]))
+    const rows = cardRows
+      .map((row) => ({
+        ...row,
+        player: playersById.get(row.player_id),
+        team: teamsById.get(row.team_id),
+      }))
+      .filter((row) => row.player && row.team)
+
     const fixtureDates = {}
-    if (fixtureIds.length > 0) {
-      const { data: offenceFixtures } = await supabase
-        .from('fixtures')
-        .select('id, fixture_date')
-        .in('id', fixtureIds)
-      for (const fixture of offenceFixtures || []) fixtureDates[fixture.id] = fixture.fixture_date
-    }
+    for (const fixture of fixtureResult.data || []) fixtureDates[fixture.id] = fixture.fixture_date
 
     const byPlayerFixture = new Map()
     for (const r of rows) {
