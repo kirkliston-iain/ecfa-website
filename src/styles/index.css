@@ -122,6 +122,46 @@ button {
 }
 
 @media (max-width: 420px) {
+  .discipline-points-scroll {
+    overflow-x: hidden !important;
+  }
+
+  .discipline-points-table {
+    width: 100% !important;
+    min-width: 0 !important;
+    table-layout: fixed;
+    font-size: 11px !important;
+  }
+
+  .discipline-points-table th,
+  .discipline-points-table td {
+    padding: 8px 3px !important;
+    line-height: 1.2;
+    overflow-wrap: anywhere;
+  }
+
+  .discipline-points-table th {
+    font-size: 9px !important;
+    letter-spacing: 0 !important;
+  }
+
+  .discipline-points-table th:first-child,
+  .discipline-points-table td:first-child {
+    width: 37%;
+    padding-left: 0 !important;
+  }
+
+  .discipline-points-table th:nth-child(2),
+  .discipline-points-table td:nth-child(2) {
+    width: 48%;
+  }
+
+  .discipline-points-table th:last-child,
+  .discipline-points-table td:last-child {
+    width: 15%;
+    padding-right: 0 !important;
+  }
+
   .standings-table-scroll {
     overflow-x: hidden !important;
   }
