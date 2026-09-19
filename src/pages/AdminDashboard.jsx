@@ -193,7 +193,7 @@ export default function AdminDashboard() {
     let query = supabase
       .from('fixtures')
       .select(
-        'id, round_name, fixture_date, home_score, away_score, status, hidden_from_public, venue, referee_name, week_off_requested, week_off_requested_team_id, updated_at, home_team:home_team_id(id, name), away_team:away_team_id(id, name), stage:stage_id(id, name, competition:competition_id(id, name))'
+        'id, round_name, fixture_date, home_score, away_score, went_to_extra_time, home_extra_time_score, away_extra_time_score, decided_by_penalties, home_penalty_score, away_penalty_score, status, hidden_from_public, venue, referee_name, week_off_requested, week_off_requested_team_id, updated_at, home_team:home_team_id(id, name), away_team:away_team_id(id, name), stage:stage_id(id, name, stage_type, competition:competition_id(id, name))'
       )
       .order('fixture_date')
     if (stageId) query = query.eq('stage_id', stageId)
@@ -236,6 +236,18 @@ export default function AdminDashboard() {
   }
 
   async function saveFixture(fixture) {
+    if (fixture.went_to_extra_time && (fixture.home_extra_time_score === '' || fixture.away_extra_time_score === '' || fixture.home_extra_time_score == null || fixture.away_extra_time_score == null)) {
+      setFixtureSaveStatus((current) => ({ ...current, [fixture.id]: 'Enter both after-extra-time scores before saving.' }))
+      return
+    }
+    if (fixture.decided_by_penalties && (fixture.home_penalty_score === '' || fixture.away_penalty_score === '' || fixture.home_penalty_score == null || fixture.away_penalty_score == null)) {
+      setFixtureSaveStatus((current) => ({ ...current, [fixture.id]: 'Enter both penalty shootout scores before saving.' }))
+      return
+    }
+    if (fixture.decided_by_penalties && Number(fixture.home_penalty_score) === Number(fixture.away_penalty_score)) {
+      setFixtureSaveStatus((current) => ({ ...current, [fixture.id]: 'A penalty shootout must have a winner.' }))
+      return
+    }
     setSaving(fixture.id)
     setFixtureSaveStatus((current) => ({ ...current, [fixture.id]: '' }))
     const { data, error } = await supabase
@@ -243,6 +255,12 @@ export default function AdminDashboard() {
       .update({
         home_score: fixture.home_score === '' ? null : Number(fixture.home_score),
         away_score: fixture.away_score === '' ? null : Number(fixture.away_score),
+        went_to_extra_time: !!fixture.went_to_extra_time,
+        home_extra_time_score: fixture.went_to_extra_time ? Number(fixture.home_extra_time_score) : null,
+        away_extra_time_score: fixture.went_to_extra_time ? Number(fixture.away_extra_time_score) : null,
+        decided_by_penalties: !!fixture.decided_by_penalties,
+        home_penalty_score: fixture.decided_by_penalties ? Number(fixture.home_penalty_score) : null,
+        away_penalty_score: fixture.decided_by_penalties ? Number(fixture.away_penalty_score) : null,
         status: fixture.status,
         hidden_from_public: fixture.hidden_from_public,
         venue: fixture.venue || null,
@@ -910,6 +928,60 @@ export default function AdminDashboard() {
                   <option value="postponed">Postponed</option>
                   <option value="cancelled">Cancelled</option>
                 </select>
+
+                {f.stage?.stage_type === 'knockout' && (
+                  <div style={{ border: '1px solid var(--line)', borderRadius: 6, padding: 12, marginBottom: 10 }}>
+                    <div style={{ fontWeight: 700, fontSize: 13, marginBottom: 8 }}>Cup match outcome</div>
+                    <label style={{ ...labelStyle, display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+                      <input
+                        type="checkbox"
+                        checked={!!f.went_to_extra_time}
+                        onChange={(e) => {
+                          updateLocal(f.id, 'went_to_extra_time', e.target.checked)
+                          if (!e.target.checked) {
+                            updateLocal(f.id, 'home_extra_time_score', null)
+                            updateLocal(f.id, 'away_extra_time_score', null)
+                          }
+                        }}
+                      />
+                      Went to extra time
+                    </label>
+                    {f.went_to_extra_time && (
+                      <div style={{ marginBottom: 10 }}>
+                        <div style={{ ...labelStyle, marginBottom: 5 }}>Score after extra time</div>
+                        <div style={{ display: 'flex', gap: 8 }}>
+                          <input type="number" min="0" aria-label="Home score after extra time" placeholder="Home" value={f.home_extra_time_score ?? ''} onChange={(e) => updateLocal(f.id, 'home_extra_time_score', e.target.value)} style={{ ...scoreInputStyle, flex: 1 }} />
+                          <span style={{ alignSelf: 'center', color: '#8A8570' }}>–</span>
+                          <input type="number" min="0" aria-label="Away score after extra time" placeholder="Away" value={f.away_extra_time_score ?? ''} onChange={(e) => updateLocal(f.id, 'away_extra_time_score', e.target.value)} style={{ ...scoreInputStyle, flex: 1 }} />
+                        </div>
+                      </div>
+                    )}
+                    <label style={{ ...labelStyle, display: 'flex', alignItems: 'center', gap: 8, marginBottom: f.decided_by_penalties ? 8 : 0 }}>
+                      <input
+                        type="checkbox"
+                        checked={!!f.decided_by_penalties}
+                        onChange={(e) => {
+                          updateLocal(f.id, 'decided_by_penalties', e.target.checked)
+                          if (!e.target.checked) {
+                            updateLocal(f.id, 'home_penalty_score', null)
+                            updateLocal(f.id, 'away_penalty_score', null)
+                          }
+                        }}
+                      />
+                      Decided by penalties
+                    </label>
+                    {f.decided_by_penalties && (
+                      <div>
+                        <div style={{ ...labelStyle, marginBottom: 5 }}>Penalty shootout score</div>
+                        <div style={{ display: 'flex', gap: 8 }}>
+                          <input type="number" min="0" aria-label="Home penalty score" placeholder="Home" value={f.home_penalty_score ?? ''} onChange={(e) => updateLocal(f.id, 'home_penalty_score', e.target.value)} style={{ ...scoreInputStyle, flex: 1 }} />
+                          <span style={{ alignSelf: 'center', color: '#8A8570' }}>–</span>
+                          <input type="number" min="0" aria-label="Away penalty score" placeholder="Away" value={f.away_penalty_score ?? ''} onChange={(e) => updateLocal(f.id, 'away_penalty_score', e.target.value)} style={{ ...scoreInputStyle, flex: 1 }} />
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
 
                 <div style={{ display: 'flex', gap: 8, marginBottom: 10 }}>
                   <input

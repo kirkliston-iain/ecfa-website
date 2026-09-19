@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useParams, Link, useNavigate } from 'react-router-dom'
 import { supabase } from '../supabaseClient'
+import { displayedScore, outcomeNote } from '../utils/fixtureOutcome'
 
 function Badge({ logoUrl, name, size = 64 }) {
   if (logoUrl) {
@@ -109,7 +110,7 @@ export default function TeamDetail() {
       const { data: fixtures } = await supabase
         .from('fixtures')
         .select(
-          'id, round_name, fixture_date, venue, home_score, away_score, status, home_team:home_team_id(id, name, logo_url), away_team:away_team_id(id, name, logo_url)'
+          'id, round_name, fixture_date, venue, home_score, away_score, went_to_extra_time, home_extra_time_score, away_extra_time_score, decided_by_penalties, home_penalty_score, away_penalty_score, status, home_team:home_team_id(id, name, logo_url), away_team:away_team_id(id, name, logo_url)'
         )
         .or(`home_team_id.eq.${id},away_team_id.eq.${id}`)
         .order('fixture_date', { ascending: true })
@@ -372,7 +373,8 @@ export default function TeamDetail() {
                     {isHome ? 'vs' : '@'} {opponent?.name}
                   </span>
                   <span style={{ fontWeight: 800, color: 'var(--ink)' }}>
-                    {f.home_score} – {f.away_score}
+                    {displayedScore(f)}
+                    {outcomeNote(f) && <div style={{ fontSize: 10, color: 'var(--muted)', fontWeight: 500 }}>{outcomeNote(f)}</div>}
                   </span>
                   <span style={{ color: 'var(--muted)', fontSize: 12, minWidth: 60, textAlign: 'right' }}>
                     {f.fixture_date

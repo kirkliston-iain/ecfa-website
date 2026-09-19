@@ -1,3 +1,5 @@
+import { displayedScore, outcomeNote } from '../utils/fixtureOutcome'
+
 function Badge({ logoUrl, name, size = 20 }) {
   if (logoUrl) {
     return (
@@ -92,9 +94,10 @@ export default function FixtureList({ fixtures }) {
           </div>
           <div style={{ textAlign: 'right' }}>
             {f.status === 'played' ? (
-              <span style={{ fontWeight: 800, color: 'var(--ink)' }}>
-                {f.home_score} – {f.away_score}
-              </span>
+              <>
+                <span style={{ fontWeight: 800, color: 'var(--ink)' }}>{displayedScore(f)}</span>
+                {outcomeNote(f) && <div style={{ fontSize: 10, color: 'var(--muted)', marginTop: 2, maxWidth: 150 }}>{outcomeNote(f)}</div>}
+              </>
             ) : (
               <span style={{ color: 'var(--muted)' }}>
                 {f.fixture_date

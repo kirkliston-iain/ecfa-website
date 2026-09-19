@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom'
 import { useEffect, useMemo, useState } from 'react'
 import { supabase } from '../supabaseClient'
+import { displayedScore, outcomeNote } from '../utils/fixtureOutcome'
 import MatchdayCarousel from '../components/MatchdayCarousel'
 import StandingsTable from '../components/StandingsTable'
 
@@ -116,7 +117,7 @@ async function loadCompetition(meta) {
   const { data: fixtures } = await supabase
     .from('fixtures')
     .select(
-      'id, fixture_date, venue, referee_name, round_name, home_placeholder, away_placeholder, home_score, away_score, status, group_id, stage_id, home_team:home_team_id(id, name, logo_url), away_team:away_team_id(id, name, logo_url)'
+      'id, fixture_date, venue, referee_name, round_name, home_placeholder, away_placeholder, home_score, away_score, went_to_extra_time, home_extra_time_score, away_extra_time_score, decided_by_penalties, home_penalty_score, away_penalty_score, status, group_id, stage_id, home_team:home_team_id(id, name, logo_url), away_team:away_team_id(id, name, logo_url)'
     )
     .in('stage_id', stageIds.length ? stageIds : ['00000000-0000-0000-0000-000000000000'])
     .eq('hidden_from_public', false)
@@ -417,7 +418,7 @@ function MatchCard({ f }) {
             padding: played ? '4px 10px' : 0,
           }}
         >
-          {played ? `${f.home_score} - ${f.away_score}` : 'v'}
+          {played ? displayedScore(f) : 'v'}
         </div>
         <div className="match-card-team match-card-team-away" style={{ minWidth: 0, display: 'flex', alignItems: 'center', gap: 6, fontWeight: 600, fontSize: 15 }}>
           {f.away_team ? (
@@ -430,6 +431,11 @@ function MatchCard({ f }) {
           </span>
         </div>
       </div>
+      {played && outcomeNote(f) && (
+        <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 6, textAlign: 'center', fontWeight: 600 }}>
+          {outcomeNote(f)}
+        </div>
+      )}
       {(f.venue || f.referee_name || (f.fixture_date && f.fixture_date.slice(11, 16) !== '00:00')) && (
         <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 6, textAlign: 'center' }}>
           {[

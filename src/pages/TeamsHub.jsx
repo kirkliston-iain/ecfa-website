@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../supabaseClient'
+import { displayedScore, outcomeNote } from '../utils/fixtureOutcome'
 
 function Badge({ logoUrl, name, size = 24 }) {
   if (logoUrl) {
@@ -79,7 +80,7 @@ export default function TeamsHub() {
       const { data: cf } = await supabase
         .from('fixtures')
         .select(
-          'id, fixture_date, venue, home_score, away_score, status, home_team:home_team_id(id, name, logo_url), away_team:away_team_id(id, name, logo_url), stage:stage_id(name, competition:competition_id(name))'
+          'id, fixture_date, venue, home_score, away_score, went_to_extra_time, home_extra_time_score, away_extra_time_score, decided_by_penalties, home_penalty_score, away_penalty_score, status, home_team:home_team_id(id, name, logo_url), away_team:away_team_id(id, name, logo_url), stage:stage_id(name, competition:competition_id(name))'
         )
         .or(`home_team_id.eq.${teamId},away_team_id.eq.${teamId}`)
         .eq('hidden_from_public', false)
@@ -211,7 +212,8 @@ export default function TeamsHub() {
               <div style={{ ...cardStyle, flex: '1 1 200px' }}>
                 <div style={sectionLabelStyle}>Last result</div>
                 <div style={{ fontSize: 13, fontWeight: 600 }}>
-                  {lastResult.home_team?.name} {lastResult.home_score} - {lastResult.away_score} {lastResult.away_team?.name}
+                  {lastResult.home_team?.name} {displayedScore(lastResult)} {lastResult.away_team?.name}
+                  {outcomeNote(lastResult) && <div style={{ fontSize: 11, color: 'var(--muted)' }}>{outcomeNote(lastResult)}</div>}
                 </div>
                 <div style={{ fontSize: 12, color: 'var(--muted)' }}>
                   {new Date(lastResult.fixture_date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}
@@ -315,7 +317,8 @@ export default function TeamsHub() {
               currentPlayedForResults.map((f) => (
                 <div key={f.id} style={resultRowStyle}>
                   <span>
-                    {f.home_team?.name} {f.home_score} - {f.away_score} {f.away_team?.name}
+                    {f.home_team?.name} {displayedScore(f)} {f.away_team?.name}
+                    {outcomeNote(f) && <div style={{ fontSize: 11, color: 'var(--muted)' }}>{outcomeNote(f)}</div>}
                   </span>
                   <span style={{ color: 'var(--muted)', fontSize: 12 }}>
                     {new Date(f.fixture_date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}
