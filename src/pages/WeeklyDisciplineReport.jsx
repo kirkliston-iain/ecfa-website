@@ -302,10 +302,49 @@ export default function WeeklyDisciplineReport() {
   const reportData = useMemo(() => {
     const totalsByName = {}
     const teamTotals = {}
-    for (const row of playerPoints) {
-      totalsByName[normalName(row.player_name)] = Number(row.points || 0)
-      const teamId = row.team?.id || row.team_id
-      if (teamId) teamTotals[teamId] = (teamTotals[teamId] || 0) + Number(row.points || 0)
+    const playerPointMap = new Map()
+    const seasonMatchMap = new Map()
+
+    // Recalculate cumulative totals through the selected matchday. The saved
+    // snapshot tables are updated separately and can otherwise leave this
+    // report one week behind the card records.
+    for (const row of records.filter((record) => {
+      const fixtureDate = dateKey(record.fixture?.fixture_date)
+      return fixtureDate && fixtureDate <= reportDate
+    })) {
+      const playerName = fullName(row.player)
+      const playerKey = row.player?.id || normalName(playerName)
+      const matchKey = `${playerKey}::${row.fixture?.id || dateKey(row.fixture?.fixture_date)}::${row.team?.id || ''}`
+      if (!seasonMatchMap.has(matchKey)) {
+        seasonMatchMap.set(matchKey, {
+          player: playerName,
+          team: row.team?.name || 'No team',
+          teamId: row.team?.id,
+          yellow: 0,
+          red: 0,
+        })
+      }
+      const match = seasonMatchMap.get(matchKey)
+      if (row.card_type === 'red') match.red += Number(row.card_count || 0)
+      else match.yellow += Number(row.card_count || 0)
+    }
+
+    for (const match of seasonMatchMap.values()) {
+      const points = match.red > 0 ? match.red * RED_POINTS : match.yellow * YELLOW_POINTS
+      const nameKey = normalName(match.player)
+      totalsByName[nameKey] = (totalsByName[nameKey] || 0) + points
+      if (match.teamId) teamTotals[match.teamId] = (teamTotals[match.teamId] || 0) + points
+
+      const existing = playerPointMap.get(nameKey)
+      if (existing) {
+        existing.points += points
+      } else {
+        playerPointMap.set(nameKey, {
+          player: match.player,
+          team: match.team,
+          points,
+        })
+      }
     }
 
     const weekendMap = new Map()
@@ -333,7 +372,7 @@ export default function WeeklyDisciplineReport() {
 
     const teamRows = teams.map((team) => ({
       team: team.name,
-      points: String(teamOverrides[team.id] ?? teamTotals[team.id] ?? 0),
+      points: String(teamTotals[team.id] ?? 0),
     })).sort((a, b) => Number(b.points) - Number(a.points) || a.team.localeCompare(b.team))
 
     const thresholdBans = weekendRows.flatMap((row) => {
@@ -367,19 +406,6 @@ export default function WeeklyDisciplineReport() {
     }
     const newBans = Array.from(newBanMap.values())
 
-    const playerPointMap = new Map()
-    for (const row of playerPoints) {
-      const key = normalName(row.player_name)
-      const points = Number(row.points || 0)
-      const existing = playerPointMap.get(key)
-      if (!existing || points > existing.points) {
-        playerPointMap.set(key, {
-          player: row.player_name,
-          team: row.team?.name || row.team_name_raw || 'No team',
-          points,
-        })
-      }
-    }
     const newBanPlayers = new Set(newBans.map((ban) => normalName(ban.player)))
     const nearThresholds = Array.from(playerPointMap.values()).flatMap((player) => {
       const next = THRESHOLDS.find((threshold) => threshold.points > player.points)
@@ -457,7 +483,7 @@ export default function WeeklyDisciplineReport() {
     }))
 
     return { weekendRows, teamRows, bans: [...automaticBans, ...manualBans].sort((a, b) => a.team.localeCompare(b.team)), newBans, nearThresholds }
-  }, [records, playerPoints, teamOverrides, teams, suspensions, fixtures, reportDate])
+  }, [records, teams, suspensions, fixtures, reportDate])
 
   function generate() {
     setGenerating(true)
