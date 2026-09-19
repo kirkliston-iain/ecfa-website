@@ -585,15 +585,28 @@ export default function WeeklyDisciplineReport() {
   async function share() {
     if (!graphicBlob) return
     const file = new File([graphicBlob], `ecfa-weekly-discipline-${reportDate}.png`, { type: 'image/png' })
-    const newBanText = reportData.newBans.length
-      ? ['NEW BANS:', ...reportData.newBans.map((ban) => `• ${ban.player} (${ban.team}) — ${ban.ban}`)].join('\\n')
+    const shareBanMap = new Map()
+    for (const ban of reportData.newBans) {
+      const key = normalName(ban.player)
+      if (!shareBanMap.has(key)) {
+        shareBanMap.set(key, { player: ban.player, team: ban.team, reasons: [] })
+      }
+      const item = shareBanMap.get(key)
+      if ((!item.team || item.team === 'No team') && ban.team && ban.team !== 'No team') item.team = ban.team
+      if (ban.ban && !item.reasons.includes(ban.ban)) item.reasons.push(ban.ban)
+    }
+    const shareBans = Array.from(shareBanMap.values()).sort((a, b) =>
+      a.team.localeCompare(b.team) || a.player.localeCompare(b.player)
+    )
+    const newBanText = shareBans.length
+      ? ['NEW BANS:', ...shareBans.map((ban) => `${ban.player} (${ban.team}) — ${ban.reasons.join(' — ')}`)].join('\n')
       : 'NEW BANS: None picked up this matchday.'
     const thresholdText = reportData.nearThresholds.length
-      ? ['CLOSE TO A THRESHOLD BAN:', ...reportData.nearThresholds.map((player) => `• ${player.player} (${player.team}) — ${player.points} points; ${player.threshold - player.points} point${player.threshold - player.points === 1 ? '' : 's'} from ${player.ban}`)].join('\\n')
+      ? ['CLOSE TO A THRESHOLD BAN:', ...reportData.nearThresholds.map((player) => `${player.player} (${player.team}) — ${player.points} points; ${player.threshold - player.points} point${player.threshold - player.points === 1 ? '' : 's'} from ${player.ban}`)].join('\n')
       : 'No players are within 2 points of a threshold ban.'
     const shareData = {
       title: 'ECFA Weekly Discipline',
-      text: [`ECFA weekly disciplinary update — ${displayDate(reportDate)}`, newBanText, thresholdText].join('\\n\\n'),
+      text: [`ECFA weekly disciplinary update — ${displayDate(reportDate)}`, newBanText, thresholdText].join('\n\n'),
       files: [file],
     }
     if (navigator.share && (!navigator.canShare || navigator.canShare({ files: [file] }))) {
