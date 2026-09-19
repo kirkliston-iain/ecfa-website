@@ -29,6 +29,16 @@ function Badge({ name, size = 20 }) {
   )
 }
 
+function displayFixtureDate(value) {
+  if (!value) return ''
+  return new Date(`${String(value).slice(0, 10)}T00:00:00`).toLocaleDateString('en-GB', {
+    weekday: 'short',
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+  })
+}
+
 export default function HistoricalSeason() {
   const [seasons, setSeasons] = useState([])
   const [season, setSeason] = useState('')
@@ -342,28 +352,32 @@ export default function HistoricalSeason() {
               <div
                 key={f.id}
                 style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
                   padding: '10px 0',
                   borderBottom: '1px solid var(--line)',
                   fontSize: 14,
                 }}
               >
-                <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
-                  <Badge name={f.home_team_name} />
-                  <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                    {f.home_team_name}
-                  </span>
-                </div>
-                <div style={{ minWidth: 60, textAlign: 'center', fontWeight: 800 }}>
-                  {f.home_goals != null && f.away_goals != null ? `${f.home_goals} - ${f.away_goals}` : 'v'}
-                </div>
-                <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 8, justifyContent: 'flex-end', minWidth: 0 }}>
-                  <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                    {f.away_team_name}
-                  </span>
-                  <Badge name={f.away_team_name} />
+                {f.fixture_date && (
+                  <div style={{ color: 'var(--muted)', fontSize: 11, marginBottom: 5 }}>
+                    {displayFixtureDate(f.fixture_date)}
+                  </div>
+                )}
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
+                    <Badge name={f.home_team_name} />
+                    <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {f.home_team_name}
+                    </span>
+                  </div>
+                  <div style={{ minWidth: 60, textAlign: 'center', fontWeight: 800 }}>
+                    {f.home_goals != null && f.away_goals != null ? `${f.home_goals} - ${f.away_goals}` : 'v'}
+                  </div>
+                  <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 8, justifyContent: 'flex-end', minWidth: 0 }}>
+                    <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {f.away_team_name}
+                    </span>
+                    <Badge name={f.away_team_name} />
+                  </div>
                 </div>
               </div>
             ))}
