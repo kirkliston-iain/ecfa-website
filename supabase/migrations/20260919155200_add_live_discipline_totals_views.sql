@@ -60,7 +60,7 @@ from scored s
 join public.teams t on t.id = s.team_id
 group by t.id, t.name;
 
-revoke all on public.discipline_player_totals from anon;
-revoke all on public.discipline_team_totals from anon;
+grant select on public.discipline_player_totals to anon;
+grant select on public.discipline_team_totals to anon;
 grant select on public.discipline_player_totals to authenticated;
 grant select on public.discipline_team_totals to authenticated;
