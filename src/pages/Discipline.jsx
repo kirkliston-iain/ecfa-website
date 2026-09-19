@@ -591,22 +591,24 @@ export default function Discipline() {
         Private — not shown on the public site.
       </p>
 
-      <Link
-        to="/discipline/weekly"
-        style={{
-          display: 'block',
-          padding: '12px 14px',
-          marginBottom: 22,
-          borderRadius: 7,
-          background: 'var(--ink)',
-          color: '#fff',
-          textAlign: 'center',
-          fontSize: 14,
-          fontWeight: 800,
-        }}
-      >
-        Generate weekly discipline report
-      </Link>
+      {isAdmin && (
+        <Link
+          to="/discipline/weekly"
+          style={{
+            display: 'block',
+            padding: '12px 14px',
+            marginBottom: 22,
+            borderRadius: 7,
+            background: 'var(--ink)',
+            color: '#fff',
+            textAlign: 'center',
+            fontSize: 14,
+            fontWeight: 800,
+          }}
+        >
+          Generate weekly discipline report
+        </Link>
+      )}
 
       <h2 style={{ fontSize: 15, textTransform: 'uppercase', letterSpacing: 0.4, color: 'var(--brass)', marginBottom: 6 }}>
         Cards League Table
