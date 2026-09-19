@@ -43,6 +43,6 @@ export default async function handler(req,res){try{
  const feedItems=[...upcoming,...events,...cupRoundDates].sort((a,b)=>a.date.localeCompare(b.date)||((a.type==='event'||a.type==='cup-round')?-1:1));
  const form={};teams.forEach(t=>{form[t.name]=enriched.filter(f=>f.status==='played'&&(f.home_team_id===t.id||f.away_team_id===t.id)).sort((a,b)=>new Date(b.fixture_date)-new Date(a.fixture_date)).slice(0,5).map(f=>{const home=f.home_team_id===t.id,ts=home?f.home_score:f.away_score,os=home?f.away_score:f.home_score;return {date:f.fixture_date.slice(0,10),teamScore:ts,oppScore:os,outcome:ts>os?'W':ts<os?'L':'D'}})});
  const leagueFixtures=enriched.filter(f=>leagueStageIds.includes(f.stage_id));
- res.setHeader('Cache-Control','s-maxage=60, stale-while-revalidate=300');
+ res.setHeader('Cache-Control','no-store, max-age=0');
  res.status(200).json({source:'ECFA',sourceUrl:`${PUBLIC_SITE}/`,fetchedAt:new Date().toISOString(),fixtures:feedItems,results,standings:standings(teams.filter(t=>leagueTeamIds.includes(t.id)),leagueFixtures),form,teams:teams.map(t=>({name:t.name,shortName:t.short_name,logoUrl:publicLogo(t.logo_url)}))});
 }catch(e){res.status(500).json({error:e.message})}}
