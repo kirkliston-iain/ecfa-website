@@ -307,7 +307,7 @@ export default function Discipline() {
     const start = String(startDate).slice(0, 10)
     return playedFixtures.filter(
       (fixture) =>
-        fixture.fixture_date > start &&
+        String(fixture.fixture_date).slice(0, 10) > start &&
         (fixture.home_team_id === teamId || fixture.away_team_id === teamId)
     ).length
   }
