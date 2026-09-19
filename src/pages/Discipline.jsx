@@ -47,6 +47,8 @@ export default function Discipline() {
   const [editTeamOverrideValue, setEditTeamOverrideValue] = useState('')
   const [editingSuspensionTeam, setEditingSuspensionTeam] = useState(null)
   const [editSuspensionTeamValue, setEditSuspensionTeamValue] = useState('')
+  const [editingSuspensionBan, setEditingSuspensionBan] = useState(null)
+  const [editSuspensionBan, setEditSuspensionBan] = useState({ banType: 'games', gamesBanned: 1, availableFrom: '' })
   const [playerPoints, setPlayerPoints] = useState([])
   const [editingPlayerPoint, setEditingPlayerPoint] = useState(null)
   const [editPlayerPointValue, setEditPlayerPointValue] = useState('')
@@ -415,6 +417,37 @@ export default function Discipline() {
     loadSuspensions()
   }
 
+  function startEditingSuspensionBan(suspension) {
+    setEditingSuspensionBan(suspension.id)
+    setEditSuspensionBan({
+      banType: suspension.is_lifetime ? 'indefinite' : suspension.available_from ? 'date' : 'games',
+      gamesBanned: suspension.games_banned || 1,
+      availableFrom: suspension.available_from || '',
+    })
+  }
+
+  async function updateSuspensionBan(suspensionId) {
+    if (editSuspensionBan.banType === 'games' && Number(editSuspensionBan.gamesBanned) < 1) return
+    if (editSuspensionBan.banType === 'date' && !editSuspensionBan.availableFrom) return
+
+    setSavingSuspension(suspensionId)
+    const { error } = await supabase
+      .from('suspensions')
+      .update({
+        games_banned: editSuspensionBan.banType === 'games' ? Number(editSuspensionBan.gamesBanned) : null,
+        is_lifetime: editSuspensionBan.banType === 'indefinite',
+        available_from: editSuspensionBan.banType === 'date' ? editSuspensionBan.availableFrom : null,
+        status: 'active',
+      })
+      .eq('id', suspensionId)
+    setSavingSuspension(null)
+
+    if (!error) {
+      setEditingSuspensionBan(null)
+      loadSuspensions()
+    }
+  }
+
   async function removeSuspension(id) {
     await supabase.from('suspensions').delete().eq('id', id)
     loadSuspensions()
@@ -676,11 +709,60 @@ export default function Discipline() {
                   </td>
                   <td style={tableCellStyle}>{s.reason}</td>
                   <td style={{ ...tableCellStyle, color: '#B3261E', fontWeight: 700, minWidth: 170 }}>
-                    {s.is_lifetime
-                      ? 'Indefinite / lifetime'
-                      : s.available_from
-                        ? `Available ${new Date(s.available_from + 'T00:00:00').toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}`
-                        : `${s.automaticGamesServed} of ${s.games_banned} served — ${Math.max(0, s.games_banned - s.automaticGamesServed)} remaining`}
+                    {editingSuspensionBan === s.id ? (
+                      <div style={{ display: 'grid', gap: 6, minWidth: 190 }}>
+                        <select
+                          value={editSuspensionBan.banType}
+                          onChange={(e) => setEditSuspensionBan((prev) => ({ ...prev, banType: e.target.value }))}
+                          style={{ ...fullSelectStyle, padding: '6px 8px' }}
+                        >
+                          <option value="games">Fixed number of games</option>
+                          <option value="date">Until a date</option>
+                          <option value="indefinite">Indefinite / lifetime</option>
+                        </select>
+                        {editSuspensionBan.banType === 'games' && (
+                          <input
+                            type="number"
+                            min="1"
+                            value={editSuspensionBan.gamesBanned}
+                            onChange={(e) => setEditSuspensionBan((prev) => ({ ...prev, gamesBanned: e.target.value }))}
+                            style={{ ...fullSelectStyle, padding: '6px 8px' }}
+                          />
+                        )}
+                        {editSuspensionBan.banType === 'date' && (
+                          <input
+                            type="date"
+                            value={editSuspensionBan.availableFrom}
+                            onChange={(e) => setEditSuspensionBan((prev) => ({ ...prev, availableFrom: e.target.value }))}
+                            style={{ ...fullSelectStyle, padding: '6px 8px' }}
+                          />
+                        )}
+                        <div style={{ display: 'flex', gap: 6 }}>
+                          <button onClick={() => updateSuspensionBan(s.id)} disabled={savingSuspension === s.id} style={smallButtonStyle}>
+                            Save
+                          </button>
+                          <button onClick={() => setEditingSuspensionBan(null)} style={smallOutlineStyle}>
+                            Cancel
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <span>
+                        {s.is_lifetime
+                          ? 'Indefinite / lifetime'
+                          : s.available_from
+                            ? `Available ${new Date(s.available_from + 'T00:00:00').toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}`
+                            : `${s.automaticGamesServed} of ${s.games_banned} served — ${Math.max(0, s.games_banned - s.automaticGamesServed)} remaining`}
+                        {isAdmin && !s.isAutomatic && (
+                          <button
+                            onClick={() => startEditingSuspensionBan(s)}
+                            style={{ ...smallOutlineStyle, padding: '3px 7px', fontSize: 11, marginLeft: 6 }}
+                          >
+                            Change
+                          </button>
+                        )}
+                      </span>
+                    )}
                   </td>
                   <td style={{ ...tableCellStyle, color: 'var(--muted)' }}>{s.notes || '—'}</td>
                   {isAdmin && (
