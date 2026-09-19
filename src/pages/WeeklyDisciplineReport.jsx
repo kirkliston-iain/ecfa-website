@@ -482,7 +482,14 @@ export default function WeeklyDisciplineReport() {
       progress: row.progress,
     }))
 
-    return { weekendRows, teamRows, bans: [...automaticBans, ...manualBans].sort((a, b) => a.team.localeCompare(b.team)), newBans, nearThresholds }
+    const bans = [...automaticBans, ...manualBans].sort((a, b) => {
+      const aHasTeam = a.team && a.team !== 'No team'
+      const bHasTeam = b.team && b.team !== 'No team'
+      if (aHasTeam !== bHasTeam) return aHasTeam ? -1 : 1
+      return a.team.localeCompare(b.team) || a.player.localeCompare(b.player)
+    })
+
+    return { weekendRows, teamRows, bans, newBans, nearThresholds }
   }, [records, teams, suspensions, fixtures, reportDate])
 
   function generate() {
