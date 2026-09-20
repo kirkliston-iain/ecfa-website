@@ -55,12 +55,12 @@ export default function TeamsHub() {
   const [squad, setSquad] = useState([])
 
   const [resultsSeason, setResultsSeason] = useState(CURRENT_SEASON)
-  const [scorersSeason, setScorersSeason] = useState(CURRENT_SEASON)
+  const [scorersSeason, setScorersSeason] = useState('Overall')
 
   useEffect(() => {
     supabase
       .from('teams')
-      .select('id, name, logo_url')
+      .select('id, name, logo_url, manager_name')
       .order('name')
       .then(({ data }) => setTeams(data || []))
   }, [])
@@ -72,7 +72,7 @@ export default function TeamsHub() {
     }
     setLoading(true)
     setResultsSeason(CURRENT_SEASON)
-    setScorersSeason(CURRENT_SEASON)
+    setScorersSeason('Overall')
 
     async function load() {
       setTeam(teams.find((t) => t.id === teamId) || null)
@@ -89,10 +89,14 @@ export default function TeamsHub() {
 
       const { data: hf } = await supabase
         .from('historic_fixtures')
-        .select('id, season, competition_name, fixture_date, home_team_name, home_goals, away_team_name, away_goals')
-        .or(`home_team_id.eq.${teamId},away_team_id.eq.${teamId}`)
+        .select('id, season, competition_name, fixture_date, home_team_id, home_team_name, home_goals, away_team_id, away_team_name, away_goals')
         .order('fixture_date', { ascending: false })
-      setHistoricFixtures(hf || [])
+      setHistoricFixtures((hf || []).filter((fixture) =>
+        fixture.home_team_id === teamId ||
+        fixture.away_team_id === teamId ||
+        fixture.home_team_name === teams.find((entry) => entry.id === teamId)?.name ||
+        fixture.away_team_name === teams.find((entry) => entry.id === teamId)?.name
+      ))
 
       const { data: cs } = await supabase
         .from('fixture_scorers')
@@ -151,7 +155,7 @@ export default function TeamsHub() {
 
   // Season-by-season scorers
   const historicScorerSeasons = Array.from(new Set(historicScorers.map((s) => s.season))).sort().reverse()
-  const scorerSeasonOptions = [CURRENT_SEASON, ...historicScorerSeasons]
+  const scorerSeasonOptions = ['Overall', CURRENT_SEASON, ...historicScorerSeasons]
 
   const currentScorersAgg = {}
   for (const s of currentScorers) {
@@ -165,6 +169,58 @@ export default function TeamsHub() {
     historicScorersAgg[s.player_name] = (historicScorersAgg[s.player_name] || 0) + Number(s.goals || 0)
   }
   const historicScorersList = Object.entries(historicScorersAgg).sort((a, b) => b[1] - a[1])
+
+  const overallScorersAgg = { ...currentScorersAgg }
+  for (const s of historicScorers) {
+    overallScorersAgg[s.player_name] = (overallScorersAgg[s.player_name] || 0) + Number(s.goals || 0)
+  }
+  const overallScorersList = Object.entries(overallScorersAgg).sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
+
+  const headToHeadMap = {}
+  function addHeadToHead(opponentName, goalsFor, goalsAgainst, outcome) {
+    if (!opponentName || goalsFor == null || goalsAgainst == null) return
+    if (!headToHeadMap[opponentName]) {
+      headToHeadMap[opponentName] = { opponent: opponentName, played: 0, wins: 0, losses: 0, draws: 0, goalsFor: 0, goalsAgainst: 0 }
+    }
+    const row = headToHeadMap[opponentName]
+    row.played += 1
+    row.goalsFor += Number(goalsFor)
+    row.goalsAgainst += Number(goalsAgainst)
+    if (outcome === 'W') row.wins += 1
+    else if (outcome === 'L') row.losses += 1
+    else row.draws += 1
+  }
+
+  for (const f of played) {
+    const isHome = f.home_team?.id === teamId
+    const opponentName = isHome ? f.away_team?.name : f.home_team?.name
+    const homeGoals = f.went_to_extra_time && f.home_extra_time_score != null ? f.home_extra_time_score : f.home_score
+    const awayGoals = f.went_to_extra_time && f.away_extra_time_score != null ? f.away_extra_time_score : f.away_score
+    const goalsFor = isHome ? homeGoals : awayGoals
+    const goalsAgainst = isHome ? awayGoals : homeGoals
+    let outcome = goalsFor > goalsAgainst ? 'W' : goalsFor < goalsAgainst ? 'L' : 'D'
+    if (f.decided_by_penalties && f.home_penalty_score != null && f.away_penalty_score != null) {
+      const homeWon = f.home_penalty_score > f.away_penalty_score
+      outcome = (isHome === homeWon) ? 'W' : 'L'
+    }
+    addHeadToHead(opponentName, goalsFor, goalsAgainst, outcome)
+  }
+
+  for (const f of historicFixtures) {
+    const isHome = f.home_team_name === team?.name
+    const opponentName = isHome ? f.away_team_name : f.home_team_name
+    const goalsFor = isHome ? f.home_goals : f.away_goals
+    const goalsAgainst = isHome ? f.away_goals : f.home_goals
+    const outcome = goalsFor > goalsAgainst ? 'W' : goalsFor < goalsAgainst ? 'L' : 'D'
+    addHeadToHead(opponentName, goalsFor, goalsAgainst, outcome)
+  }
+  const headToHead = Object.values(headToHeadMap).sort((a, b) => b.played - a.played || a.opponent.localeCompare(b.opponent))
+
+  const displayedScorers = scorersSeason === 'Overall'
+    ? overallScorersList
+    : scorersSeason === CURRENT_SEASON
+      ? currentScorersList
+      : historicScorersList
 
   return (
     <div className="container" style={{ padding: '32px 20px 48px' }}>
@@ -192,7 +248,14 @@ export default function TeamsHub() {
         <>
           <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 28 }}>
             <Badge logoUrl={team.logo_url} name={team.name} size={56} />
-            <h2 style={{ fontSize: 22, margin: 0 }}>{team.name}</h2>
+            <div>
+              <h2 style={{ fontSize: 22, margin: 0 }}>{team.name}</h2>
+              {team.manager_name && (
+                <div style={{ color: 'var(--muted)', fontSize: 13, marginTop: 4 }}>
+                  Manager: <strong style={{ color: 'var(--ink)' }}>{team.manager_name}</strong>
+                </div>
+              )}
+            </div>
           </div>
 
           <div style={{ display: 'flex', gap: 10, marginBottom: 28, flexWrap: 'wrap' }}>
@@ -350,10 +413,10 @@ export default function TeamsHub() {
             ))}
           </select>
           <div style={{ marginBottom: 12 }}>
-            {(scorersSeason === CURRENT_SEASON ? currentScorersList : historicScorersList).length === 0 ? (
+            {displayedScorers.length === 0 ? (
               <p style={{ color: 'var(--muted)', fontSize: 14 }}>No scorers recorded for this season.</p>
             ) : (
-              (scorersSeason === CURRENT_SEASON ? currentScorersList : historicScorersList).map(([name, goals]) => (
+              displayedScorers.map(([name, goals]) => (
                 <div key={name} style={resultRowStyle}>
                   <span>{name}</span>
                   <strong>{goals}</strong>
@@ -361,6 +424,43 @@ export default function TeamsHub() {
               ))
             )}
           </div>
+
+          <h2 style={{ ...sectionHeaderStyle, marginTop: 36 }}>Overall Head-to-Head Record</h2>
+          <p style={{ color: 'var(--muted)', fontSize: 13, marginTop: -4, marginBottom: 12 }}>
+            Complete record from the results currently held on this website. Penalty shootout victories count as wins; shootout kicks are not included in goals.
+          </p>
+          {headToHead.length === 0 ? (
+            <p style={{ color: 'var(--muted)', fontSize: 14 }}>No head-to-head results recorded.</p>
+          ) : (
+            <div style={{ overflowX: 'auto' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+                <thead>
+                  <tr style={{ borderBottom: '3px solid var(--brass)' }}>
+                    <th style={{ ...headToHeadHeaderStyle, textAlign: 'left' }}>Team</th>
+                    <th style={headToHeadHeaderStyle}>P</th>
+                    <th style={headToHeadHeaderStyle}>W</th>
+                    <th style={headToHeadHeaderStyle}>L</th>
+                    <th style={headToHeadHeaderStyle}>D</th>
+                    <th style={headToHeadHeaderStyle}>GF</th>
+                    <th style={headToHeadHeaderStyle}>GA</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {headToHead.map((row) => (
+                    <tr key={row.opponent} style={{ borderBottom: '1px solid var(--line)' }}>
+                      <td style={{ padding: '9px 6px', fontWeight: 600 }}>{row.opponent}</td>
+                      <td style={headToHeadCellStyle}>{row.played}</td>
+                      <td style={headToHeadCellStyle}>{row.wins}</td>
+                      <td style={headToHeadCellStyle}>{row.losses}</td>
+                      <td style={headToHeadCellStyle}>{row.draws}</td>
+                      <td style={headToHeadCellStyle}>{row.goalsFor}</td>
+                      <td style={headToHeadCellStyle}>{row.goalsAgainst}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
         </>
       )}
     </div>
@@ -406,3 +506,5 @@ const resultRowStyle = {
   borderBottom: '1px solid var(--line)',
   fontSize: 14,
 }
+const headToHeadHeaderStyle = { padding: '8px 6px', textAlign: 'center', fontSize: 11, textTransform: 'uppercase' }
+const headToHeadCellStyle = { padding: '9px 6px', textAlign: 'center' }
