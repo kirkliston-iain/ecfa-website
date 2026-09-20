@@ -658,6 +658,10 @@ export default function AdminDashboard() {
         Manage sponsors &rarr;
       </Link>
 
+      <Link to="/admin/records" style={{ ...linkButtonStyle, display: 'block', marginBottom: 8 }}>
+        Records management &rarr;
+      </Link>
+
       {(currentProfile?.id === '28696bc6-2df2-4855-b259-3f156ad55748' || currentProfile?.role === 'owner') && (
         <>
           <Link to="/admin/accounts" style={{ ...linkButtonStyle, display: 'block', marginBottom: 8 }}>
