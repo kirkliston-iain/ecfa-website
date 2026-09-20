@@ -125,6 +125,13 @@ export default function AdminDashboard() {
       const season = fixture.stage?.competition?.season
       if (!date || !season || date <= today || blockedDates.has(date)) return
       if (new Date(`${date}T12:00:00Z`).getUTCDay() !== 6) return
+      const hasConfirmedFixture = allFixtures.some((other) =>
+        other.stage?.competition?.season === season
+        && other.fixture_date?.slice(0, 10) === date
+        && other.home_team?.id
+        && other.away_team?.id
+      )
+      if (!hasConfirmedFixture) return
       if (!fixtureSaturdaysBySeason.has(season)) fixtureSaturdaysBySeason.set(season, new Set())
       fixtureSaturdaysBySeason.get(season).add(date)
     })
@@ -135,16 +142,6 @@ export default function AdminDashboard() {
         const season = fixture.stage?.competition?.season
         const availableDates = [...(fixtureSaturdaysBySeason.get(season) || [])]
           .filter((date) => date !== fixture.fixture_date?.slice(0, 10))
-          .filter((date) => {
-            const cupCompetitionIds = [...new Set(allFixtures
-              .filter((other) => other.fixture_date?.slice(0, 10) === date && isCupCompetition(other.stage?.competition?.name))
-              .map((other) => other.stage?.competition?.id)
-              .filter(Boolean))]
-            return cupCompetitionIds.every((competitionId) =>
-              teamWasEliminatedBefore(allFixtures, fixture.home_team.id, competitionId, date)
-              && teamWasEliminatedBefore(allFixtures, fixture.away_team.id, competitionId, date)
-            )
-          })
           .filter((date) => !allFixtures.some((other) => {
             if (other.id === fixture.id || other.status === 'postponed' || other.fixture_date?.slice(0, 10) !== date) return false
             const teamIds = [other.home_team?.id, other.away_team?.id]
@@ -609,7 +606,7 @@ export default function AdminDashboard() {
           </button>
         </div>
         <p style={{ color: 'var(--muted)', fontSize: 13, lineHeight: 1.45, margin: '0 0 10px' }}>
-          Saturdays already in this season’s fixtures where both teams are free. No-games dates and cup weekends are excluded unless both teams are already confirmed out.
+          Saturdays already in this season’s fixtures where both teams are free. No-games dates and Saturdays where every fixture is still TBC are excluded.
         </p>
         {rescheduleCheckError ? (
           <div role="alert" style={{ color: '#B3261E', fontSize: 13, fontWeight: 700 }}>{rescheduleCheckError}</div>
@@ -1420,41 +1417,6 @@ function seriousOffenceLabel(code) {
     violent_conduct: 'Violent conduct',
   }
   return labels[code] || code
-}
-
-function isCupCompetition(name) {
-  return name?.toLocaleLowerCase().includes('cup')
-}
-
-function teamWasEliminatedBefore(fixtures, teamId, competitionId, beforeDate) {
-  const knockoutResults = fixtures
-    .filter((fixture) =>
-      fixture.stage?.competition?.id === competitionId
-      && fixture.stage?.stage_type === 'knockout'
-      && fixture.status === 'played'
-      && fixture.fixture_date?.slice(0, 10) < beforeDate
-      && (fixture.home_team?.id === teamId || fixture.away_team?.id === teamId)
-    )
-    .sort((a, b) => b.fixture_date.localeCompare(a.fixture_date))
-
-  const latestResult = knockoutResults[0]
-  if (!latestResult) return false
-
-  let homeScore = latestResult.home_score
-  let awayScore = latestResult.away_score
-  if (latestResult.decided_by_penalties) {
-    homeScore = latestResult.home_penalty_score
-    awayScore = latestResult.away_penalty_score
-  } else if (latestResult.went_to_extra_time) {
-    homeScore = latestResult.home_extra_time_score
-    awayScore = latestResult.away_extra_time_score
-  }
-  if (homeScore == null || awayScore == null || Number(homeScore) === Number(awayScore)) return false
-
-  const losingTeamId = Number(homeScore) < Number(awayScore)
-    ? latestResult.home_team?.id
-    : latestResult.away_team?.id
-  return losingTeamId === teamId
 }
 
 function formatShortDate(date) {
