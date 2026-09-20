@@ -41,6 +41,40 @@ function Badge({ logoUrl, name, size = 24 }) {
 
 const CURRENT_SEASON = '2026/27'
 
+const HISTORIC_TEAM_ALIASES = {
+  'AC Oxgangs FC': 'AC Oxgangs',
+  'Barclay Viewforth FC': 'Barclay Viewforth Church',
+  'Bingham FC': 'Hope Church',
+  'Bristo Memorial FC': 'South East Saints',
+  'Broxburn Baptist Church FC': 'Broxburn Baptist Church',
+  Carrubbers: 'Carrubbers Church',
+  'Carrubbers FC': 'Carrubbers Church',
+  Central: 'Liberton Church',
+  'Central FC': 'Liberton Church',
+  'Charlotte Chapel FC': 'Charlotte Chapel',
+  'Gorgie United': 'Gorgie United Salvation Army',
+  'Gorgie United FC': 'Gorgie United Salvation Army',
+  Ladywell: 'Ladywell Baptist Church',
+  'Ladywell Baptist Church FC': 'Ladywell Baptist Church',
+  Niddrie: 'The Mission',
+  'Niddrie FC': 'The Mission',
+  'Port Seton FC': 'Port Seton',
+  'South East Saints FC': 'South East Saints',
+  "St Columba's FC": 'St Columbas',
+  "St Mary's Metropolitan FC": 'St Marys Metropolitan Church',
+  'St Marys': 'St Marys Metropolitan Church',
+  "St Marys Metropolitan Church's FC": 'St Marys Metropolitan Church',
+  'The Mission FC': 'The Mission',
+  'White Lightning': 'White Lightning Bruntsfield Church',
+  'White Lightning FC': 'White Lightning Bruntsfield Church',
+}
+
+function canonicalTeamName(name, teamId, currentTeams) {
+  const currentTeam = teamId ? currentTeams.find((entry) => entry.id === teamId) : null
+  if (currentTeam) return currentTeam.name
+  return HISTORIC_TEAM_ALIASES[name] || name
+}
+
 export default function TeamsHub() {
   const [teams, setTeams] = useState([])
   const [teamId, setTeamId] = useState('')
@@ -91,12 +125,12 @@ export default function TeamsHub() {
         .from('historic_fixtures')
         .select('id, season, competition_name, fixture_date, home_team_id, home_team_name, home_goals, away_team_id, away_team_name, away_goals')
         .order('fixture_date', { ascending: false })
-      setHistoricFixtures((hf || []).filter((fixture) =>
-        fixture.home_team_id === teamId ||
-        fixture.away_team_id === teamId ||
-        fixture.home_team_name === teams.find((entry) => entry.id === teamId)?.name ||
-        fixture.away_team_name === teams.find((entry) => entry.id === teamId)?.name
-      ))
+      const selectedTeamName = teams.find((entry) => entry.id === teamId)?.name
+      setHistoricFixtures((hf || []).filter((fixture) => {
+        const homeName = canonicalTeamName(fixture.home_team_name, fixture.home_team_id, teams)
+        const awayName = canonicalTeamName(fixture.away_team_name, fixture.away_team_id, teams)
+        return fixture.home_team_id === teamId || fixture.away_team_id === teamId || homeName === selectedTeamName || awayName === selectedTeamName
+      }))
 
       const { data: cs } = await supabase
         .from('fixture_scorers')
@@ -207,8 +241,12 @@ export default function TeamsHub() {
   }
 
   for (const f of historicFixtures) {
-    const isHome = f.home_team_name === team?.name
-    const opponentName = isHome ? f.away_team_name : f.home_team_name
+    const selectedTeamName = canonicalTeamName(team?.name, teamId, teams)
+    const homeName = canonicalTeamName(f.home_team_name, f.home_team_id, teams)
+    const awayName = canonicalTeamName(f.away_team_name, f.away_team_id, teams)
+    const isHome = f.home_team_id === teamId || homeName === selectedTeamName
+    const opponentName = isHome ? awayName : homeName
+    if (opponentName === selectedTeamName) continue
     const goalsFor = isHome ? f.home_goals : f.away_goals
     const goalsAgainst = isHome ? f.away_goals : f.home_goals
     const outcome = goalsFor > goalsAgainst ? 'W' : goalsFor < goalsAgainst ? 'L' : 'D'
