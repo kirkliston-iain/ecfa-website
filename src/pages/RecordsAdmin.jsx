@@ -15,7 +15,12 @@ export default function RecordsAdmin() {
   const [lists, setLists] = useState({ teams: [], venues: [], players: [], managers: [], officials: [], competitions: [] })
   const [history, setHistory] = useState([])
   const [type, setType] = useState('team')
+  const [playerAction, setPlayerAction] = useState('rename')
+  const [playerSearch, setPlayerSearch] = useState('')
+  const [secondPlayerSearch, setSecondPlayerSearch] = useState('')
   const [entityId, setEntityId] = useState('')
+  const [mergePlayerId, setMergePlayerId] = useState('')
+  const [keepPlayerId, setKeepPlayerId] = useState('')
   const [newName, setNewName] = useState('')
   const [effectiveDate, setEffectiveDate] = useState(new Date().toISOString().slice(0, 10))
   const [reason, setReason] = useState('')
@@ -23,11 +28,28 @@ export default function RecordsAdmin() {
   const [message, setMessage] = useState('')
   const [error, setError] = useState('')
 
+  async function loadAllPlayers() {
+    const pageSize = 1000
+    const allPlayers = []
+    for (let from = 0; ; from += pageSize) {
+      const result = await supabase
+        .from('players')
+        .select('id, first_name, last_name, team:team_id(name)')
+        .order('last_name')
+        .order('first_name')
+        .range(from, from + pageSize - 1)
+      if (result.error) return result
+      allPlayers.push(...(result.data || []))
+      if ((result.data || []).length < pageSize) break
+    }
+    return { data: allPlayers, error: null }
+  }
+
   async function load() {
     const [teams, venues, players, officials, competitions, changes] = await Promise.all([
       supabase.from('teams').select('id, name, manager_name').order('name'),
       supabase.from('venues').select('id, name').order('name'),
-      supabase.from('players').select('id, first_name, last_name, team:team_id(name)').order('last_name'),
+      loadAllPlayers(),
       supabase.from('referees').select('id, name').order('name'),
       supabase.from('competitions').select('name').order('name'),
       supabase.from('record_name_changes').select('id, entity_type, old_name, new_name, effective_date, reason, changed_by_name, affected_rows, created_at').order('created_at', { ascending: false }).limit(50),
@@ -66,10 +88,32 @@ export default function RecordsAdmin() {
   }, [lists, type])
 
   const selected = options.find((option) => option.id === entityId)
+  const mergePlayer = options.find((option) => option.id === mergePlayerId)
+  const visibleOptions = type === 'player'
+    ? options.filter((option) => option.label.toLowerCase().includes(playerSearch.trim().toLowerCase())).slice(0, 100)
+    : options
+  const secondPlayerOptions = options
+    .filter((option) => option.id !== entityId && option.label.toLowerCase().includes(secondPlayerSearch.trim().toLowerCase()))
+    .slice(0, 100)
 
   function changeType(nextType) {
     setType(nextType)
     setEntityId('')
+    setMergePlayerId('')
+    setKeepPlayerId('')
+    setPlayerSearch('')
+    setSecondPlayerSearch('')
+    setPlayerAction('rename')
+    setNewName('')
+    setMessage('')
+    setError('')
+  }
+
+  function changePlayerAction(action) {
+    setPlayerAction(action)
+    setEntityId('')
+    setMergePlayerId('')
+    setKeepPlayerId('')
     setNewName('')
     setMessage('')
     setError('')
@@ -119,6 +163,42 @@ export default function RecordsAdmin() {
     await load()
   }
 
+  async function mergePlayers() {
+    if (!entityId || !mergePlayerId || !keepPlayerId || !effectiveDate || !reason.trim()) {
+      setError('Choose two players, select the name to keep, and complete the reference date and reason.')
+      return
+    }
+    const keepPlayer = keepPlayerId === entityId ? selected : mergePlayer
+    const removePlayer = keepPlayerId === entityId ? mergePlayer : selected
+    const confirmed = window.confirm(
+      `Combine “${removePlayer?.name}” into “${keepPlayer?.name}”? The retained name will be “${keepPlayer?.name}” and the other player record will be removed.`
+    )
+    if (!confirmed) return
+
+    setSaving(true)
+    setError('')
+    setMessage('')
+    const { data, error: mergeError } = await supabase.rpc('merge_player_records', {
+      p_keep_player_id: keepPlayerId,
+      p_merge_player_id: keepPlayerId === entityId ? mergePlayerId : entityId,
+      p_effective_date: effectiveDate,
+      p_reason: reason.trim(),
+    })
+    setSaving(false)
+    if (mergeError) {
+      setError(mergeError.message)
+      return
+    }
+    setMessage(`Combined ${data.merged_name} into ${data.kept_name}. Linked current and historical records were retained.`)
+    setEntityId('')
+    setMergePlayerId('')
+    setKeepPlayerId('')
+    setPlayerSearch('')
+    setSecondPlayerSearch('')
+    setReason('')
+    await load()
+  }
+
   return (
     <div className="container" style={{ padding: '32px 20px 48px', maxWidth: 760 }}>
       <Link to="/admin/dashboard" style={backStyle}>← Back to admin</Link>
@@ -142,14 +222,60 @@ export default function RecordsAdmin() {
           ))}
         </div>
 
-        <label style={labelStyle} htmlFor="record-to-change">Existing record</label>
+        {type === 'player' && (
+          <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
+            <button type="button" onClick={() => changePlayerAction('rename')} style={{ ...tabStyle, ...(playerAction === 'rename' ? activeTabStyle : {}) }}>Rename one player</button>
+            <button type="button" onClick={() => changePlayerAction('merge')} style={{ ...tabStyle, ...(playerAction === 'merge' ? activeTabStyle : {}) }}>Combine two players</button>
+          </div>
+        )}
+
+        <label style={labelStyle} htmlFor="record-to-change">{type === 'player' && playerAction === 'merge' ? 'First player' : 'Existing record'}</label>
+        {type === 'player' && (
+          <input
+            type="search"
+            value={playerSearch}
+            onChange={(event) => setPlayerSearch(event.target.value)}
+            style={{ ...inputStyle, marginBottom: 8 }}
+            placeholder="Search players by name or team…"
+          />
+        )}
         <select id="record-to-change" value={entityId} onChange={(event) => selectEntity(event.target.value)} style={inputStyle}>
           <option value="">Select…</option>
-          {options.map((option) => <option key={option.id} value={option.id}>{option.label}</option>)}
+          {visibleOptions.map((option) => <option key={option.id} value={option.id}>{option.label}</option>)}
         </select>
 
-        <label style={labelStyle} htmlFor="new-record-name">New name</label>
-        <input id="new-record-name" value={newName} onChange={(event) => setNewName(event.target.value)} style={inputStyle} />
+        {type === 'player' && playerAction === 'merge' ? (
+          <>
+            <label style={labelStyle} htmlFor="second-player">Second player</label>
+            <input
+              type="search"
+              value={secondPlayerSearch}
+              onChange={(event) => setSecondPlayerSearch(event.target.value)}
+              style={{ ...inputStyle, marginBottom: 8 }}
+              placeholder="Search for the duplicate player…"
+            />
+            <select id="second-player" value={mergePlayerId} onChange={(event) => { setMergePlayerId(event.target.value); setKeepPlayerId('') }} style={inputStyle}>
+              <option value="">Select…</option>
+              {secondPlayerOptions.map((option) => <option key={option.id} value={option.id}>{option.label}</option>)}
+            </select>
+            {selected && mergePlayer && (
+              <fieldset style={{ border: '1px solid var(--line)', borderRadius: 7, padding: 12, margin: '0 0 15px' }}>
+                <legend style={{ ...labelStyle, padding: '0 5px', marginBottom: 0 }}>Name and player record to keep</legend>
+                {[selected, mergePlayer].map((option) => (
+                  <label key={option.id} style={{ display: 'flex', gap: 8, alignItems: 'flex-start', padding: '6px 0', fontSize: 14 }}>
+                    <input type="radio" name="keep-player" checked={keepPlayerId === option.id} onChange={() => setKeepPlayerId(option.id)} />
+                    <span><strong>{option.name}</strong><br /><span style={{ color: 'var(--muted)', fontSize: 12 }}>{option.label}</span></span>
+                  </label>
+                ))}
+              </fieldset>
+            )}
+          </>
+        ) : (
+          <>
+            <label style={labelStyle} htmlFor="new-record-name">New name</label>
+            <input id="new-record-name" value={newName} onChange={(event) => setNewName(event.target.value)} style={inputStyle} />
+          </>
+        )}
 
         <label style={labelStyle} htmlFor="reference-date">Reference/effective date</label>
         <input id="reference-date" type="date" value={effectiveDate} onChange={(event) => setEffectiveDate(event.target.value)} style={inputStyle} />
@@ -162,8 +288,13 @@ export default function RecordsAdmin() {
         </p>
         {error && <p role="alert" style={{ color: '#B3261E', fontWeight: 700 }}>{error}</p>}
         {message && <p role="status" style={{ color: '#1B6E3C', fontWeight: 700 }}>{message}</p>}
-        <button type="button" onClick={save} disabled={saving || !entityId} style={{ ...saveStyle, opacity: saving || !entityId ? 0.55 : 1 }}>
-          {saving ? 'Updating records…' : 'Review and apply change'}
+        <button
+          type="button"
+          onClick={type === 'player' && playerAction === 'merge' ? mergePlayers : save}
+          disabled={saving || !entityId || (type === 'player' && playerAction === 'merge' && (!mergePlayerId || !keepPlayerId))}
+          style={{ ...saveStyle, opacity: saving || !entityId || (type === 'player' && playerAction === 'merge' && (!mergePlayerId || !keepPlayerId)) ? 0.55 : 1 }}
+        >
+          {saving ? 'Updating records…' : type === 'player' && playerAction === 'merge' ? 'Review and combine players' : 'Review and apply change'}
         </button>
       </div>
 
