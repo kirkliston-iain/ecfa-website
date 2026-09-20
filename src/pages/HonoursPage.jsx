@@ -66,7 +66,13 @@ export default function HonoursPage() {
       }
 
       const totalsList = Object.values(totalsMap).sort(
-        (a, b) => b.total - a.total || a.name.localeCompare(b.name)
+        (a, b) =>
+          b.total - a.total ||
+          b.League - a.League ||
+          b['League Cup'] - a['League Cup'] ||
+          b['Knockout Cup'] - a['Knockout Cup'] ||
+          b['Brian Latto Cup'] - a['Brian Latto Cup'] ||
+          a.name.localeCompare(b.name)
       )
 
       setGrid(g)
