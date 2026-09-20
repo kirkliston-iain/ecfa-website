@@ -12,6 +12,9 @@ export default function AdminDashboard() {
   const [statusFilter, setStatusFilter] = useState('')
   const [fixtures, setFixtures] = useState([])
   const [weekOffRequests, setWeekOffRequests] = useState([])
+  const [rescheduleOpportunities, setRescheduleOpportunities] = useState([])
+  const [rescheduleCheckError, setRescheduleCheckError] = useState('')
+  const [checkingReschedules, setCheckingReschedules] = useState(false)
   const [saving, setSaving] = useState(null)
   const [fixtureSaveStatus, setFixtureSaveStatus] = useState({})
   const [currentProfile, setCurrentProfile] = useState(null)
@@ -92,7 +95,57 @@ export default function AdminDashboard() {
 
     loadContactEnquiries()
     loadWeekOffRequests()
+    loadRescheduleOpportunities()
   }, [])
+
+  async function loadRescheduleOpportunities() {
+    setCheckingReschedules(true)
+    setRescheduleCheckError('')
+    const [fixtureResult, calendarResult] = await Promise.all([
+      supabase
+        .from('fixtures')
+        .select('id, fixture_date, status, home_team:home_team_id(id, name), away_team:away_team_id(id, name), stage:stage_id(competition:competition_id(name, season))')
+        .order('fixture_date'),
+      supabase.from('calendar_events').select('event_date, title'),
+    ])
+    setCheckingReschedules(false)
+
+    if (fixtureResult.error || calendarResult.error) {
+      setRescheduleCheckError('Could not check postponed fixtures just now.')
+      return
+    }
+
+    const allFixtures = fixtureResult.data || []
+    const blockedDates = new Set((calendarResult.data || []).map((event) => event.event_date))
+    const today = new Date().toISOString().slice(0, 10)
+    const fixtureSaturdaysBySeason = new Map()
+
+    allFixtures.forEach((fixture) => {
+      const date = fixture.fixture_date?.slice(0, 10)
+      const season = fixture.stage?.competition?.season
+      if (!date || !season || date <= today || blockedDates.has(date)) return
+      if (new Date(`${date}T12:00:00Z`).getUTCDay() !== 6) return
+      if (!fixtureSaturdaysBySeason.has(season)) fixtureSaturdaysBySeason.set(season, new Set())
+      fixtureSaturdaysBySeason.get(season).add(date)
+    })
+
+    const opportunities = allFixtures
+      .filter((fixture) => fixture.status === 'postponed' && fixture.home_team && fixture.away_team)
+      .map((fixture) => {
+        const season = fixture.stage?.competition?.season
+        const availableDates = [...(fixtureSaturdaysBySeason.get(season) || [])]
+          .filter((date) => date !== fixture.fixture_date?.slice(0, 10))
+          .filter((date) => !allFixtures.some((other) => {
+            if (other.id === fixture.id || other.status === 'postponed' || other.fixture_date?.slice(0, 10) !== date) return false
+            const teamIds = [other.home_team?.id, other.away_team?.id]
+            return teamIds.includes(fixture.home_team.id) || teamIds.includes(fixture.away_team.id)
+          }))
+          .sort()
+        return { ...fixture, availableDates }
+      })
+
+    setRescheduleOpportunities(opportunities)
+  }
 
   async function loadWeekOffRequests() {
     const { data } = await supabase
@@ -151,6 +204,7 @@ export default function AdminDashboard() {
       roundName: '',
     })
     loadFixtures()
+    loadRescheduleOpportunities()
   }
 
   useEffect(() => {
@@ -300,6 +354,7 @@ export default function AdminDashboard() {
       [fixture.id]: savedStatus !== fixture.status ? 'Saved as Played.' : 'Saved.',
     }))
     await loadWeekOffRequests()
+    await loadRescheduleOpportunities()
 
   }
 
@@ -535,6 +590,43 @@ export default function AdminDashboard() {
           </button>
         </div>
       )}
+
+      <section style={{ ...cardStyle, marginBottom: 16, borderLeft: '5px solid var(--brass)' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, marginBottom: 8 }}>
+          <h2 style={{ fontSize: 17, margin: 0 }}>Postponed match opportunities</h2>
+          <button type="button" onClick={loadRescheduleOpportunities} disabled={checkingReschedules} style={smallOutlineButtonStyle}>
+            {checkingReschedules ? 'Checking…' : 'Check again'}
+          </button>
+        </div>
+        <p style={{ color: 'var(--muted)', fontSize: 13, lineHeight: 1.45, margin: '0 0 10px' }}>
+          Saturdays already in this season’s fixtures where both teams are free. No-games dates are excluded.
+        </p>
+        {rescheduleCheckError ? (
+          <div role="alert" style={{ color: '#B3261E', fontSize: 13, fontWeight: 700 }}>{rescheduleCheckError}</div>
+        ) : rescheduleOpportunities.length === 0 && !checkingReschedules ? (
+          <div style={{ color: 'var(--muted)', fontSize: 13 }}>There are no postponed fixtures to rearrange.</div>
+        ) : (
+          <div style={{ display: 'grid', gap: 10 }}>
+            {rescheduleOpportunities.map((fixture) => (
+              <article key={fixture.id} style={{ paddingTop: 10, borderTop: '1px solid var(--line)' }}>
+                <div style={{ fontWeight: 800, lineHeight: 1.35 }}>
+                  {fixture.home_team.name} v {fixture.away_team.name}
+                </div>
+                <div style={{ color: 'var(--muted)', fontSize: 12, margin: '3px 0 7px' }}>
+                  Postponed {formatShortDate(fixture.fixture_date?.slice(0, 10))}
+                </div>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                  {fixture.availableDates.length > 0
+                    ? fixture.availableDates.map((date) => (
+                        <span key={date} style={dateBadgeStyle}>{formatLongDate(date)}</span>
+                      ))
+                    : <span style={{ color: 'var(--muted)', fontSize: 13 }}>No shared free Saturday in the fixture calendar.</span>}
+                </div>
+              </article>
+            ))}
+          </div>
+        )}
+      </section>
 
       <button
         onClick={() => setShowContactEnquiries((current) => !current)}
@@ -1320,6 +1412,26 @@ function seriousOffenceLabel(code) {
   return labels[code] || code
 }
 
+function formatShortDate(date) {
+  if (!date) return 'date unknown'
+  return new Date(`${date}T12:00:00Z`).toLocaleDateString('en-GB', {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+    timeZone: 'UTC',
+  })
+}
+
+function formatLongDate(date) {
+  return new Date(`${date}T12:00:00Z`).toLocaleDateString('en-GB', {
+    weekday: 'short',
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+    timeZone: 'UTC',
+  })
+}
+
 const cardStyle = {
   border: '1px solid var(--line)',
   borderRadius: 8,
@@ -1366,6 +1478,21 @@ const outlineButtonStyle = {
   fontSize: 14,
   borderRadius: 6,
   cursor: 'pointer',
+}
+const smallOutlineButtonStyle = {
+  ...outlineButtonStyle,
+  flexShrink: 0,
+  padding: '7px 9px',
+  fontSize: 12,
+}
+const dateBadgeStyle = {
+  display: 'inline-block',
+  padding: '6px 8px',
+  borderRadius: 999,
+  background: '#FFF4CC',
+  color: 'var(--pitch)',
+  fontSize: 12,
+  fontWeight: 800,
 }
 const linkButtonStyle = {
   background: 'none',
