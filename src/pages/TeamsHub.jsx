@@ -92,6 +92,22 @@ export default function TeamsHub() {
   const [scorersSeason, setScorersSeason] = useState(CURRENT_SEASON)
   const [headToHeadSeason, setHeadToHeadSeason] = useState(CURRENT_SEASON)
 
+  async function loadAllHistoricFixtures() {
+    const pageSize = 1000
+    const allFixtures = []
+    for (let from = 0; ; from += pageSize) {
+      const result = await supabase
+        .from('historic_fixtures')
+        .select('id, season, competition_name, fixture_date, home_team_id, home_team_name, home_goals, away_team_id, away_team_name, away_goals')
+        .order('fixture_date', { ascending: false })
+        .range(from, from + pageSize - 1)
+      if (result.error) return result
+      allFixtures.push(...(result.data || []))
+      if ((result.data || []).length < pageSize) break
+    }
+    return { data: allFixtures, error: null }
+  }
+
   useEffect(() => {
     supabase
       .from('teams')
@@ -123,10 +139,7 @@ export default function TeamsHub() {
         .order('fixture_date')
       setCurrentFixtures(cf || [])
 
-      const { data: hf } = await supabase
-        .from('historic_fixtures')
-        .select('id, season, competition_name, fixture_date, home_team_id, home_team_name, home_goals, away_team_id, away_team_name, away_goals')
-        .order('fixture_date', { ascending: false })
+      const { data: hf } = await loadAllHistoricFixtures()
       const selectedTeamName = teams.find((entry) => entry.id === teamId)?.name
       setHistoricFixtures((hf || []).filter((fixture) => {
         const homeName = canonicalTeamName(fixture.home_team_name, fixture.home_team_id, teams)
