@@ -89,8 +89,8 @@ export default function TeamsHub() {
   const [squad, setSquad] = useState([])
 
   const [resultsSeason, setResultsSeason] = useState(CURRENT_SEASON)
-  const [scorersSeason, setScorersSeason] = useState('Overall')
-  const [headToHeadSeason, setHeadToHeadSeason] = useState('Overall')
+  const [scorersSeason, setScorersSeason] = useState(CURRENT_SEASON)
+  const [headToHeadSeason, setHeadToHeadSeason] = useState(CURRENT_SEASON)
 
   useEffect(() => {
     supabase
@@ -107,8 +107,8 @@ export default function TeamsHub() {
     }
     setLoading(true)
     setResultsSeason(CURRENT_SEASON)
-    setScorersSeason('Overall')
-    setHeadToHeadSeason('Overall')
+    setScorersSeason(CURRENT_SEASON)
+    setHeadToHeadSeason(CURRENT_SEASON)
 
     async function load() {
       setTeam(teams.find((t) => t.id === teamId) || null)
