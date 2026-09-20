@@ -12,7 +12,7 @@ const TYPES = [
 ]
 
 export default function RecordsAdmin() {
-  const [lists, setLists] = useState({ teams: [], venues: [], players: [], managers: [], officials: [], competitions: [] })
+  const [lists, setLists] = useState({ teams: [], venues: [], players: [], historicalPlayers: [], managers: [], officials: [], competitions: [] })
   const [history, setHistory] = useState([])
   const [type, setType] = useState('team')
   const [playerAction, setPlayerAction] = useState('rename')
@@ -45,16 +45,47 @@ export default function RecordsAdmin() {
     return { data: allPlayers, error: null }
   }
 
+  async function loadHistoricalPlayers() {
+    const pageSize = 1000
+    const rows = []
+    for (const table of ['historic_scorers', 'historic_match_scorers']) {
+      for (let from = 0; ; from += pageSize) {
+        const result = await supabase
+          .from(table)
+          .select('player_name, team_name')
+          .range(from, from + pageSize - 1)
+        if (result.error) return result
+        rows.push(...(result.data || []))
+        if ((result.data || []).length < pageSize) break
+      }
+    }
+
+    const byName = new Map()
+    rows.forEach((row) => {
+      const name = row.player_name?.trim()
+      if (!name) return
+      const key = name.toLocaleLowerCase()
+      const existing = byName.get(key) || { name, teams: new Set() }
+      if (row.team_name?.trim()) existing.teams.add(row.team_name.trim())
+      byName.set(key, existing)
+    })
+    return {
+      data: [...byName.values()].map((row) => ({ ...row, teams: [...row.teams].sort() })),
+      error: null,
+    }
+  }
+
   async function load() {
-    const [teams, venues, players, officials, competitions, changes] = await Promise.all([
+    const [teams, venues, players, historicalPlayers, officials, competitions, changes] = await Promise.all([
       supabase.from('teams').select('id, name, manager_name').order('name'),
       supabase.from('venues').select('id, name').order('name'),
       loadAllPlayers(),
+      loadHistoricalPlayers(),
       supabase.from('referees').select('id, name').order('name'),
       supabase.from('competitions').select('name').order('name'),
       supabase.from('record_name_changes').select('id, entity_type, old_name, new_name, effective_date, reason, changed_by_name, affected_rows, created_at').order('created_at', { ascending: false }).limit(50),
     ])
-    const failed = [teams, venues, players, officials, competitions, changes].find((result) => result.error)
+    const failed = [teams, venues, players, historicalPlayers, officials, competitions, changes].find((result) => result.error)
     if (failed) {
       setError(failed.error.message)
       return
@@ -65,6 +96,7 @@ export default function RecordsAdmin() {
       teams: teams.data || [],
       venues: venues.data || [],
       players: players.data || [],
+      historicalPlayers: historicalPlayers.data || [],
       managers: managerNames.map((name) => ({ id: name, name })),
       officials: officials.data || [],
       competitions: competitionNames.map((name) => ({ id: name, name })),
@@ -80,11 +112,24 @@ export default function RecordsAdmin() {
     if (type === 'official') return lists.officials.map((row) => ({ id: row.id, label: row.name, name: row.name }))
     if (type === 'manager') return lists.managers.map((row) => ({ id: row.id, label: row.name, name: row.name }))
     if (type === 'competition') return lists.competitions.map((row) => ({ id: row.id, label: row.name, name: row.name }))
-    return lists.players.map((row) => ({
-      id: row.id,
-      name: `${row.first_name} ${row.last_name}`,
+    const currentNames = new Set(lists.players.map((row) => `${row.first_name} ${row.last_name}`.trim().toLocaleLowerCase()))
+    const current = lists.players.map((row) => ({
+      id: `current:${row.id}`,
+      playerId: row.id,
+      kind: 'current',
+      name: `${row.first_name} ${row.last_name}`.trim(),
       label: `${row.first_name} ${row.last_name}${row.team?.name ? ` — ${row.team.name}` : ' — No current team'}`,
     }))
+    const historical = lists.historicalPlayers
+      .filter((row) => !currentNames.has(row.name.toLocaleLowerCase()))
+      .map((row) => ({
+        id: `historical:${encodeURIComponent(row.name.toLocaleLowerCase())}`,
+        playerId: null,
+        kind: 'historical',
+        name: row.name,
+        label: `${row.name} — Historical${row.teams.length ? ` — ${row.teams.join(', ')}` : ''}`,
+      }))
+    return [...current, ...historical].sort((a, b) => a.name.localeCompare(b.name))
   }, [lists, type])
 
   const selected = options.find((option) => option.id === entityId)
@@ -144,13 +189,21 @@ export default function RecordsAdmin() {
     setSaving(true)
     setError('')
     setMessage('')
-    const { data, error: saveError } = await supabase.rpc('apply_record_name_change', {
-      p_entity_type: type,
-      p_entity_id: entityId,
-      p_new_name: newName.trim(),
-      p_effective_date: effectiveDate,
-      p_reason: reason.trim(),
-    })
+    const request = type === 'player' && selected?.kind === 'historical'
+      ? supabase.rpc('rename_historical_player_name', {
+          p_old_name: selected.name,
+          p_new_name: newName.trim(),
+          p_effective_date: effectiveDate,
+          p_reason: reason.trim(),
+        })
+      : supabase.rpc('apply_record_name_change', {
+          p_entity_type: type,
+          p_entity_id: type === 'player' ? selected?.playerId : entityId,
+          p_new_name: newName.trim(),
+          p_effective_date: effectiveDate,
+          p_reason: reason.trim(),
+        })
+    const { data, error: saveError } = await request
     setSaving(false)
     if (saveError) {
       setError(saveError.message)
@@ -178,9 +231,12 @@ export default function RecordsAdmin() {
     setSaving(true)
     setError('')
     setMessage('')
-    const { data, error: mergeError } = await supabase.rpc('merge_player_records', {
-      p_keep_player_id: keepPlayerId,
-      p_merge_player_id: keepPlayerId === entityId ? mergePlayerId : entityId,
+    const { data, error: mergeError } = await supabase.rpc('merge_player_entries', {
+      p_first_player_id: selected.playerId,
+      p_first_name: selected.name,
+      p_second_player_id: mergePlayer.playerId,
+      p_second_name: mergePlayer.name,
+      p_keep_choice: keepPlayerId === entityId ? 1 : 2,
       p_effective_date: effectiveDate,
       p_reason: reason.trim(),
     })
@@ -204,7 +260,7 @@ export default function RecordsAdmin() {
       <Link to="/admin/dashboard" style={backStyle}>← Back to admin</Link>
       <h1 style={{ fontSize: 26, marginBottom: 6 }}>Records management</h1>
       <p style={{ color: 'var(--muted)', marginTop: 0, lineHeight: 1.5 }}>
-        Rename core records across the current site and matching historical data. Every change keeps the former name, reference date, reason and administrator below.
+        Rename core records across the current site and historical archive. Historical-only players can also be searched, renamed or combined. Every change keeps the former name, reference date, reason and administrator below.
       </p>
 
       <div style={cardStyle}>
@@ -284,7 +340,7 @@ export default function RecordsAdmin() {
         <textarea id="change-reason" value={reason} onChange={(event) => setReason(event.target.value)} rows={3} style={{ ...inputStyle, resize: 'vertical' }} placeholder="For example: club requested an official name change" />
 
         <p style={{ fontSize: 12, color: 'var(--muted)', lineHeight: 1.45 }}>
-          Team and competition changes also update matching historical results. Venue history is not stored in the historical imports, so venue changes apply to the live fixture archive. Player-name matching in imported history uses the exact former name.
+          Team and competition changes also update matching historical results. Venue history is not stored in the historical imports, so venue changes apply to the live fixture archive. Historical player changes update every exact match in both imported scoring archives.
         </p>
         {error && <p role="alert" style={{ color: '#B3261E', fontWeight: 700 }}>{error}</p>}
         {message && <p role="status" style={{ color: '#1B6E3C', fontWeight: 700 }}>{message}</p>}
