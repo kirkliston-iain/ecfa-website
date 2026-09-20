@@ -37,6 +37,7 @@ import AdminAudit from './pages/AdminAudit'
 import DownloadsAdmin from './pages/DownloadsAdmin'
 import SponsorsAdmin from './pages/SponsorsAdmin'
 import Charity from './pages/Charity'
+import RecordsAdmin from './pages/RecordsAdmin'
 
 export default function App() {
   const location = useLocation()
@@ -161,6 +162,14 @@ export default function App() {
             element={
               <ProtectedRoute requireAdmin>
                 <WeeklyDisciplineReport />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/records"
+            element={
+              <ProtectedRoute requireAdmin>
+                <RecordsAdmin />
               </ProtectedRoute>
             }
           />
