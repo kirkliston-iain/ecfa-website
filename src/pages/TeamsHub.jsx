@@ -90,6 +90,7 @@ export default function TeamsHub() {
 
   const [resultsSeason, setResultsSeason] = useState(CURRENT_SEASON)
   const [scorersSeason, setScorersSeason] = useState('Overall')
+  const [headToHeadSeason, setHeadToHeadSeason] = useState('Overall')
 
   useEffect(() => {
     supabase
@@ -107,6 +108,7 @@ export default function TeamsHub() {
     setLoading(true)
     setResultsSeason(CURRENT_SEASON)
     setScorersSeason('Overall')
+    setHeadToHeadSeason('Overall')
 
     async function load() {
       setTeam(teams.find((t) => t.id === teamId) || null)
@@ -183,6 +185,7 @@ export default function TeamsHub() {
   // Season-by-season results: current season (from live fixtures) + historic seasons
   const historicSeasons = Array.from(new Set(historicFixtures.map((f) => f.season))).sort().reverse()
   const resultSeasonOptions = [CURRENT_SEASON, ...historicSeasons]
+  const headToHeadSeasonOptions = ['Overall', ...new Set([CURRENT_SEASON, ...historicSeasons])]
 
   const currentPlayedForResults = played
   const historicForSeason = historicFixtures.filter((f) => f.season === resultsSeason)
@@ -226,6 +229,7 @@ export default function TeamsHub() {
   }
 
   for (const f of played) {
+    if (headToHeadSeason !== 'Overall' && headToHeadSeason !== CURRENT_SEASON) continue
     const isHome = f.home_team?.id === teamId
     const opponentName = isHome ? f.away_team?.name : f.home_team?.name
     const homeGoals = f.went_to_extra_time && f.home_extra_time_score != null ? f.home_extra_time_score : f.home_score
@@ -241,6 +245,7 @@ export default function TeamsHub() {
   }
 
   for (const f of historicFixtures) {
+    if (headToHeadSeason !== 'Overall' && f.season !== headToHeadSeason) continue
     const selectedTeamName = canonicalTeamName(team?.name, teamId, teams)
     const homeName = canonicalTeamName(f.home_team_name, f.home_team_id, teams)
     const awayName = canonicalTeamName(f.away_team_name, f.away_team_id, teams)
@@ -467,11 +472,30 @@ export default function TeamsHub() {
           <p style={{ color: 'var(--muted)', fontSize: 13, marginTop: -4, marginBottom: 12 }}>
             Complete record from the results currently held on this website. Penalty shootout victories count as wins; shootout kicks are not included in goals.
           </p>
+          <label htmlFor="head-to-head-season" style={{ display: 'block', fontSize: 12, fontWeight: 700, marginBottom: 5 }}>Season</label>
+          <select
+            id="head-to-head-season"
+            value={headToHeadSeason}
+            onChange={(event) => setHeadToHeadSeason(event.target.value)}
+            style={{ ...selectStyle, marginBottom: 12 }}
+          >
+            {headToHeadSeasonOptions.map((season) => <option key={season} value={season}>{season}</option>)}
+          </select>
           {headToHead.length === 0 ? (
             <p style={{ color: 'var(--muted)', fontSize: 14 }}>No head-to-head results recorded.</p>
           ) : (
-            <div style={{ overflowX: 'auto' }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+            <div>
+              <table style={{ width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed', fontSize: 11 }}>
+                <colgroup>
+                  <col style={{ width: '41%' }} />
+                  <col style={{ width: '7%' }} />
+                  <col style={{ width: '7%' }} />
+                  <col style={{ width: '7%' }} />
+                  <col style={{ width: '7%' }} />
+                  <col style={{ width: '8%' }} />
+                  <col style={{ width: '8%' }} />
+                  <col style={{ width: '15%' }} />
+                </colgroup>
                 <thead>
                   <tr style={{ borderBottom: '3px solid var(--brass)' }}>
                     <th style={{ ...headToHeadHeaderStyle, textAlign: 'left' }}>Team</th>
@@ -481,18 +505,20 @@ export default function TeamsHub() {
                     <th style={headToHeadHeaderStyle}>D</th>
                     <th style={headToHeadHeaderStyle}>GF</th>
                     <th style={headToHeadHeaderStyle}>GA</th>
+                    <th style={headToHeadHeaderStyle}>Win %</th>
                   </tr>
                 </thead>
                 <tbody>
                   {headToHead.map((row) => (
                     <tr key={row.opponent} style={{ borderBottom: '1px solid var(--line)' }}>
-                      <td style={{ padding: '9px 6px', fontWeight: 600 }}>{row.opponent}</td>
+                      <td style={{ padding: '8px 3px', fontWeight: 600, fontSize: 12, lineHeight: 1.25 }}>{row.opponent}</td>
                       <td style={headToHeadCellStyle}>{row.played}</td>
                       <td style={headToHeadCellStyle}>{row.wins}</td>
                       <td style={headToHeadCellStyle}>{row.losses}</td>
                       <td style={headToHeadCellStyle}>{row.draws}</td>
                       <td style={headToHeadCellStyle}>{row.goalsFor}</td>
                       <td style={headToHeadCellStyle}>{row.goalsAgainst}</td>
+                      <td style={{ ...headToHeadCellStyle, fontWeight: 700 }}>{((row.wins / row.played) * 100).toFixed(1)}%</td>
                     </tr>
                   ))}
                 </tbody>
@@ -544,5 +570,5 @@ const resultRowStyle = {
   borderBottom: '1px solid var(--line)',
   fontSize: 14,
 }
-const headToHeadHeaderStyle = { padding: '8px 6px', textAlign: 'center', fontSize: 11, textTransform: 'uppercase' }
-const headToHeadCellStyle = { padding: '9px 6px', textAlign: 'center' }
+const headToHeadHeaderStyle = { padding: '7px 2px', textAlign: 'center', fontSize: 9, textTransform: 'uppercase', whiteSpace: 'nowrap' }
+const headToHeadCellStyle = { padding: '8px 2px', textAlign: 'center', whiteSpace: 'nowrap' }
