@@ -48,18 +48,55 @@ function canonicalTeamName(name) {
   return TEAM_ALIASES[cleanName] || cleanName
 }
 
+function scoringResult(fixture, isHome) {
+  let homeScore = fixture.home_score
+  let awayScore = fixture.away_score
+  if (fixture.went_to_extra_time && fixture.home_extra_time_score != null && fixture.away_extra_time_score != null) {
+    homeScore = fixture.home_extra_time_score
+    awayScore = fixture.away_extra_time_score
+  }
+  if (homeScore == null || awayScore == null) return '—'
+
+  const goalsFor = Number(isHome ? homeScore : awayScore)
+  const goalsAgainst = Number(isHome ? awayScore : homeScore)
+  let outcome = goalsFor > goalsAgainst ? 'W' : goalsFor < goalsAgainst ? 'L' : 'D'
+  let note = ''
+
+  if (fixture.decided_by_penalties && fixture.home_penalty_score != null && fixture.away_penalty_score != null) {
+    const penaltiesFor = Number(isHome ? fixture.home_penalty_score : fixture.away_penalty_score)
+    const penaltiesAgainst = Number(isHome ? fixture.away_penalty_score : fixture.home_penalty_score)
+    outcome = penaltiesFor > penaltiesAgainst ? 'W' : 'L'
+    note = ` (${penaltiesFor}–${penaltiesAgainst} pens)`
+  }
+  return `${outcome} ${goalsFor}–${goalsAgainst}${note}`
+}
+
+function formatMatchDate(date) {
+  if (!date) return '—'
+  return new Date(`${date}T12:00:00Z`).toLocaleDateString('en-GB', {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+    timeZone: 'UTC',
+  })
+}
+
 export default function PlayerDetail() {
   const { id } = useParams()
   const [player, setPlayer] = useState(null)
   const [goals, setGoals] = useState([])
   const [historicGoals, setHistoricGoals] = useState([])
   const [historicMatchGoals, setHistoricMatchGoals] = useState([])
+  const [scoringMatchSeason, setScoringMatchSeason] = useState('Overall')
   const [discipline, setDiscipline] = useState([])
+  const [cardSeason, setCardSeason] = useState('Overall')
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
 
   useEffect(() => {
     window.scrollTo({ top: 0, left: 0, behavior: 'auto' })
+    setScoringMatchSeason('Overall')
+    setCardSeason('Overall')
     let cancelled = false
 
     async function load() {
@@ -84,7 +121,7 @@ export default function PlayerDetail() {
       const [goalResult, historicResult, historicMatchResult, disciplineResult] = await Promise.all([
         supabase
           .from('fixture_scorers')
-          .select('id, goals, team:team_id(id, name), fixture:fixture_id(id, fixture_date, home_score, away_score, home_team:home_team_id(id, name), away_team:away_team_id(id, name))')
+          .select('id, goals, team:team_id(id, name), fixture:fixture_id(id, fixture_date, home_score, away_score, went_to_extra_time, home_extra_time_score, away_extra_time_score, decided_by_penalties, home_penalty_score, away_penalty_score, home_team:home_team_id(id, name), away_team:away_team_id(id, name), stage:stage_id(competition:competition_id(season)))')
           .eq('player_id', id),
         supabase
           .from('historic_scorers')
@@ -93,11 +130,11 @@ export default function PlayerDetail() {
           .order('season', { ascending: false }),
         supabase
           .from('historic_match_scorers')
-          .select('season, fixture_date, team_name, home_team_name, away_team_name, goals')
+          .select('id, season, fixture_date, team_name, home_team_name, away_team_name, home_goals, away_goals, goals')
           .ilike('player_name', fullName),
         supabase
           .from('discipline_records')
-          .select('id, card_type, card_count, notes, serious_offence, fixture:fixture_id(id, fixture_date, home_score, away_score, home_team:home_team_id(name), away_team:away_team_id(name))')
+          .select('id, card_type, card_count, notes, serious_offence, fixture:fixture_id(id, fixture_date, home_score, away_score, home_team:home_team_id(name), away_team:away_team_id(name), stage:stage_id(competition:competition_id(season)))')
           .eq('player_id', id),
       ])
 
@@ -123,6 +160,13 @@ export default function PlayerDetail() {
     () => discipline.filter((row) => row.card_type === 'red').reduce((sum, row) => sum + Number(row.card_count || 0), 0),
     [discipline]
   )
+  const cardSeasons = useMemo(
+    () => ['Overall', ...new Set(discipline.map((row) => String(row.fixture?.stage?.competition?.season || 'Current season').replace('-', '/')))],
+    [discipline]
+  )
+  const visibleDiscipline = cardSeason === 'Overall'
+    ? discipline
+    : discipline.filter((row) => String(row.fixture?.stage?.competition?.season || 'Current season').replace('-', '/') === cardSeason)
   const aggregatedHistoricGoals = useMemo(() => {
     const totals = new Map()
     for (const row of historicGoals) {
@@ -170,6 +214,54 @@ export default function PlayerDetail() {
       .map(([opponent, goalCount]) => ({ opponent, goals: goalCount }))
       .sort((left, right) => right.goals - left.goals || left.opponent.localeCompare(right.opponent))
   }, [goals, historicMatchGoals])
+  const scoringMatches = useMemo(() => {
+    const matches = []
+
+    for (const row of goals) {
+      const fixture = row.fixture
+      if (!fixture) continue
+      const isHome = row.team?.id
+        ? row.team.id === fixture.home_team?.id
+        : canonicalTeamName(row.team?.name) === canonicalTeamName(fixture.home_team?.name)
+      const opponent = canonicalTeamName(isHome ? fixture.away_team?.name : fixture.home_team?.name)
+      const season = String(fixture.stage?.competition?.season || 'Current season').replace('-', '/')
+      matches.push({
+        key: `current-${row.id}`,
+        fixtureId: fixture.id,
+        season,
+        date: fixture.fixture_date?.slice(0, 10) || '',
+        opponent,
+        goals: Number(row.goals || 0),
+        result: scoringResult(fixture, isHome),
+      })
+    }
+
+    for (const row of historicMatchGoals) {
+      const scoringTeam = canonicalTeamName(row.team_name)
+      const homeTeam = canonicalTeamName(row.home_team_name)
+      const awayTeam = canonicalTeamName(row.away_team_name)
+      const isHome = scoringTeam === homeTeam
+      if (!isHome && scoringTeam !== awayTeam) continue
+      matches.push({
+        key: `historic-${row.id}`,
+        fixtureId: null,
+        season: String(row.season || 'Unknown').replace('-', '/'),
+        date: row.fixture_date || '',
+        opponent: isHome ? awayTeam : homeTeam,
+        goals: Number(row.goals || 0),
+        result: scoringResult({ home_score: row.home_goals, away_score: row.away_goals }, isHome),
+      })
+    }
+
+    return matches.sort((left, right) => right.date.localeCompare(left.date) || right.goals - left.goals)
+  }, [goals, historicMatchGoals])
+  const scoringMatchSeasons = useMemo(
+    () => ['Overall', ...new Set(scoringMatches.map((match) => match.season))],
+    [scoringMatches]
+  )
+  const visibleScoringMatches = scoringMatchSeason === 'Overall'
+    ? scoringMatches
+    : scoringMatches.filter((match) => match.season === scoringMatchSeason)
 
   if (loading) return <div className="container" style={{ padding: 48 }}>Loading player…</div>
   if (error) return <div className="container" style={{ padding: 48 }}>{error}</div>
@@ -199,11 +291,21 @@ export default function PlayerDetail() {
       </div>
 
       <section style={{ marginBottom: 34 }}>
-        <h2 style={sectionHeadingStyle}>Discipline history</h2>
+        <h2 style={sectionHeadingStyle}>Cards received</h2>
         <p style={{ color: 'var(--muted)', fontSize: 13, marginTop: -5 }}>
           Recorded yellow and red cards, shown match by match.
         </p>
-        {discipline.length === 0 ? (
+        {discipline.length > 0 && (
+          <>
+            <label htmlFor="card-season" style={{ display: 'block', color: 'var(--muted)', fontSize: 12, fontWeight: 700, marginBottom: 5 }}>
+              Season
+            </label>
+            <select id="card-season" value={cardSeason} onChange={(event) => setCardSeason(event.target.value)} style={seasonSelectStyle}>
+              {cardSeasons.map((season) => <option key={season} value={season}>{season}</option>)}
+            </select>
+          </>
+        )}
+        {visibleDiscipline.length === 0 ? (
           <p style={{ color: 'var(--muted)' }}>No discipline records.</p>
         ) : (
           <div style={{ overflowX: 'auto' }}>
@@ -217,7 +319,7 @@ export default function PlayerDetail() {
                 </tr>
               </thead>
               <tbody>
-                {discipline.map((row) => (
+                {visibleDiscipline.map((row) => (
                   <tr key={row.id}>
                     <td style={tdStyle}>
                       {row.fixture?.fixture_date ? new Date(row.fixture.fixture_date).toLocaleDateString('en-GB') : '—'}
@@ -286,6 +388,46 @@ export default function PlayerDetail() {
           </table>
         )}
       </section>
+
+      <section style={{ marginTop: 34 }}>
+        <h2 style={sectionHeadingStyle}>Games scored in</h2>
+        <label htmlFor="scoring-match-season" style={{ display: 'block', color: 'var(--muted)', fontSize: 12, fontWeight: 700, marginBottom: 5 }}>
+          Season
+        </label>
+        <select
+          id="scoring-match-season"
+          value={scoringMatchSeason}
+          onChange={(event) => setScoringMatchSeason(event.target.value)}
+          style={seasonSelectStyle}
+        >
+          {scoringMatchSeasons.map((season) => <option key={season} value={season}>{season}</option>)}
+        </select>
+        {visibleScoringMatches.length === 0 ? (
+          <p style={{ color: 'var(--muted)' }}>No match-level scoring records are available for this season.</p>
+        ) : (
+          <div style={{ borderTop: '1px solid var(--line)' }}>
+            {visibleScoringMatches.map((match) => (
+              <article key={match.key} style={scoringMatchRowStyle}>
+                <div style={{ minWidth: 0 }}>
+                  <div style={{ color: 'var(--muted)', fontSize: 11, marginBottom: 3 }}>
+                    {match.season} · {match.fixtureId ? (
+                      <Link to={`/fixtures/${match.fixtureId}`} style={{ color: 'var(--brass)', fontWeight: 700 }}>
+                        {formatMatchDate(match.date)}
+                      </Link>
+                    ) : formatMatchDate(match.date)}
+                  </div>
+                  <div style={{ fontWeight: 700, lineHeight: 1.35 }}>{match.opponent}</div>
+                  <div style={{ color: 'var(--muted)', fontSize: 12, marginTop: 2 }}>{match.result}</div>
+                </div>
+                <div style={{ textAlign: 'center', flexShrink: 0 }}>
+                  <strong style={{ display: 'block', fontSize: 22, color: 'var(--brass)' }}>{match.goals}</strong>
+                  <span style={{ color: 'var(--muted)', fontSize: 10, textTransform: 'uppercase' }}>Goals</span>
+                </div>
+              </article>
+            ))}
+          </div>
+        )}
+      </section>
     </div>
   )
 }
@@ -302,3 +444,22 @@ const valueStyle = { display: 'block', fontSize: 26, marginTop: 5 }
 const sectionHeadingStyle = { color: 'var(--brass)', fontSize: 18, paddingBottom: 8, borderBottom: '2px solid var(--line)' }
 const thStyle = { padding: '8px', borderBottom: '1px solid var(--line)', textAlign: 'left', color: 'var(--muted)', textTransform: 'uppercase', fontSize: 11 }
 const tdStyle = { padding: '10px 8px', borderBottom: '1px solid var(--line)', verticalAlign: 'top' }
+const seasonSelectStyle = {
+  width: '100%',
+  boxSizing: 'border-box',
+  padding: '10px 12px',
+  marginBottom: 14,
+  border: '1px solid var(--line)',
+  borderRadius: 7,
+  background: '#fff',
+  color: 'var(--ink)',
+  font: 'inherit',
+}
+const scoringMatchRowStyle = {
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'space-between',
+  gap: 14,
+  padding: '11px 8px',
+  borderBottom: '1px solid var(--line)',
+}
