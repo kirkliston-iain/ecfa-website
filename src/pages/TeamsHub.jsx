@@ -92,6 +92,7 @@ export default function TeamsHub() {
   const [resultsSeason, setResultsSeason] = useState(CURRENT_SEASON)
   const [scorersSeason, setScorersSeason] = useState(CURRENT_SEASON)
   const [headToHeadSeason, setHeadToHeadSeason] = useState(CURRENT_SEASON)
+  const [headToHeadSort, setHeadToHeadSort] = useState({ key: 'played', direction: 'desc' })
 
   async function loadAllHistoricFixtures() {
     const pageSize = 1000
@@ -271,7 +272,47 @@ export default function TeamsHub() {
     const outcome = goalsFor > goalsAgainst ? 'W' : goalsFor < goalsAgainst ? 'L' : 'D'
     addHeadToHead(opponentName, goalsFor, goalsAgainst, outcome)
   }
-  const headToHead = Object.values(headToHeadMap).sort((a, b) => b.played - a.played || a.opponent.localeCompare(b.opponent))
+  const headToHead = Object.values(headToHeadMap).sort((a, b) => {
+    const valueFor = (row) => {
+      if (headToHeadSort.key === 'opponent') return row.opponent
+      if (headToHeadSort.key === 'winPercentage') return row.played ? row.wins / row.played : 0
+      return row[headToHeadSort.key]
+    }
+    const aValue = valueFor(a)
+    const bValue = valueFor(b)
+    const comparison = typeof aValue === 'string' ? aValue.localeCompare(bValue) : aValue - bValue
+    return (headToHeadSort.direction === 'asc' ? comparison : -comparison) || a.opponent.localeCompare(b.opponent)
+  })
+
+  function changeHeadToHeadSort(key) {
+    setHeadToHeadSort((current) => current.key === key
+      ? { key, direction: current.direction === 'asc' ? 'desc' : 'asc' }
+      : { key, direction: key === 'opponent' ? 'asc' : 'desc' })
+  }
+
+  function sortableHead(label, key, align = 'center') {
+    const active = headToHeadSort.key === key
+    const direction = active ? headToHeadSort.direction : null
+    return (
+      <th
+        scope="col"
+        style={{ ...headToHeadHeaderStyle, textAlign: align }}
+        aria-sort={active ? (direction === 'asc' ? 'ascending' : 'descending') : 'none'}
+      >
+        <button
+          type="button"
+          onClick={() => changeHeadToHeadSort(key)}
+          style={{ ...headToHeadSortButtonStyle, justifyContent: align === 'left' ? 'flex-start' : 'center' }}
+          aria-label={`Sort by ${label}${active ? `, currently ${direction === 'asc' ? 'ascending' : 'descending'}` : ''}`}
+        >
+          <span>{label}</span>
+          <span aria-hidden="true" style={{ minWidth: 8, color: active ? 'var(--brass)' : 'var(--muted)' }}>
+            {active ? (direction === 'asc' ? '▲' : '▼') : '↕'}
+          </span>
+        </button>
+      </th>
+    )
+  }
 
   const displayedScorers = scorersSeason === 'Overall'
     ? overallScorersList
@@ -516,14 +557,14 @@ export default function TeamsHub() {
                 </colgroup>
                 <thead>
                   <tr style={{ borderBottom: '3px solid var(--brass)' }}>
-                    <th style={{ ...headToHeadHeaderStyle, textAlign: 'left' }}>Team</th>
-                    <th style={headToHeadHeaderStyle}>P</th>
-                    <th style={headToHeadHeaderStyle}>W</th>
-                    <th style={headToHeadHeaderStyle}>L</th>
-                    <th style={headToHeadHeaderStyle}>D</th>
-                    <th style={headToHeadHeaderStyle}>GF</th>
-                    <th style={headToHeadHeaderStyle}>GA</th>
-                    <th style={headToHeadHeaderStyle}>Win %</th>
+                    {sortableHead('Team', 'opponent', 'left')}
+                    {sortableHead('P', 'played')}
+                    {sortableHead('W', 'wins')}
+                    {sortableHead('L', 'losses')}
+                    {sortableHead('D', 'draws')}
+                    {sortableHead('GF', 'goalsFor')}
+                    {sortableHead('GA', 'goalsAgainst')}
+                    {sortableHead('Win %', 'winPercentage')}
                   </tr>
                 </thead>
                 <tbody>
@@ -589,4 +630,5 @@ const resultRowStyle = {
   fontSize: 14,
 }
 const headToHeadHeaderStyle = { padding: '7px 2px', textAlign: 'center', fontSize: 9, textTransform: 'uppercase', whiteSpace: 'nowrap' }
+const headToHeadSortButtonStyle = { width: '100%', display: 'flex', alignItems: 'center', gap: 2, padding: '5px 0', border: 0, background: 'transparent', color: 'var(--ink)', font: 'inherit', fontWeight: 700, textTransform: 'inherit', cursor: 'pointer', whiteSpace: 'nowrap' }
 const headToHeadCellStyle = { padding: '8px 2px', textAlign: 'center', whiteSpace: 'nowrap' }

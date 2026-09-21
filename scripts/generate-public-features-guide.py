@@ -98,7 +98,7 @@ cover = Table([[p('ECFA WEBSITE', 'CoverSub')], [p('Public Features Guide', 'Cov
               ]))
 story += [Spacer(1, 35*mm), cover, Spacer(1, 18*mm)]
 story.append(Table([[p('WEBSITE', 'Smallx'), p('https://ecfa-website.vercel.app', 'CardTitle')],
-                    [p('GUIDE UPDATED', 'Smallx'), p('16 September 2026', 'CardTitle')]],
+                    [p('GUIDE UPDATED', 'Smallx'), p('21 September 2026', 'CardTitle')]],
                    colWidths=[35*mm, 125*mm], style=TableStyle([
                        ('BOX', (0,0), (-1,-1), 0.7, LINE), ('INNERGRID', (0,0), (-1,-1), 0.5, LINE),
                        ('BACKGROUND', (0,0), (0,-1), PALE), ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
@@ -152,6 +152,7 @@ story.append(card_grid([
     ('Form and fixtures', 'Review recent form, the latest result, the next fixture and a wider fixture list.'),
     ('Results by season', 'Switch between the current campaign and available historical seasons.'),
     ('Team scorers and honours', 'See season-by-season scorers and honours won by the club.'),
+    ('Head-to-head comparisons', 'Filter the opponent table by season and sort any column in ascending or descending order.'),
 ]))
 
 # Records/referees
