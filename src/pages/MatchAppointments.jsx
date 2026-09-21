@@ -14,6 +14,10 @@ function slotKey(venue, start, pitch) {
   return `${venue}|${start}|${pitch}`
 }
 
+function fixtureStart(fixture) {
+  return fixture.fixture_date?.slice(11, 16) || ''
+}
+
 function fixtureTeams(fixture) {
   return [fixture.home_team?.name, fixture.away_team?.name].filter(Boolean)
 }
@@ -31,9 +35,8 @@ export default function MatchAppointments() {
   const [loading, setLoading] = useState(true)
   const [working, setWorking] = useState('')
   const [message, setMessage] = useState('')
-  const [showAdditional, setShowAdditional] = useState(false)
 
-  const slots = useMemo(() => {
+  const configuredSlots = useMemo(() => {
     if (!settings) return []
     return settings.venues.flatMap((venue) => venue.slots.flatMap((slot) =>
       Array.from({ length: slot.pitches }, (_, index) => ({
@@ -47,6 +50,51 @@ export default function MatchAppointments() {
       }))
     ))
   }, [settings])
+
+  const assignedFixtureSlots = useMemo(() => {
+    if (!settings) return { byFixture: new Map(), slots: [] }
+    const counts = new Map()
+    const byFixture = new Map()
+    const fixtureSlots = []
+
+    fixtures.forEach((fixture) => {
+      const venue = fixture.venue?.trim()
+      const start = fixtureStart(fixture)
+      if (!venue || !start) return
+      const groupKey = `${venue}|${start}`
+      const pitch = (counts.get(groupKey) || 0) + 1
+      counts.set(groupKey, pitch)
+      const configuredVenue = settings.venues.find((item) => item.name === venue)
+      const configuredSlot = configuredVenue?.slots.find((item) => item.start === start)
+      const end = configuredSlot?.end || ''
+      const slot = {
+        key: slotKey(venue, start, pitch),
+        venue,
+        area: configuredVenue?.area || 'Any',
+        start,
+        end,
+        pitch,
+        label: `${venue} · ${start}${end ? `–${end}` : ''}${counts.get(groupKey) > 1 || configuredSlot?.pitches > 1 ? ` · Pitch ${pitch}` : ''}`,
+        assigned: true,
+      }
+      byFixture.set(fixture.id, slot)
+      fixtureSlots.push(slot)
+    })
+
+    // Once every fixture has been counted, show pitch labels consistently for
+    // all simultaneous games at a multi-pitch venue (including Pitch 1).
+    fixtureSlots.forEach((slot) => {
+      const total = counts.get(`${slot.venue}|${slot.start}`) || 1
+      if (total > 1 && !slot.label.includes(' · Pitch ')) slot.label += ` · Pitch ${slot.pitch}`
+    })
+    return { byFixture, slots: fixtureSlots }
+  }, [fixtures, settings])
+
+  const slots = useMemo(() => {
+    const merged = new Map(configuredSlots.map((slot) => [slot.key, slot]))
+    assignedFixtureSlots.slots.forEach((slot) => merged.set(slot.key, slot))
+    return [...merged.values()]
+  }, [configuredSlots, assignedFixtureSlots])
 
   useEffect(() => {
     async function loadBase() {
@@ -82,8 +130,11 @@ export default function MatchAppointments() {
       setLoading(false)
       return
     }
-    setFixtures((fixtureRows || []).filter((fixture) => fixture.fixture_date?.slice(0, 10) === weekDate))
+    const matchdayFixtures = (fixtureRows || []).filter((fixture) => fixture.fixture_date?.slice(0, 10) === weekDate)
+    setFixtures(matchdayFixtures)
     if (week) {
+      // Fixture venue/time assignments are the source of truth. The slot list
+      // is rebuilt below once React has derived pitch numbers from the fixtures.
       setAvailableSlots(week.available_slots || [])
       setAvailableReferees(week.available_referees || [])
       setAllocations(week.allocations || [])
@@ -99,6 +150,26 @@ export default function MatchAppointments() {
     }
     setLoading(false)
   }
+
+  useEffect(() => {
+    if (loading || !fixtures.length || !assignedFixtureSlots.slots.length) return
+    const assignedKeys = assignedFixtureSlots.slots.map((slot) => slot.key)
+    setAvailableSlots(assignedKeys)
+    setAllocations((current) => fixtures.map((fixture) => {
+      const slot = assignedFixtureSlots.byFixture.get(fixture.id)
+      const previous = current.find((row) => row?.fixtureId === fixture.id)
+      return {
+        fixtureId: fixture.id,
+        venue: slot?.venue || '',
+        slotKey: slot?.key || '',
+        start: slot?.start || '',
+        end: slot?.end || '',
+        referee: previous?.referee || fixture.referee_name || '',
+        reason: 'Venue and kickoff pulled from the fixture',
+      }
+    }))
+    setStatus((current) => current === 'confirmed' ? current : 'draft')
+  }, [loading, fixtures, assignedFixtureSlots])
 
   function toggle(list, setList, value) {
     setList((current) => current.includes(value) ? current.filter((item) => item !== value) : [...current, value])
@@ -131,12 +202,10 @@ export default function MatchAppointments() {
   function generate() {
     setMessage('')
     if (!fixtures.length) return setMessage('There are no scheduled fixtures on this date.')
-    if (!availableSlots.length) return setMessage('Select at least one available venue slot.')
+    if (assignedFixtureSlots.byFixture.size !== fixtures.length) return setMessage('Every fixture needs a venue and kickoff time before appointments can be generated.')
     if (!availableReferees.length) return setMessage('Select the referees who are available.')
 
-    const freeSlots = slots.filter((slot) => availableSlots.includes(slot.key))
     const usedRefs = new Set()
-    const usedSlots = new Set()
     const generated = []
     const fixtureOrder = [...fixtures].sort((a, b) =>
       Number(b.home_team?.name === 'South East Saints') - Number(a.home_team?.name === 'South East Saints')
@@ -144,27 +213,11 @@ export default function MatchAppointments() {
 
     for (const fixture of fixtureOrder) {
       const teams = fixtureTeams(fixture)
-      const peffermillUsed = generated.filter((row) => row.venue === 'Peffermill Sports Complex').length
-      const candidateSlots = freeSlots.filter((slot) => !usedSlots.has(slot.key) && slotAllowed(fixture, slot))
-      const rankedSlots = candidateSlots.map((slot) => {
-        let score = 0
-        const homePrefs = settings.teamPreferences?.[fixture.home_team?.name] || []
-        const awayPrefs = settings.teamPreferences?.[fixture.away_team?.name] || []
-        const homeRank = homePrefs.findIndex((pref) => pref.venue === slot.venue && (!pref.start || pref.start === slot.start))
-        const awayRank = awayPrefs.findIndex((pref) => pref.venue === slot.venue && (!pref.start || pref.start === slot.start))
-        if (homeRank >= 0) score += 80 - homeRank * 18
-        if (awayRank >= 0) score += 28 - awayRank * 6
-        if (fixture.home_team?.name === 'South East Saints' && slot.venue === 'Newcraighall Grass') score += 1000
-        if (slot.venue === 'Peffermill Sports Complex' && peffermillUsed < 2) score += 240
-        score -= venueHistoryCount(slot.venue, teams) * 4
-        return { slot, score }
-      }).sort((a, b) => b.score - a.score)
-      const chosenSlot = rankedSlots[0]?.slot
+      const chosenSlot = assignedFixtureSlots.byFixture.get(fixture.id)
       if (!chosenSlot) {
-        generated.push({ fixtureId: fixture.id, venue: '', slotKey: '', start: '', end: '', referee: '', reason: 'No suitable available venue slot' })
+        generated.push({ fixtureId: fixture.id, venue: '', slotKey: '', start: '', end: '', referee: '', reason: 'Assign a venue and kickoff to this fixture first' })
         continue
       }
-      usedSlots.add(chosenSlot.key)
 
       const refereeCandidates = referees
         .filter((referee) => availableReferees.includes(referee.name) && !usedRefs.has(referee.name) && refereeAllowed(referee.name, fixture, chosenSlot))
@@ -178,9 +231,7 @@ export default function MatchAppointments() {
         }).sort((a, b) => b.score - a.score)
       const chosenReferee = refereeCandidates[0]
       if (chosenReferee) usedRefs.add(chosenReferee.referee.name)
-      const reasons = []
-      if (chosenSlot.venue === 'Newcraighall Grass') reasons.push('SES home venue')
-      if (chosenSlot.venue === 'Peffermill Sports Complex' && peffermillUsed < 2) reasons.push('helps meet Peffermill minimum')
+      const reasons = ['venue and kickoff pulled from the fixture']
       if (chosenReferee) reasons.push(`${chosenReferee.preference} preference`, chosenReferee.repeats ? `${chosenReferee.repeats} previous team appointment${chosenReferee.repeats === 1 ? '' : 's'}` : 'no previous appointment with either team')
       generated.push({
         fixtureId: fixture.id, venue: chosenSlot.venue, slotKey: chosenSlot.key, start: chosenSlot.start, end: chosenSlot.end,
@@ -260,23 +311,13 @@ export default function MatchAppointments() {
 
       {!loading && <>
         <section style={sectionStyle}>
-          <h3 style={subheadingStyle}>1. Available venue slots</h3>
+          <h3 style={subheadingStyle}>1. Assigned venue slots</h3>
+          <p style={{ color: 'var(--muted)', fontSize: 12, margin: '0 0 10px' }}>Pulled automatically from the venues and kickoff times already assigned to these fixtures.</p>
           <div style={{ display: 'grid', gap: 7 }}>
-            {slots
-              .filter((slot) => !settings.venues.find((venue) => venue.name === slot.venue)?.additional)
-              .map((slot) => <label key={slot.key} style={checkStyle}><input type="checkbox" checked={availableSlots.includes(slot.key)} onChange={() => toggle(availableSlots, setAvailableSlots, slot.key)} /> {slot.label}</label>)}
+            {assignedFixtureSlots.slots.length
+              ? assignedFixtureSlots.slots.map((slot) => <div key={slot.key} style={checkStyle}><span aria-hidden="true">✓</span> {slot.label}</div>)
+              : <p style={{ color: 'var(--muted)', fontSize: 13, margin: 0 }}>No assigned venues found for this matchday.</p>}
           </div>
-          <button type="button" onClick={() => setShowAdditional((current) => !current)} style={{ ...outlineStyle, width: '100%', marginTop: 14 }}>
-            {showAdditional ? 'Hide additional venues' : 'Additional venues'}
-          </button>
-          {showAdditional && (
-            <div style={{ display: 'grid', gap: 7, marginTop: 12, paddingTop: 12, borderTop: '1px solid var(--line)' }}>
-              <p style={{ color: 'var(--muted)', fontSize: 12, margin: '0 0 4px' }}>These are not normally used. Tick only the slots available for this matchday.</p>
-              {slots
-                .filter((slot) => settings.venues.find((venue) => venue.name === slot.venue)?.additional)
-                .map((slot) => <label key={slot.key} style={checkStyle}><input type="checkbox" checked={availableSlots.includes(slot.key)} onChange={() => toggle(availableSlots, setAvailableSlots, slot.key)} /> {slot.label}</label>)}
-            </div>
-          )}
         </section>
 
         <section style={sectionStyle}>
