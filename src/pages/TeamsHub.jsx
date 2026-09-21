@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { supabase } from '../supabaseClient'
 import { displayedScore, outcomeNote } from '../utils/fixtureOutcome'
 
@@ -377,17 +378,21 @@ export default function TeamsHub() {
           ) : (
             <div style={{ marginBottom: 32, display: 'flex', flexWrap: 'wrap', gap: 8 }}>
               {squad.map((p) => (
-                <span
+                <Link
                   key={p.id}
+                  to={`/players/${p.id}`}
+                  aria-label={`View ${p.first_name} ${p.last_name}'s player profile`}
                   style={{
                     fontSize: 13,
                     padding: '6px 12px',
                     border: '1px solid var(--line)',
                     borderRadius: 20,
+                    color: 'var(--ink)',
+                    textDecoration: 'none',
                   }}
                 >
                   {p.first_name} {p.last_name}
-                </span>
+                </Link>
               ))}
             </div>
           )}
