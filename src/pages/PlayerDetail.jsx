@@ -21,16 +21,45 @@ function matchLabel(fixture) {
   return `${home} v ${away}`
 }
 
+const TEAM_ALIASES = {
+  'Barclay Viewforth FC': 'Barclay Viewforth Church',
+  'Bingham FC': 'Hope Church',
+  'Bristo Memorial FC': 'South East Saints',
+  Carrubbers: 'Carrubbers Church',
+  'Carrubbers FC': 'Carrubbers Church',
+  Central: 'Liberton Church',
+  'Central FC': 'Liberton Church',
+  'Gorgie United': 'Gorgie United Salvation Army',
+  'Gorgie United FC': 'Gorgie United Salvation Army',
+  Ladywell: 'Ladywell Baptist Church',
+  Niddrie: 'The Mission',
+  'Niddrie FC': 'The Mission',
+  'Port Seton FC': 'Port Seton',
+  'South East Saints FC': 'South East Saints',
+  "St Mary's Metropolitan FC": 'St Marys Metropolitan Church',
+  'St Marys': 'St Marys Metropolitan Church',
+  'The Mission FC': 'The Mission',
+  'White Lightning': 'White Lightning Bruntsfield Church',
+  'White Lightning FC': 'White Lightning Bruntsfield Church',
+}
+
+function canonicalTeamName(name) {
+  const cleanName = String(name || '').trim().replace(/\s+/g, ' ')
+  return TEAM_ALIASES[cleanName] || cleanName
+}
+
 export default function PlayerDetail() {
   const { id } = useParams()
   const [player, setPlayer] = useState(null)
   const [goals, setGoals] = useState([])
   const [historicGoals, setHistoricGoals] = useState([])
+  const [historicMatchGoals, setHistoricMatchGoals] = useState([])
   const [discipline, setDiscipline] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
 
   useEffect(() => {
+    window.scrollTo({ top: 0, left: 0, behavior: 'auto' })
     let cancelled = false
 
     async function load() {
@@ -52,16 +81,20 @@ export default function PlayerDetail() {
       }
 
       const fullName = `${playerRow.first_name || ''} ${playerRow.last_name || ''}`.trim()
-      const [goalResult, historicResult, disciplineResult] = await Promise.all([
+      const [goalResult, historicResult, historicMatchResult, disciplineResult] = await Promise.all([
         supabase
           .from('fixture_scorers')
-          .select('id, goals, fixture:fixture_id(id, fixture_date, home_score, away_score, home_team:home_team_id(name), away_team:away_team_id(name))')
+          .select('id, goals, team:team_id(id, name), fixture:fixture_id(id, fixture_date, home_score, away_score, home_team:home_team_id(id, name), away_team:away_team_id(id, name))')
           .eq('player_id', id),
         supabase
           .from('historic_scorers')
           .select('season, team_name, goals')
           .ilike('player_name', fullName)
           .order('season', { ascending: false }),
+        supabase
+          .from('historic_match_scorers')
+          .select('season, fixture_date, team_name, home_team_name, away_team_name, goals')
+          .ilike('player_name', fullName),
         supabase
           .from('discipline_records')
           .select('id, card_type, card_count, notes, serious_offence, fixture:fixture_id(id, fixture_date, home_score, away_score, home_team:home_team_id(name), away_team:away_team_id(name))')
@@ -72,6 +105,7 @@ export default function PlayerDetail() {
         setPlayer(playerRow)
         setGoals(goalResult.data || [])
         setHistoricGoals(historicResult.data || [])
+        setHistoricMatchGoals(historicMatchResult.data || [])
         setDiscipline((disciplineResult.data || []).sort((a, b) => new Date(b.fixture?.fixture_date || 0) - new Date(a.fixture?.fixture_date || 0)))
         setLoading(false)
       }
@@ -107,6 +141,35 @@ export default function PlayerDetail() {
 
   const currentGoals = goals.reduce((sum, row) => sum + Number(row.goals || 0), 0)
   const historicalGoals = aggregatedHistoricGoals.reduce((sum, row) => sum + Number(row.goals || 0), 0)
+  const goalsByOpponent = useMemo(() => {
+    const totals = new Map()
+    const addGoals = (opponent, goalCount) => {
+      const name = canonicalTeamName(opponent)
+      if (!name) return
+      totals.set(name, (totals.get(name) || 0) + Number(goalCount || 0))
+    }
+
+    for (const row of goals) {
+      const fixture = row.fixture
+      if (!fixture) continue
+      const isHome = row.team?.id
+        ? row.team.id === fixture.home_team?.id
+        : canonicalTeamName(row.team?.name) === canonicalTeamName(fixture.home_team?.name)
+      addGoals(isHome ? fixture.away_team?.name : fixture.home_team?.name, row.goals)
+    }
+
+    for (const row of historicMatchGoals) {
+      const scoringTeam = canonicalTeamName(row.team_name)
+      const homeTeam = canonicalTeamName(row.home_team_name)
+      const awayTeam = canonicalTeamName(row.away_team_name)
+      if (scoringTeam === homeTeam) addGoals(awayTeam, row.goals)
+      else if (scoringTeam === awayTeam) addGoals(homeTeam, row.goals)
+    }
+
+    return [...totals.entries()]
+      .map(([opponent, goalCount]) => ({ opponent, goals: goalCount }))
+      .sort((left, right) => right.goals - left.goals || left.opponent.localeCompare(right.opponent))
+  }, [goals, historicMatchGoals])
 
   if (loading) return <div className="container" style={{ padding: 48 }}>Loading player…</div>
   if (error) return <div className="container" style={{ padding: 48 }}>{error}</div>
@@ -189,6 +252,33 @@ export default function PlayerDetail() {
                 <tr key={`${row.season}-${row.team_name}`}>
                   <td style={tdStyle}>{row.season}</td>
                   <td style={tdStyle}>{row.team_name}</td>
+                  <td style={{ ...tdStyle, textAlign: 'right', fontWeight: 800 }}>{row.goals}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </section>
+
+      <section style={{ marginTop: 34 }}>
+        <h2 style={sectionHeadingStyle}>Goals by opponent</h2>
+        <p style={{ color: 'var(--muted)', fontSize: 13 }}>
+          Goals scored against each team from the match-level records currently held on the website.
+        </p>
+        {goalsByOpponent.length === 0 ? (
+          <p style={{ color: 'var(--muted)' }}>No match-level scoring records are available.</p>
+        ) : (
+          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+            <thead>
+              <tr>
+                <th style={thStyle}>Opponent</th>
+                <th style={{ ...thStyle, textAlign: 'right' }}>Goals</th>
+              </tr>
+            </thead>
+            <tbody>
+              {goalsByOpponent.map((row) => (
+                <tr key={row.opponent}>
+                  <td style={tdStyle}>{row.opponent}</td>
                   <td style={{ ...tdStyle, textAlign: 'right', fontWeight: 800 }}>{row.goals}</td>
                 </tr>
               ))}
