@@ -127,7 +127,7 @@ export default function VenueFixtures() {
       <h1 style={{ marginBottom: 6 }}>{venueName}</h1>
       {date && <p style={{ color: 'var(--muted)', marginTop: 0 }}>{formatDate(date)}</p>}
       <p style={{ color: 'var(--muted)' }}>
-        All matches at this venue on this date. Separate pitches are combined and kick-off time is ignored.
+        All matches at this venue on this date. Matches with this venue name are combined for the day; kick-off time is ignored when grouping them.
       </p>
 
       {error && <p>{error}</p>}
