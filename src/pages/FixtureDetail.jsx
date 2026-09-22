@@ -44,6 +44,10 @@ function supportsDirectHistoricScorers(season) {
   return Number.isFinite(startYear) && startYear >= 2025
 }
 
+function normalizedPlayerName(name) {
+  return String(name || '').trim().replace(/\s+/g, ' ').toLocaleLowerCase('en-GB')
+}
+
 export default function FixtureDetail() {
   const { id } = useParams()
   const navigate = useNavigate()
@@ -120,21 +124,42 @@ export default function FixtureDetail() {
       let s = []
       let d = []
       if (f.is_historic) {
-        const { data: historicScorers } = await supabase
-          .from('historic_match_scorers')
-          .select('goals, player_name, team_name')
-          .eq('historic_fixture_id', id)
+        const teamIds = [f.home_team?.id, f.away_team?.id].filter(Boolean)
+        const [{ data: historicScorers }, { data: squadPlayers }] = await Promise.all([
+          supabase
+            .from('historic_match_scorers')
+            .select('goals, player_name, team_name')
+            .eq('historic_fixture_id', id),
+          teamIds.length
+            ? supabase
+                .from('players')
+                .select('id, first_name, last_name, team_id')
+                .in('team_id', teamIds)
+            : Promise.resolve({ data: [] }),
+        ])
 
-        s = (historicScorers || []).map((row) => ({
-          goals: row.goals,
-          team_id: row.team_name === f.home_team?.name ? f.home_team?.id : f.away_team?.id,
-          player: { first_name: row.player_name, last_name: '' },
-        }))
+        const playersByTeamAndName = new Map(
+          (squadPlayers || []).map((player) => [
+            `${player.team_id}::${normalizedPlayerName(`${player.first_name} ${player.last_name}`)}`,
+            player,
+          ])
+        )
+        s = (historicScorers || []).map((row) => {
+          const teamId = row.team_name === f.home_team?.name ? f.home_team?.id : f.away_team?.id
+          const matchedPlayer = playersByTeamAndName.get(
+            `${teamId}::${normalizedPlayerName(row.player_name)}`
+          )
+          return {
+            goals: row.goals,
+            team_id: teamId,
+            player: matchedPlayer || { first_name: row.player_name, last_name: '' },
+          }
+        })
       } else {
         const [{ data: liveScorers }, { data: disciplineRows }] = await Promise.all([
           supabase
             .from('fixture_scorers')
-            .select('goals, team_id, player:player_id(first_name, last_name)')
+            .select('goals, team_id, player:player_id(id, first_name, last_name)')
             .eq('fixture_id', id),
           supabase
             .from('discipline_records')
@@ -209,12 +234,14 @@ export default function FixtureDetail() {
 
         const historicMeetings = (hf || []).map((m) => ({
           ...m,
+          fixture_id: supportsDirectHistoricScorers(m.season) ? m.id : null,
           scorers: supportsDirectHistoricScorers(m.season)
             ? archivedScorersByFixture[m.id] || []
             : [],
         }))
         const currentMeetings = (liveFixtures || []).map((m) => ({
           id: `live-${m.id}`,
+          fixture_id: m.id,
           competition_name: m.stage?.competition?.name || 'ECFA',
           season: m.stage?.competition?.season || 'Current season',
           fixture_date: m.fixture_date,
@@ -380,13 +407,27 @@ export default function FixtureDetail() {
                 {m.competition_name} — {m.season} —{' '}
                 {new Date(m.fixture_date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
               </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 14, marginBottom: m.scorers.length ? 6 : 0 }}>
-                <span style={{ flex: 1, textAlign: 'right', fontWeight: 600 }}>{m.home_team_name}</span>
-                <span style={{ fontWeight: 800, minWidth: 60, textAlign: 'center' }}>
-                  {m.home_goals != null && m.away_goals != null ? `${m.home_goals} - ${m.away_goals}` : 'v'}
-                </span>
-                <span style={{ flex: 1, fontWeight: 600 }}>{m.away_team_name}</span>
-              </div>
+              {m.fixture_id ? (
+                <Link
+                  to={`/fixtures/${m.fixture_id}`}
+                  style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 14, marginBottom: m.scorers.length ? 6 : 0, color: 'inherit', textDecoration: 'none' }}
+                  aria-label={`View ${m.home_team_name} versus ${m.away_team_name}`}
+                >
+                  <span style={{ flex: 1, textAlign: 'right', fontWeight: 600 }}>{m.home_team_name}</span>
+                  <span style={{ fontWeight: 800, minWidth: 60, textAlign: 'center', color: 'var(--brass)' }}>
+                    {m.home_goals != null && m.away_goals != null ? `${m.home_goals} - ${m.away_goals}` : 'v'}
+                  </span>
+                  <span style={{ flex: 1, fontWeight: 600 }}>{m.away_team_name}</span>
+                </Link>
+              ) : (
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 14, marginBottom: m.scorers.length ? 6 : 0 }}>
+                  <span style={{ flex: 1, textAlign: 'right', fontWeight: 600 }}>{m.home_team_name}</span>
+                  <span style={{ fontWeight: 800, minWidth: 60, textAlign: 'center' }}>
+                    {m.home_goals != null && m.away_goals != null ? `${m.home_goals} - ${m.away_goals}` : 'v'}
+                  </span>
+                  <span style={{ flex: 1, fontWeight: 600 }}>{m.away_team_name}</span>
+                </div>
+              )}
               {m.comment && (
                 <div style={{ fontSize: 12, color: 'var(--muted)', textAlign: 'center', marginBottom: 6 }}>
                   {m.comment}
@@ -449,9 +490,16 @@ function ScorerColumn({ title, scorers }) {
                 fontSize: 14,
               }}
             >
-              <span>
-                {s.player?.first_name} {s.player?.last_name}
-              </span>
+              {s.player?.id ? (
+                <Link
+                  to={`/players/${s.player.id}`}
+                  style={{ color: 'var(--ink)', fontWeight: 600, textDecoration: 'underline', textDecorationColor: 'var(--brass)', textUnderlineOffset: 3 }}
+                >
+                  {s.player.first_name} {s.player.last_name}
+                </Link>
+              ) : (
+                <span>{s.player?.first_name} {s.player?.last_name}</span>
+              )}
               <span style={{ fontWeight: 800, color: 'var(--ink)' }}>{s.goals}</span>
             </li>
           ))}
