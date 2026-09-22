@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
 import { supabase } from '../supabaseClient'
 import { displayedScore, fullOutcomeNote } from '../utils/fixtureOutcome'
-import { isVenueLinkable, venueDateUrl } from '../utils/venueGrouping'
+import { isVenueLinkable, venueHistoryUrl } from '../utils/venueGrouping'
 
 function Badge({ logoUrl, name, size = 56 }) {
   if (logoUrl) {
@@ -355,7 +355,7 @@ export default function FixtureDetail() {
           {fixture.venue && (
             isVenueLinkable(fixture.venue) ? (
               <Link
-                to={venueDateUrl(fixture.venue, fixture.fixture_date)}
+                to={venueHistoryUrl(fixture.venue)}
                 style={{ fontSize: 12, color: 'var(--muted)', textDecoration: 'underline', textDecorationColor: 'var(--brass)', textUnderlineOffset: 3 }}
               >
                 {fixture.venue}
