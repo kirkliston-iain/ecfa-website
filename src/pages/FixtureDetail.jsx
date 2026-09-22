@@ -39,13 +39,9 @@ function Badge({ logoUrl, name, size = 56 }) {
   )
 }
 
-function historicMeetingKey(meeting) {
-  return [
-    meeting.season,
-    meeting.fixture_date?.slice(0, 10),
-    meeting.home_team_name,
-    meeting.away_team_name,
-  ].join('::')
+function supportsDirectHistoricScorers(season) {
+  const startYear = Number.parseInt(String(season || '').match(/^(\d{4})/)?.[1], 10)
+  return Number.isFinite(startYear) && startYear >= 2025
 }
 
 export default function FixtureDetail() {
@@ -114,14 +110,16 @@ export default function FixtureDetail() {
             .limit(5),
         ])
 
-        const historicDates = [...new Set((hf || []).map((m) => m.fixture_date?.slice(0, 10)).filter(Boolean))]
+        const historicFixtureIds = (hf || [])
+          .filter((m) => supportsDirectHistoricScorers(m.season))
+          .map((m) => m.id)
         const liveFixtureIds = (liveFixtures || []).map((m) => m.id)
         const [{ data: archivedScorers }, { data: liveScorers }] = await Promise.all([
-          historicDates.length
+          historicFixtureIds.length
             ? supabase
                 .from('historic_match_scorers')
-                .select('season, fixture_date, home_team_name, away_team_name, player_name, team_name, goals')
-                .in('fixture_date', historicDates)
+                .select('historic_fixture_id, player_name, team_name, goals')
+                .in('historic_fixture_id', historicFixtureIds)
             : Promise.resolve({ data: [] }),
           liveFixtureIds.length
             ? supabase
@@ -131,11 +129,13 @@ export default function FixtureDetail() {
             : Promise.resolve({ data: [] }),
         ])
 
-        const archivedScorersByMatch = {}
+        const archivedScorersByFixture = {}
         for (const row of archivedScorers || []) {
-          const key = historicMeetingKey(row)
-          if (!archivedScorersByMatch[key]) archivedScorersByMatch[key] = []
-          archivedScorersByMatch[key].push(row)
+          if (!row.historic_fixture_id) continue
+          if (!archivedScorersByFixture[row.historic_fixture_id]) {
+            archivedScorersByFixture[row.historic_fixture_id] = []
+          }
+          archivedScorersByFixture[row.historic_fixture_id].push(row)
         }
 
         const liveScorersByFixture = {}
@@ -150,7 +150,9 @@ export default function FixtureDetail() {
 
         const historicMeetings = (hf || []).map((m) => ({
           ...m,
-          scorers: archivedScorersByMatch[historicMeetingKey(m)] || [],
+          scorers: supportsDirectHistoricScorers(m.season)
+            ? archivedScorersByFixture[m.id] || []
+            : [],
         }))
         const currentMeetings = (liveFixtures || []).map((m) => ({
           id: `live-${m.id}`,
