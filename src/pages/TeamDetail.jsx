@@ -142,6 +142,7 @@ export default function TeamDetail() {
         .from('players')
         .select('id, first_name, last_name')
         .eq('team_id', id)
+        .order('first_name', { ascending: true })
         .order('last_name', { ascending: true })
 
       const { data: honourRows } = await supabase

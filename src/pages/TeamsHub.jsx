@@ -172,6 +172,7 @@ export default function TeamsHub() {
         .from('players')
         .select('id, first_name, last_name')
         .eq('team_id', teamId)
+        .order('first_name')
         .order('last_name')
       setSquad(sq || [])
 

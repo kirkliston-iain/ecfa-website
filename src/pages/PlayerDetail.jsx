@@ -87,6 +87,11 @@ function formatSeasonLabel(season) {
   return season === CURRENT_SEASON ? `Current season (${season})` : season
 }
 
+function hasOpponentLevelScoringData(season) {
+  const startYear = Number.parseInt(String(season || '').match(/^(\d{4})/)?.[1], 10)
+  return Number.isFinite(startYear) && startYear >= 2025
+}
+
 export default function PlayerDetail() {
   const { id } = useParams()
   const [player, setPlayer] = useState(null)
@@ -207,6 +212,7 @@ export default function PlayerDetail() {
       const fixture = row.fixture
       if (!fixture) continue
       const season = String(fixture.stage?.competition?.season || CURRENT_SEASON).replace('-', '/')
+      if (!hasOpponentLevelScoringData(season)) continue
       if (opponentSeason !== 'Overall' && season !== opponentSeason) continue
       const isHome = row.team?.id
         ? row.team.id === fixture.home_team?.id
@@ -216,6 +222,7 @@ export default function PlayerDetail() {
 
     for (const row of historicMatchGoals) {
       const season = String(row.season || 'Unknown').replace('-', '/')
+      if (!hasOpponentLevelScoringData(season)) continue
       if (opponentSeason !== 'Overall' && season !== opponentSeason) continue
       const scoringTeam = canonicalTeamName(row.team_name)
       const homeTeam = canonicalTeamName(row.home_team_name)
@@ -276,7 +283,9 @@ export default function PlayerDetail() {
   const visibleScoringMatches = scoringMatchSeason === 'Overall'
     ? scoringMatches
     : scoringMatches.filter((match) => match.season === scoringMatchSeason)
-  const opponentSeasonOptions = scoringMatchSeasons
+  const opponentSeasonOptions = scoringMatchSeasons.filter(
+    (season) => season === 'Overall' || hasOpponentLevelScoringData(season)
+  )
 
   if (loading) return <div className="container" style={{ padding: 48 }}>Loading player…</div>
   if (error) return <div className="container" style={{ padding: 48 }}>{error}</div>
@@ -379,7 +388,7 @@ export default function PlayerDetail() {
       <section style={{ marginTop: 34 }}>
         <h2 style={sectionHeadingStyle}>Goals by opponent</h2>
         <p style={{ color: 'var(--muted)', fontSize: 13 }}>
-          Goals scored against each team from the match-level records currently held on the website.
+          Opponent-specific goal records are available from 2025/26 onwards. Earlier seasons contain totals only and are not included here.
         </p>
         <label htmlFor="opponent-season" style={{ display: 'block', color: 'var(--muted)', fontSize: 12, fontWeight: 700, marginBottom: 5 }}>
           Season
