@@ -2,6 +2,8 @@ import { useEffect, useMemo, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { supabase } from '../supabaseClient'
 
+const CURRENT_SEASON = '2026/27'
+
 const SEASON_OPTIONS = [
   { value: 'overall', label: 'Overall (All-time)' },
   { value: '2026/27', label: '2026/27 (current)' },
@@ -108,6 +110,7 @@ export default function ScorersPage() {
   const [historic, setHistoric] = useState([])
   const [current, setCurrent] = useState([])
   const [teamLogos, setTeamLogos] = useState({})
+  const [playerDirectory, setPlayerDirectory] = useState([])
 
   useEffect(() => {
     let cancelled = false
@@ -117,11 +120,13 @@ export default function ScorersPage() {
 
       const hist = await fetchAllHistoricScorers()
 
-      const { data: scorers } = await supabase
-        .from('fixture_scorers')
-        .select('goals, player:player_id(id, first_name, last_name), team:team_id(name)')
-
-      const { data: teams } = await supabase.from('teams').select('name, logo_url')
+      const [{ data: scorers }, { data: teams }, { data: directoryPlayers }] = await Promise.all([
+        supabase
+          .from('fixture_scorers')
+          .select('goals, player:player_id(id, first_name, last_name), team:team_id(name)'),
+        supabase.from('teams').select('name, logo_url'),
+        supabase.from('players').select('id, first_name, last_name, team_id').order('last_name').order('first_name'),
+      ])
 
       if (!cancelled) {
         setHistoric(hist || [])
@@ -136,6 +141,7 @@ export default function ScorersPage() {
         const logoMap = {}
         for (const t of teams || []) logoMap[t.name] = t.logo_url
         setTeamLogos(logoMap)
+        setPlayerDirectory(directoryPlayers || [])
         setLoading(false)
       }
     }
@@ -149,6 +155,13 @@ export default function ScorersPage() {
   const rows = useMemo(() => {
     const rosterNames = {}
     const rosterIds = {}
+    for (const player of playerDirectory) {
+      const name = `${player.first_name || ''} ${player.last_name || ''}`.trim()
+      const key = playerKey(name)
+      if (!key || rosterIds[key]) continue
+      rosterNames[key] = name
+      rosterIds[key] = player.id
+    }
     for (const row of current) {
       const key = playerKey(row.player_name)
       rosterNames[key] = row.player_name
@@ -180,11 +193,39 @@ export default function ScorersPage() {
         goals,
       }))
       .sort((a, b) => b.goals - a.goals)
-  }, [season, historic, current])
+  }, [season, historic, current, playerDirectory])
 
   const visibleRows = playerSearch
     ? rows.filter((row) => playerKey(row.player_name) === playerKey(playerSearch))
     : rows
+
+  const playerSeasonRows = useMemo(() => {
+    if (!playerSearch) return []
+    const searchedKey = playerKey(playerSearch)
+    const totals = new Map()
+    const addRow = (seasonName, teamName, goals) => {
+      const cleanSeason = String(seasonName || 'Unknown').replace('-', '/')
+      const cleanTeam = String(teamName || 'Team not recorded').trim()
+      const key = `${cleanSeason.toLocaleLowerCase('en-GB')}::${cleanTeam.toLocaleLowerCase('en-GB')}`
+      const existing = totals.get(key)
+      if (existing) existing.goals += Number(goals || 0)
+      else totals.set(key, { season: cleanSeason, team_name: cleanTeam, goals: Number(goals || 0) })
+    }
+
+    for (const row of historic) {
+      if (playerKey(row.player_name) === searchedKey) addRow(row.season, row.team_name, row.goals)
+    }
+    for (const row of current) {
+      if (playerKey(row.player_name) === searchedKey) addRow(CURRENT_SEASON, row.team_name, row.goals)
+    }
+
+    return [...totals.values()].sort((left, right) => {
+      const seasonOrder = right.season.localeCompare(left.season, 'en-GB', { numeric: true })
+      return seasonOrder || left.team_name.localeCompare(right.team_name, 'en-GB')
+    })
+  }, [playerSearch, historic, current])
+
+  const playerHistoryTotal = playerSeasonRows.reduce((sum, row) => sum + row.goals, 0)
 
   if (loading) return <div className="container" style={{ padding: 48 }}>Loading…</div>
 
@@ -225,6 +266,36 @@ export default function ScorersPage() {
         </div>
       )}
 
+
+      {playerSearch && playerSeasonRows.length > 0 && (
+        <section style={{ marginBottom: 28 }}>
+          <h2 style={{ color: 'var(--brass)', fontSize: 18, paddingBottom: 8, borderBottom: '2px solid var(--line)' }}>
+            Scoring history
+          </h2>
+          <p style={{ color: 'var(--muted)', fontSize: 13 }}>
+            {playerHistoryTotal} goal{playerHistoryTotal === 1 ? '' : 's'} across recorded ECFA seasons.
+          </p>
+          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+            <thead>
+              <tr>
+                <th style={thStyle('left')}>Season</th>
+                <th style={thStyle('left')}>Team</th>
+                <th style={thStyle()}>Goals</th>
+              </tr>
+            </thead>
+            <tbody>
+              {playerSeasonRows.map((row) => (
+                <tr key={`${row.season}-${row.team_name}`} style={{ borderBottom: '1px solid var(--line)' }}>
+                  <td style={{ padding: '10px 8px' }}>{row.season}</td>
+                  <td style={{ padding: '10px 8px' }}>{row.team_name}</td>
+                  <td style={{ padding: '10px 8px', textAlign: 'center', fontWeight: 800 }}>{row.goals}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </section>
+      )}
+
       <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 14 }}>
         <thead>
           <tr style={{ borderBottom: '3px solid var(--brass)' }}>
@@ -239,7 +310,11 @@ export default function ScorersPage() {
             <tr key={row.player_name} style={{ borderBottom: '1px solid var(--line)' }}>
               <td style={{ padding: '10px 8px' }}>{i + 1}</td>
               <td style={{ padding: '10px 8px', fontWeight: 600 }}>
-                {row.player_id ? <Link to={`/players/${row.player_id}`} style={{ color: 'var(--ink)' }}>{row.player_name}</Link> : row.player_name}
+                {row.player_id ? (
+                  <Link to={`/players/${row.player_id}`} style={{ color: 'var(--ink)' }}>{row.player_name}</Link>
+                ) : (
+                  <Link to={`/scorers?player=${encodeURIComponent(row.player_name)}`} style={{ color: 'var(--ink)' }}>{row.player_name}</Link>
+                )}
               </td>
               {season !== 'overall' && (
                 <td style={{ padding: '10px 8px', color: 'var(--muted)' }}>
