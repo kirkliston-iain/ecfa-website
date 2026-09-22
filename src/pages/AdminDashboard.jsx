@@ -9,7 +9,7 @@ export default function AdminDashboard() {
   const [stageId, setStageId] = useState('')
   const [teamFilter, setTeamFilter] = useState('')
   const [dateFilter, setDateFilter] = useState('')
-  const [statusFilter, setStatusFilter] = useState('')
+  const [statusFilter, setStatusFilter] = useState('scheduled')
   const [fixtures, setFixtures] = useState([])
   const [weekOffRequests, setWeekOffRequests] = useState([])
   const [rescheduleOpportunities, setRescheduleOpportunities] = useState([])
