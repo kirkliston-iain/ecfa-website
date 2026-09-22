@@ -8,6 +8,7 @@ import CompetitionsIndex from './pages/CompetitionsIndex'
 import StandingsPage from './pages/StandingsPage'
 import Competition from './pages/Competition'
 import FixtureDetail from './pages/FixtureDetail'
+import VenueFixtures from './pages/VenueFixtures'
 import TeamDetail from './pages/TeamDetail'
 import ScorersPage from './pages/ScorersPage'
 import HonoursPage from './pages/HonoursPage'
@@ -53,6 +54,7 @@ export default function App() {
           <Route path="/standings" element={<StandingsPage />} />
           <Route path="/competitions/:slug" element={<Competition />} />
           <Route path="/fixtures/:id" element={<FixtureDetail />} />
+          <Route path="/venues/:venueKey" element={<VenueFixtures />} />
           <Route path="/teams/:id" element={<TeamDetail />} />
           <Route path="/scorers" element={<ScorersPage />} />
           <Route path="/honours" element={<HonoursPage />} />
