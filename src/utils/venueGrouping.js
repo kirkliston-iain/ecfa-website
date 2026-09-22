@@ -10,16 +10,7 @@ export function venueGroupKey(value) {
   return cleanVenueName(value)
     .toLocaleLowerCase('en-GB')
     .replace(/[–—]/g, '-')
-    .replace(/\s*-\s*3g$/i, '')
-    .replace(/\s+(?:3g|grass|enclosure)$/i, '')
     .replace(/\s+/g, ' ')
-    .trim()
-}
-
-export function venueGroupLabel(value) {
-  return cleanVenueName(value)
-    .replace(/\s*-\s*3g$/i, '')
-    .replace(/\s+(?:3g|grass|enclosure)$/i, '')
     .trim()
 }
 
@@ -30,5 +21,6 @@ export function isVenueLinkable(value) {
 
 export function venueDateUrl(venue, fixtureDate) {
   const date = String(fixtureDate || '').slice(0, 10)
-  return `/venues/${encodeURIComponent(venueGroupKey(venue))}?date=${encodeURIComponent(date)}&name=${encodeURIComponent(venueGroupLabel(venue))}`
+  const name = cleanVenueName(venue)
+  return `/venues/${encodeURIComponent(venueGroupKey(venue))}?date=${encodeURIComponent(date)}&name=${encodeURIComponent(name)}`
 }
