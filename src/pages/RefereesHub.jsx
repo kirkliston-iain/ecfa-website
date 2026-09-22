@@ -59,6 +59,10 @@ export default function RefereesHub() {
   const [cardStats, setCardStats] = useState(null)
 
   useEffect(() => {
+    window.scrollTo({ top: 0, left: 0, behavior: 'auto' })
+  }, [])
+
+  useEffect(() => {
     supabase
       .from('admin_profiles')
       .select('id')
