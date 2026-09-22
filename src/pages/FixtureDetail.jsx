@@ -55,21 +55,61 @@ export default function FixtureDetail() {
   const [error, setError] = useState(null)
 
   useEffect(() => {
+    window.scrollTo({ top: 0, left: 0, behavior: 'auto' })
     let cancelled = false
 
     async function load() {
       setLoading(true)
       setError(null)
 
-      const { data: f, error: fErr } = await supabase
+      const { data: liveFixture } = await supabase
         .from('fixtures')
         .select(
           'id, round_name, fixture_date, venue, referee_name, home_score, away_score, went_to_extra_time, home_extra_time_score, away_extra_time_score, decided_by_penalties, home_penalty_score, away_penalty_score, status, home_team:home_team_id(id, name, logo_url), away_team:away_team_id(id, name, logo_url)'
         )
         .eq('id', id)
-        .single()
+        .maybeSingle()
 
-      if (fErr || !f) {
+      let f = liveFixture
+      if (!f) {
+        const { data: historicFixture } = await supabase
+          .from('historic_fixtures')
+          .select('id, competition_name, season, fixture_date, home_team_id, home_team_name, home_goals, away_team_id, away_team_name, away_goals, comment, home_team:home_team_id(id, name, logo_url), away_team:away_team_id(id, name, logo_url)')
+          .eq('id', id)
+          .maybeSingle()
+
+        if (historicFixture && supportsDirectHistoricScorers(historicFixture.season)) {
+          f = {
+            id: historicFixture.id,
+            round_name: `${historicFixture.competition_name} — ${historicFixture.season}`,
+            fixture_date: `${historicFixture.fixture_date}T00:00:00`,
+            venue: historicFixture.comment || null,
+            referee_name: null,
+            home_score: historicFixture.home_goals,
+            away_score: historicFixture.away_goals,
+            went_to_extra_time: false,
+            home_extra_time_score: null,
+            away_extra_time_score: null,
+            decided_by_penalties: false,
+            home_penalty_score: null,
+            away_penalty_score: null,
+            status: 'played',
+            home_team: historicFixture.home_team || {
+              id: historicFixture.home_team_id,
+              name: historicFixture.home_team_name,
+              logo_url: null,
+            },
+            away_team: historicFixture.away_team || {
+              id: historicFixture.away_team_id,
+              name: historicFixture.away_team_name,
+              logo_url: null,
+            },
+            is_historic: true,
+          }
+        }
+      }
+
+      if (!f) {
         if (!cancelled) {
           setError('Fixture not found.')
           setLoading(false)
@@ -77,15 +117,33 @@ export default function FixtureDetail() {
         return
       }
 
-      const { data: s } = await supabase
-        .from('fixture_scorers')
-        .select('goals, team_id, player:player_id(first_name, last_name)')
-        .eq('fixture_id', id)
+      let s = []
+      let d = []
+      if (f.is_historic) {
+        const { data: historicScorers } = await supabase
+          .from('historic_match_scorers')
+          .select('goals, player_name, team_name')
+          .eq('historic_fixture_id', id)
 
-      const { data: d } = await supabase
-        .from('discipline_records')
-        .select('card_type, card_count, team_id, player:player_id(first_name, last_name)')
-        .eq('fixture_id', id)
+        s = (historicScorers || []).map((row) => ({
+          goals: row.goals,
+          team_id: row.team_name === f.home_team?.name ? f.home_team?.id : f.away_team?.id,
+          player: { first_name: row.player_name, last_name: '' },
+        }))
+      } else {
+        const [{ data: liveScorers }, { data: disciplineRows }] = await Promise.all([
+          supabase
+            .from('fixture_scorers')
+            .select('goals, team_id, player:player_id(first_name, last_name)')
+            .eq('fixture_id', id),
+          supabase
+            .from('discipline_records')
+            .select('card_type, card_count, team_id, player:player_id(first_name, last_name)')
+            .eq('fixture_id', id),
+        ])
+        s = liveScorers || []
+        d = disciplineRows || []
+      }
 
       let meetings = []
       if (f.home_team?.id && f.away_team?.id) {
@@ -98,6 +156,7 @@ export default function FixtureDetail() {
             .from('historic_fixtures')
             .select('id, competition_name, season, fixture_date, home_team_name, home_goals, away_team_name, away_goals, comment')
             .or(teamPairFilter)
+            .neq('id', id)
             .order('fixture_date', { ascending: false })
             .limit(5),
           supabase
@@ -174,8 +233,8 @@ export default function FixtureDetail() {
 
       if (!cancelled) {
         setFixture(f)
-        setScorers(s || [])
-        setDiscipline(d || [])
+        setScorers(s)
+        setDiscipline(d)
         setPreviousMeetings(meetings)
         setLoading(false)
       }

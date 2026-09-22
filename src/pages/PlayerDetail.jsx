@@ -143,7 +143,7 @@ export default function PlayerDetail() {
           .order('season', { ascending: false }),
         supabase
           .from('historic_match_scorers')
-          .select('id, season, fixture_date, team_name, home_team_name, away_team_name, home_goals, away_goals, goals')
+          .select('id, historic_fixture_id, season, fixture_date, team_name, home_team_name, away_team_name, home_goals, away_goals, goals')
           .ilike('player_name', fullName),
         supabase
           .from('discipline_records')
@@ -265,7 +265,7 @@ export default function PlayerDetail() {
       if (!isHome && scoringTeam !== awayTeam) continue
       matches.push({
         key: `historic-${row.id}`,
-        fixtureId: null,
+        fixtureId: hasOpponentLevelScoringData(row.season) ? row.historic_fixture_id : null,
         season: String(row.season || 'Unknown').replace('-', '/'),
         date: row.fixture_date || '',
         opponent: isHome ? awayTeam : homeTeam,
