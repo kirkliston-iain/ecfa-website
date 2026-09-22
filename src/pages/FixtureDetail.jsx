@@ -365,7 +365,15 @@ export default function FixtureDetail() {
             )
           )}
           {fixture.referee_name && (
-            <div style={{ fontSize: 12, color: 'var(--muted)' }}>Referee: {fixture.referee_name}</div>
+            <div style={{ fontSize: 12, color: 'var(--muted)' }}>
+              Referee:{' '}
+              <Link
+                to={`/referees?ref=${encodeURIComponent(fixture.referee_name)}`}
+                style={{ color: 'inherit', fontWeight: 600, textDecoration: 'underline', textDecorationColor: 'var(--brass)', textUnderlineOffset: 3 }}
+              >
+                {fixture.referee_name}
+              </Link>
+            </div>
           )}
         </div>
 
