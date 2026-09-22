@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { supabase } from '../supabaseClient'
+import * as XLSX from 'xlsx'
 
 export default function TeamsAdmin() {
   const [teams, setTeams] = useState([])
@@ -12,6 +13,10 @@ export default function TeamsAdmin() {
   const [editingId, setEditingId] = useState(null)
   const [editFirstName, setEditFirstName] = useState('')
   const [editLastName, setEditLastName] = useState('')
+  const [exportTeamId, setExportTeamId] = useState('all')
+  const [exporting, setExporting] = useState(false)
+  const [exportMessage, setExportMessage] = useState('')
+  const [exportError, setExportError] = useState('')
 
   useEffect(() => {
     supabase
@@ -74,12 +79,165 @@ export default function TeamsAdmin() {
     loadSquad(selectedTeamId)
   }
 
+
+  function safeSheetName(name, index) {
+    const prefix = String(index + 1).padStart(2, '0')
+    const cleaned = String(name || 'Team').replace(/[\\/?*\[\]:]/g, '').trim()
+    return `${prefix} ${cleaned}`.slice(0, 31)
+  }
+
+  function fileSlug(name) {
+    return String(name || 'squad')
+      .toLocaleLowerCase('en-GB')
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-+|-+$/g, '')
+  }
+
+  function addSquadSheet(workbook, sheetName, players, teamName, includeTeam) {
+    const header = includeTeam
+      ? ['Team', 'First name', 'Surname', 'Full name']
+      : ['First name', 'Surname', 'Full name']
+    const rows = players.map((player) => {
+      const fullName = [player.first_name, player.last_name].filter(Boolean).join(' ')
+      return includeTeam
+        ? [teamName, player.first_name, player.last_name, fullName]
+        : [player.first_name, player.last_name, fullName]
+    })
+    const worksheet = XLSX.utils.aoa_to_sheet([header, ...rows])
+    worksheet['!cols'] = includeTeam
+      ? [{ wch: 36 }, { wch: 20 }, { wch: 24 }, { wch: 36 }]
+      : [{ wch: 20 }, { wch: 24 }, { wch: 36 }]
+    worksheet['!autofilter'] = { ref: worksheet['!ref'] || `A1:${includeTeam ? 'D' : 'C'}1` }
+    XLSX.utils.book_append_sheet(workbook, worksheet, sheetName)
+  }
+
+  async function exportSquads() {
+    setExporting(true)
+    setExportMessage('')
+    setExportError('')
+
+    let query = supabase
+      .from('players')
+      .select('id, first_name, last_name, team_id')
+      .not('team_id', 'is', null)
+      .order('last_name')
+      .order('first_name')
+
+    if (exportTeamId !== 'all') query = query.eq('team_id', exportTeamId)
+
+    const { data, error } = await query
+    if (error) {
+      setExportError('The squad list could not be loaded. Please try again.')
+      setExporting(false)
+      return
+    }
+
+    const players = data || []
+    const workbook = XLSX.utils.book_new()
+    workbook.Props = {
+      Title: exportTeamId === 'all' ? 'ECFA squad lists' : 'ECFA squad list',
+      Subject: 'Current team squad lists',
+      Author: 'Edinburgh Churches Football Association',
+      CreatedDate: new Date(),
+    }
+
+    if (exportTeamId === 'all') {
+      const teamById = new Map(teams.map((team) => [team.id, team]))
+      const combinedPlayers = players
+        .map((player) => ({ ...player, team_name: teamById.get(player.team_id)?.name || 'Unknown team' }))
+        .sort((a, b) =>
+          a.team_name.localeCompare(b.team_name, 'en-GB')
+          || a.last_name.localeCompare(b.last_name, 'en-GB')
+          || a.first_name.localeCompare(b.first_name, 'en-GB')
+        )
+
+      const combinedRows = combinedPlayers.map((player) => ({
+        first_name: player.first_name,
+        last_name: player.last_name,
+        team_name: player.team_name,
+      }))
+      addSquadSheet(
+        workbook,
+        'All squads',
+        combinedRows,
+        '',
+        true
+      )
+      const allSheet = workbook.Sheets['All squads']
+      XLSX.utils.sheet_add_aoa(
+        allSheet,
+        [['Team', 'First name', 'Surname', 'Full name'], ...combinedPlayers.map((player) => [
+          player.team_name,
+          player.first_name,
+          player.last_name,
+          [player.first_name, player.last_name].filter(Boolean).join(' '),
+        ])],
+        { origin: 'A1' }
+      )
+
+      teams.forEach((team, index) => {
+        const teamPlayers = players
+          .filter((player) => player.team_id === team.id)
+          .sort((a, b) =>
+            a.last_name.localeCompare(b.last_name, 'en-GB')
+            || a.first_name.localeCompare(b.first_name, 'en-GB')
+          )
+        addSquadSheet(workbook, safeSheetName(team.name, index), teamPlayers, team.name, false)
+      })
+
+      XLSX.writeFile(workbook, 'ecfa-all-squad-lists.xlsx', { compression: true })
+      setExportMessage(`Exported ${players.length} players across ${teams.length} teams.`)
+    } else {
+      const team = teams.find((item) => item.id === exportTeamId)
+      const orderedPlayers = [...players].sort((a, b) =>
+        a.last_name.localeCompare(b.last_name, 'en-GB')
+        || a.first_name.localeCompare(b.first_name, 'en-GB')
+      )
+      addSquadSheet(workbook, 'Squad list', orderedPlayers, team?.name || 'Team', false)
+      XLSX.writeFile(workbook, `ecfa-${fileSlug(team?.name)}-squad.xlsx`, { compression: true })
+      setExportMessage(`Exported ${orderedPlayers.length} players for ${team?.name || 'the selected team'}.`)
+    }
+
+    setExporting(false)
+  }
+
   return (
     <div className="container" style={{ padding: '24px 16px', maxWidth: 480 }}>
       <Link to="/admin/dashboard" style={{ fontSize: 13, color: 'var(--brass)', display: 'block', marginBottom: 16 }}>
         &larr; Back to admin
       </Link>
       <h1 style={{ fontSize: 22, color: 'var(--pitch)', marginBottom: 20 }}>Manage Squads</h1>
+
+      <section style={{ ...cardStyle, marginBottom: 20, background: '#fafafa' }}>
+        <div style={{ fontWeight: 800, marginBottom: 5 }}>Export squad lists</div>
+        <p style={{ color: 'var(--muted)', fontSize: 13, margin: '0 0 12px' }}>
+          Download an Excel workbook for every team or one selected team.
+        </p>
+        <select
+          value={exportTeamId}
+          onChange={(e) => {
+            setExportTeamId(e.target.value)
+            setExportMessage('')
+            setExportError('')
+          }}
+          style={{ ...fullSelectStyle, marginBottom: 10 }}
+        >
+          <option value="all">All teams</option>
+          {teams.map((team) => (
+            <option key={team.id} value={team.id}>{team.name}</option>
+          ))}
+        </select>
+        <button
+          type="button"
+          onClick={exportSquads}
+          disabled={exporting || teams.length === 0}
+          style={{ ...smallButtonStyle, width: '100%', opacity: exporting ? 0.65 : 1 }}
+        >
+          {exporting ? 'Preparing Excel file…' : 'Download Excel'}
+        </button>
+        {exportMessage && <div style={{ color: '#176B3A', fontSize: 13, fontWeight: 700, marginTop: 10 }}>{exportMessage}</div>}
+        {exportError && <div style={{ color: '#B3261E', fontSize: 13, fontWeight: 700, marginTop: 10 }}>{exportError}</div>}
+      </section>
 
       <select
         value={selectedTeamId}
