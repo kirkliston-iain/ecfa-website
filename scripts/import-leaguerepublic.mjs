@@ -217,17 +217,19 @@ async function importScorers(competitionSlug) {
         const firstName = stat.firstName.trim()
         const lastName = stat.lastName.trim()
 
-        let { data: player } = await supabase
+        const { data: matchingPlayers } = await supabase
           .from('players')
           .select('id')
           .eq('first_name', firstName)
           .eq('last_name', lastName)
-          .maybeSingle()
+          .eq('team_id', side.teamId)
+          .limit(1)
 
+        let player = matchingPlayers?.[0] || null
         if (!player) {
           const { data: created, error: createErr } = await supabase
             .from('players')
-            .insert({ first_name: firstName, last_name: lastName })
+            .insert({ first_name: firstName, last_name: lastName, team_id: side.teamId })
             .select('id')
             .single()
           if (createErr) continue
