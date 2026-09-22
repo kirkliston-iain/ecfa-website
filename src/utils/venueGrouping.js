@@ -19,8 +19,7 @@ export function isVenueLinkable(value) {
   return Boolean(cleaned) && !NON_VENUES.has(cleaned.toLocaleLowerCase('en-GB'))
 }
 
-export function venueDateUrl(venue, fixtureDate) {
-  const date = String(fixtureDate || '').slice(0, 10)
+export function venueHistoryUrl(venue) {
   const name = cleanVenueName(venue)
-  return `/venues/${encodeURIComponent(venueGroupKey(venue))}?date=${encodeURIComponent(date)}&name=${encodeURIComponent(name)}`
+  return `/venues/${encodeURIComponent(venueGroupKey(venue))}?name=${encodeURIComponent(name)}`
 }
