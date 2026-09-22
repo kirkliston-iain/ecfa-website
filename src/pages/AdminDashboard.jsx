@@ -242,7 +242,7 @@ export default function AdminDashboard() {
   useEffect(() => {
     setTeamFilter('')
     setDateFilter('')
-    setStatusFilter('')
+    setStatusFilter('scheduled')
     if (competitionId && !stageId) {
       setFixtures([])
       return
