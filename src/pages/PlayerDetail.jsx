@@ -369,10 +369,17 @@ export default function PlayerDetail() {
         <p style={{ color: 'var(--muted)', fontSize: 13 }}>
           {currentGoals} goal{currentGoals === 1 ? '' : 's'} this season and {historicalGoals} across previous recorded seasons.
         </p>
-        {aggregatedHistoricGoals.length > 0 && (
+        {(currentGoals > 0 || aggregatedHistoricGoals.length > 0) && (
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
             <thead><tr><th style={thStyle}>Season</th><th style={thStyle}>Team</th><th style={{ ...thStyle, textAlign: 'right' }}>Goals</th></tr></thead>
             <tbody>
+              {currentGoals > 0 && (
+                <tr>
+                  <td style={tdStyle}>{CURRENT_SEASON}</td>
+                  <td style={tdStyle}>{player.team?.name || 'Current team'}</td>
+                  <td style={{ ...tdStyle, textAlign: 'right', fontWeight: 800 }}>{currentGoals}</td>
+                </tr>
+              )}
               {aggregatedHistoricGoals.map((row) => (
                 <tr key={`${row.season}-${row.team_name}`}>
                   <td style={tdStyle}>{row.season}</td>
@@ -435,25 +442,36 @@ export default function PlayerDetail() {
           <p style={{ color: 'var(--muted)' }}>No match-level scoring records are available for this season.</p>
         ) : (
           <div style={{ borderTop: '1px solid var(--line)' }}>
-            {visibleScoringMatches.map((match) => (
-              <article key={match.key} style={scoringMatchRowStyle}>
-                <div style={{ minWidth: 0 }}>
-                  <div style={{ color: 'var(--muted)', fontSize: 11, marginBottom: 3 }}>
-                    {match.season} · {match.fixtureId ? (
-                      <Link to={`/fixtures/${match.fixtureId}`} style={{ color: 'var(--brass)', fontWeight: 700 }}>
-                        {formatMatchDate(match.date)}
-                      </Link>
-                    ) : formatMatchDate(match.date)}
+            {visibleScoringMatches.map((match) => {
+              const content = (
+                <>
+                  <div style={{ minWidth: 0 }}>
+                    <div style={{ color: 'var(--muted)', fontSize: 11, marginBottom: 3 }}>
+                      {match.season} · {formatMatchDate(match.date)}
+                    </div>
+                    <div style={{ fontWeight: 700, lineHeight: 1.35 }}>{match.opponent}</div>
+                    <div style={{ color: 'var(--muted)', fontSize: 12, marginTop: 2 }}>{match.result}</div>
                   </div>
-                  <div style={{ fontWeight: 700, lineHeight: 1.35 }}>{match.opponent}</div>
-                  <div style={{ color: 'var(--muted)', fontSize: 12, marginTop: 2 }}>{match.result}</div>
-                </div>
-                <div style={{ textAlign: 'center', flexShrink: 0 }}>
-                  <strong style={{ display: 'block', fontSize: 22, color: 'var(--brass)' }}>{match.goals}</strong>
-                  <span style={{ color: 'var(--muted)', fontSize: 10, textTransform: 'uppercase' }}>Goals</span>
-                </div>
-              </article>
-            ))}
+                  <div style={{ textAlign: 'center', flexShrink: 0 }}>
+                    <strong style={{ display: 'block', fontSize: 22, color: 'var(--brass)' }}>{match.goals}</strong>
+                    <span style={{ color: 'var(--muted)', fontSize: 10, textTransform: 'uppercase' }}>Goals</span>
+                  </div>
+                </>
+              )
+
+              return match.fixtureId ? (
+                <Link
+                  key={match.key}
+                  to={`/fixtures/${match.fixtureId}`}
+                  aria-label={`View match against ${match.opponent} on ${formatMatchDate(match.date)}`}
+                  style={{ ...scoringMatchRowStyle, color: 'inherit', textDecoration: 'none' }}
+                >
+                  {content}
+                </Link>
+              ) : (
+                <article key={match.key} style={scoringMatchRowStyle}>{content}</article>
+              )
+            })}
           </div>
         )}
       </section>
