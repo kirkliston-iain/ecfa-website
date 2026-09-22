@@ -98,7 +98,7 @@ cover = Table([[p('ECFA WEBSITE', 'CoverSub')], [p('Public Features Guide', 'Cov
               ]))
 story += [Spacer(1, 35*mm), cover, Spacer(1, 18*mm)]
 story.append(Table([[p('WEBSITE', 'Smallx'), p('https://ecfa-website.vercel.app', 'CardTitle')],
-                    [p('GUIDE UPDATED', 'Smallx'), p('21 September 2026', 'CardTitle')]],
+                    [p('GUIDE UPDATED', 'Smallx'), p('22 September 2026', 'CardTitle')]],
                    colWidths=[35*mm, 125*mm], style=TableStyle([
                        ('BOX', (0,0), (-1,-1), 0.7, LINE), ('INNERGRID', (0,0), (-1,-1), 0.5, LINE),
                        ('BACKGROUND', (0,0), (0,-1), PALE), ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
@@ -143,7 +143,7 @@ story.append(card_grid([
     ('All-time scorers', 'Combine every recorded ECFA season into an overall career goals table.'),
     ('Player profiles', 'View a player’s current team, current and historical goals, and recorded yellow and red cards.'),
     ('Scoring history', 'Historical goals are totalled by season and team, avoiding duplicate single-goal lines.'),
-    ('Match-linked goals', 'Where source data exists, scoring records can be connected to the relevant fixture.'),
+    ('Match-linked goals', 'Current-season and 2025/26 match records show their recorded scorers on fixture and previous-meeting details.'),
     ('Name search', 'Find current players and historical scorers using full or partial names.'),
 ]))
 story += [Spacer(1, 10)] + section_title('5. Teams')

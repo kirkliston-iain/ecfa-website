@@ -39,6 +39,15 @@ function Badge({ logoUrl, name, size = 56 }) {
   )
 }
 
+function historicMeetingKey(meeting) {
+  return [
+    meeting.season,
+    meeting.fixture_date?.slice(0, 10),
+    meeting.home_team_name,
+    meeting.away_team_name,
+  ].join('::')
+}
+
 export default function FixtureDetail() {
   const { id } = useParams()
   const navigate = useNavigate()
@@ -84,28 +93,81 @@ export default function FixtureDetail() {
 
       let meetings = []
       if (f.home_team?.id && f.away_team?.id) {
-        const { data: hf } = await supabase
-          .from('historic_fixtures')
-          .select('id, competition_name, season, fixture_date, home_team_name, home_goals, away_team_name, away_goals, comment')
-          .or(
-            `and(home_team_id.eq.${f.home_team.id},away_team_id.eq.${f.away_team.id}),and(home_team_id.eq.${f.away_team.id},away_team_id.eq.${f.home_team.id})`
-          )
-          .order('fixture_date', { ascending: false })
-          .limit(5)
+        const teamPairFilter =
+          `and(home_team_id.eq.${f.home_team.id},away_team_id.eq.${f.away_team.id}),` +
+          `and(home_team_id.eq.${f.away_team.id},away_team_id.eq.${f.home_team.id})`
 
-        const fixtureIds = (hf || []).map((m) => m.id)
-        let scorersByFixture = {}
-        if (fixtureIds.length > 0) {
-          const { data: hs } = await supabase
-            .from('historic_scorers')
-            .select('historic_fixture_id, player_name, team_name, goals')
-            .in('historic_fixture_id', fixtureIds)
-          for (const row of hs || []) {
-            if (!scorersByFixture[row.historic_fixture_id]) scorersByFixture[row.historic_fixture_id] = []
-            scorersByFixture[row.historic_fixture_id].push(row)
-          }
+        const [{ data: hf }, { data: liveFixtures }] = await Promise.all([
+          supabase
+            .from('historic_fixtures')
+            .select('id, competition_name, season, fixture_date, home_team_name, home_goals, away_team_name, away_goals, comment')
+            .or(teamPairFilter)
+            .order('fixture_date', { ascending: false })
+            .limit(5),
+          supabase
+            .from('fixtures')
+            .select('id, fixture_date, venue, home_score, away_score, home_team:home_team_id(id, name), away_team:away_team_id(id, name), stage:stage_id(competition:competition_id(name, season))')
+            .or(teamPairFilter)
+            .eq('status', 'played')
+            .neq('id', id)
+            .order('fixture_date', { ascending: false })
+            .limit(5),
+        ])
+
+        const historicDates = [...new Set((hf || []).map((m) => m.fixture_date?.slice(0, 10)).filter(Boolean))]
+        const liveFixtureIds = (liveFixtures || []).map((m) => m.id)
+        const [{ data: archivedScorers }, { data: liveScorers }] = await Promise.all([
+          historicDates.length
+            ? supabase
+                .from('historic_match_scorers')
+                .select('season, fixture_date, home_team_name, away_team_name, player_name, team_name, goals')
+                .in('fixture_date', historicDates)
+            : Promise.resolve({ data: [] }),
+          liveFixtureIds.length
+            ? supabase
+                .from('fixture_scorers')
+                .select('fixture_id, goals, player:player_id(first_name, last_name), team:team_id(name)')
+                .in('fixture_id', liveFixtureIds)
+            : Promise.resolve({ data: [] }),
+        ])
+
+        const archivedScorersByMatch = {}
+        for (const row of archivedScorers || []) {
+          const key = historicMeetingKey(row)
+          if (!archivedScorersByMatch[key]) archivedScorersByMatch[key] = []
+          archivedScorersByMatch[key].push(row)
         }
-        meetings = (hf || []).map((m) => ({ ...m, scorers: scorersByFixture[m.id] || [] }))
+
+        const liveScorersByFixture = {}
+        for (const row of liveScorers || []) {
+          if (!liveScorersByFixture[row.fixture_id]) liveScorersByFixture[row.fixture_id] = []
+          liveScorersByFixture[row.fixture_id].push({
+            player_name: [row.player?.first_name, row.player?.last_name].filter(Boolean).join(' '),
+            team_name: row.team?.name,
+            goals: row.goals,
+          })
+        }
+
+        const historicMeetings = (hf || []).map((m) => ({
+          ...m,
+          scorers: archivedScorersByMatch[historicMeetingKey(m)] || [],
+        }))
+        const currentMeetings = (liveFixtures || []).map((m) => ({
+          id: `live-${m.id}`,
+          competition_name: m.stage?.competition?.name || 'ECFA',
+          season: m.stage?.competition?.season || 'Current season',
+          fixture_date: m.fixture_date,
+          home_team_name: m.home_team?.name,
+          home_goals: m.home_score,
+          away_team_name: m.away_team?.name,
+          away_goals: m.away_score,
+          comment: m.venue || null,
+          scorers: liveScorersByFixture[m.id] || [],
+        }))
+
+        meetings = [...currentMeetings, ...historicMeetings]
+          .sort((a, b) => new Date(b.fixture_date) - new Date(a.fixture_date))
+          .slice(0, 5)
       }
 
       if (!cancelled) {
