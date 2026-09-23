@@ -186,7 +186,7 @@ export default function StatsPage() {
     <div className="container" style={{ padding: '32px 20px 48px', maxWidth: 900 }}>
       <h1 style={{ fontSize: 30, marginBottom: 4 }}>Stats</h1>
       <p style={{ color: 'var(--muted)', marginBottom: 24 }}>
-        Current-season ECFA team records{season ? ` — ${String(season).replace('-', '/')}` : ''}.
+        Current-season ECFA team records{season ? ` — ${String(season).replace('-', '/')}` : ''}. Team statistics can include every competition or league matches only.
       </p>
 
       {error ? <p style={{ color: '#B3261E' }}>{error}</p> : (
@@ -196,7 +196,7 @@ export default function StatsPage() {
               Competition scope
               <select value={scope} onChange={(event) => setScope(event.target.value)} style={selectStyle}>
                 <option value="all">All competitions</option>
-                <option value="league">League only</option>
+                <option value="appin-league">League only</option>
               </select>
             </label>
             <label style={controlLabelStyle}>
@@ -246,8 +246,8 @@ export default function StatsPage() {
         <h2 style={{ fontSize: 20, color: 'var(--brass)', borderBottom: '2px solid var(--line)', paddingBottom: 8 }}>More ECFA statistics</h2>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(210px, 1fr))', gap: 12 }}>
           <Link to="/scorers" style={linkCardStyle}>
-            <strong>Player scoring</strong>
-            <span style={linkDescriptionStyle}>Season and all-time league goals. Cup scorers are not recorded.</span>
+            <strong>Player scoring — league only</strong>
+            <span style={linkDescriptionStyle}>Season and all-time league goals. Cup scorer identities are not recorded, so no competition split is shown.</span>
           </Link>
           <Link to="/referees" style={linkCardStyle}>
             <strong>Referee statistics</strong>
