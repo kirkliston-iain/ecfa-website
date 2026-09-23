@@ -56,14 +56,23 @@ export default function HistoricalSeason() {
     let cancelled = false
 
     async function loadArchiveIndex() {
-      const [fixtureResult, scorerResult, honourResult, teamResult] = await Promise.all([
-        supabase
-          .from('historic_fixtures')
-          .select('season, competition_name, home_goals, away_goals'),
+      const [seasonResult, scorerResult, honourResult, teamResult] = await Promise.all([
+        supabase.from('historic_fixture_seasons').select('season'),
         supabase.from('historic_scorers').select('season'),
         supabase.from('honours').select('season, status'),
         supabase.from('teams').select('id, name').order('name'),
       ])
+
+      const fixtureSeasons = (seasonResult.data || []).map((row) => row.season).filter(Boolean)
+      const fixtureResults = await Promise.all(
+        fixtureSeasons.map((seasonLabel) =>
+          supabase
+            .from('historic_fixtures')
+            .select('competition_name, home_goals, away_goals')
+            .eq('season', seasonLabel)
+            .range(0, 9999)
+        )
+      )
 
       if (cancelled) return
 
@@ -82,13 +91,14 @@ export default function HistoricalSeason() {
         return index.get(label)
       }
 
-      for (const fixture of fixtureResult.data || []) {
-        if (!fixture.season) continue
-        const entry = getSeason(fixture.season)
-        entry.fixtures += 1
-        if (fixture.home_goals != null && fixture.away_goals != null) entry.results += 1
-        if (fixture.competition_name) entry.competitions.add(fixture.competition_name)
-      }
+      fixtureSeasons.forEach((seasonLabel, indexPosition) => {
+        const entry = getSeason(seasonLabel)
+        for (const fixture of fixtureResults[indexPosition].data || []) {
+          entry.fixtures += 1
+          if (fixture.home_goals != null && fixture.away_goals != null) entry.results += 1
+          if (fixture.competition_name) entry.competitions.add(fixture.competition_name)
+        }
+      })
       for (const scorer of scorerResult.data || []) {
         if (scorer.season) getSeason(scorer.season).hasScorers = true
       }
@@ -103,7 +113,7 @@ export default function HistoricalSeason() {
         .sort((left, right) => right.season.localeCompare(left.season, undefined, { numeric: true }))
 
       setSeasonSummaries(summaries)
-      setSeasons(summaries.filter((entry) => entry.fixtures > 0).map((entry) => entry.season))
+      setSeasons(fixtureSeasons.sort((left, right) => right.localeCompare(left, undefined, { numeric: true })))
       setTeams(teamResult.data || [])
     }
 
@@ -112,7 +122,6 @@ export default function HistoricalSeason() {
       cancelled = true
     }
   }, [])
-
   useEffect(() => {
     if (!season) {
       setFixtures([])
