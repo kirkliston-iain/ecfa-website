@@ -11,6 +11,7 @@ import FixtureDetail from './pages/FixtureDetail'
 import VenueFixtures from './pages/VenueFixtures'
 import TeamDetail from './pages/TeamDetail'
 import ScorersPage from './pages/ScorersPage'
+import StatsPage from './pages/StatsPage'
 import HonoursPage from './pages/HonoursPage'
 import AdminLogin from './pages/AdminLogin'
 import AdminDashboard from './pages/AdminDashboard'
@@ -57,6 +58,7 @@ export default function App() {
           <Route path="/venues/:venueKey" element={<VenueFixtures />} />
           <Route path="/teams/:id" element={<TeamDetail />} />
           <Route path="/scorers" element={<ScorersPage />} />
+          <Route path="/stats" element={<StatsPage />} />
           <Route path="/honours" element={<HonoursPage />} />
           <Route path="/history" element={<HistoricalSeason />} />
           <Route path="/teams" element={<TeamsHub />} />
