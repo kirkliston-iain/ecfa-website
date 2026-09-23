@@ -6,8 +6,7 @@ const TABS = [
   { to: '/', label: 'Match Hub', end: true },
   { to: '/standings', label: 'Competitions' },
   { to: '/teams', label: 'Teams' },
-  { to: '/scorers', label: 'Scorers' },
-  { to: '/referees', label: 'Referees' },
+  { to: '/stats', label: 'Stats' },
   { to: '/honours', label: 'Honours' },
   { to: '/history', label: 'History' },
   { to: '/sponsors', label: 'Sponsors' },
@@ -15,7 +14,6 @@ const TABS = [
   { to: '/downloads', label: 'Downloads' },
   { to: '/search', label: 'Search' },
   { to: '/contact', label: 'Contact Us' },
-  { to: '/web-stats', label: 'Web Stats' },
 ]
 
 export default function Header() {
@@ -29,8 +27,9 @@ export default function Header() {
     return () => listener.subscription.unsubscribe()
   }, [])
 
+  const statsIndex = TABS.findIndex((tab) => tab.to === '/stats')
   const tabs = signedIn
-    ? [...TABS.slice(0, 5), { to: '/discipline', label: 'Discipline' }, ...TABS.slice(5)]
+    ? [...TABS.slice(0, statsIndex + 1), { to: '/discipline', label: 'Discipline' }, ...TABS.slice(statsIndex + 1)]
     : TABS
 
   return (
@@ -58,11 +57,11 @@ export default function Header() {
           className="container hscroll site-navigation"
           style={{ display: 'flex', gap: 28, overflowX: 'auto' }}
         >
-          {tabs.map((t) => (
+          {tabs.map((tab) => (
             <NavLink
-              key={t.to}
-              to={t.to}
-              end={t.end}
+              key={tab.to}
+              to={tab.to}
+              end={tab.end}
               style={({ isActive }) => ({
                 padding: '14px 0',
                 fontSize: 13,
@@ -74,7 +73,7 @@ export default function Header() {
                 color: isActive ? 'var(--ink)' : 'var(--muted)',
               })}
             >
-              {t.label}
+              {tab.label}
             </NavLink>
           ))}
         </nav>
