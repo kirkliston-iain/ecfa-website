@@ -141,6 +141,7 @@ export default function WebStats() {
           '/': 'Match Hub',
           '/standings': 'Competitions and standings',
           '/competitions': 'Competitions',
+          '/stats': 'Football statistics',
           '/scorers': 'Scorers',
           '/honours': 'Honours',
           '/history': 'History',
