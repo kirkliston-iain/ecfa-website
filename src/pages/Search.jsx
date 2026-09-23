@@ -9,6 +9,7 @@ const SITE_PAGES = [
   { label: 'Honours', description: 'ECFA competition winners', to: '/honours' },
   { label: 'History', description: 'Previous seasons and results', to: '/history' },
   { label: 'Teams', description: 'Team pages, squads, managers and fixtures', to: '/teams' },
+  { label: 'Stats', description: 'Current-season team records, player scoring and referee statistics', to: '/stats' },
   { label: 'Referees', description: 'Officials, games, venues and cards', to: '/referees' },
   { label: 'Sponsors', description: 'ECFA competition sponsors', to: '/sponsors' },
   { label: 'Charity', description: 'League and team charity events by season', to: '/charity' },
