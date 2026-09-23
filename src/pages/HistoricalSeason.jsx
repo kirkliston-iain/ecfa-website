@@ -135,7 +135,7 @@ export default function HistoricalSeason() {
 
     supabase
       .from('historic_fixtures')
-      .select('id, competition_name, fixture_date, home_team_name, home_goals, away_team_name, away_goals, comment')
+      .select('id, competition_name, fixture_date, home_team_name, home_team_id, home_goals, away_team_name, away_team_id, away_goals, comment')
       .eq('season', season)
       .then(({ data }) => setSeasonFixtures(data || []))
 
@@ -155,7 +155,7 @@ export default function HistoricalSeason() {
 
     let query = supabase
       .from('historic_fixtures')
-      .select('id, competition_name, fixture_date, home_team_name, home_goals, away_team_name, away_goals, comment')
+      .select('id, competition_name, fixture_date, home_team_name, home_team_id, home_goals, away_team_name, away_team_id, away_goals, comment')
       .eq('season', season)
 
     if (teamId) {
@@ -270,6 +270,17 @@ export default function HistoricalSeason() {
   const topScorers = [...scorerTotals.values()]
     .sort((left, right) => right.goals - left.goals || left.playerName.localeCompare(right.playerName))
     .slice(0, 10)
+
+  const teamsByName = new Map(teams.map((team) => [team.name.trim().toLowerCase(), team.id]))
+  function linkedTeamName(name, explicitId, style = {}) {
+    const teamIdForLink = explicitId || teamsByName.get(String(name || '').trim().toLowerCase())
+    if (!teamIdForLink) return <span style={style}>{name}</span>
+    return (
+      <Link to={`/teams/${teamIdForLink}`} style={{ ...style, color: 'inherit', textDecoration: 'underline', textDecorationColor: 'var(--brass)', textUnderlineOffset: 3 }}>
+        {name}
+      </Link>
+    )
+  }
 
   return (
     <div className="container" style={{ padding: '32px 20px 48px' }}>
@@ -435,8 +446,8 @@ export default function HistoricalSeason() {
             <div key={i} style={{ padding: '10px 0', borderBottom: '1px solid var(--line)', fontSize: 14 }}>
               <div style={{ fontWeight: 700 }}>{r.competition}</div>
               <div>
-                🏆 <strong>{r.winner}</strong>
-                <span style={{ color: 'var(--muted)' }}> beat {r.runnerUp}</span>
+                🏆 <strong>{linkedTeamName(r.winner)}</strong>
+                <span style={{ color: 'var(--muted)' }}> beat {linkedTeamName(r.runnerUp)}</span>
                 {r.fixture.home_goals != null && r.fixture.away_goals != null && (
                   <span style={{ color: 'var(--muted)' }}>
                     {' '}
@@ -476,7 +487,7 @@ export default function HistoricalSeason() {
                   </Link>
                   {scorer.teamName && (
                     <span style={{ display: 'block', color: 'var(--muted)', fontSize: 12, marginTop: 2 }}>
-                      {scorer.teamName}
+                      {linkedTeamName(scorer.teamName)}
                     </span>
                   )}
                 </span>
@@ -529,7 +540,7 @@ export default function HistoricalSeason() {
               }}
             >
               <div style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                {i + 1}. {t.name}
+                {i + 1}. {linkedTeamName(t.name)}
               </div>
               <div style={{ width: 28, textAlign: 'center' }}>{t.p}</div>
               <div style={{ width: 28, textAlign: 'center' }}>{t.w}</div>
@@ -575,17 +586,13 @@ export default function HistoricalSeason() {
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                   <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
                     <Badge name={f.home_team_name} />
-                    <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                      {f.home_team_name}
-                    </span>
+                    {linkedTeamName(f.home_team_name, f.home_team_id, { overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' })}
                   </div>
                   <div style={{ minWidth: 60, textAlign: 'center', fontWeight: 800 }}>
                     {f.home_goals != null && f.away_goals != null ? `${f.home_goals} - ${f.away_goals}` : 'v'}
                   </div>
                   <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 8, justifyContent: 'flex-end', minWidth: 0 }}>
-                    <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                      {f.away_team_name}
-                    </span>
+                    {linkedTeamName(f.away_team_name, f.away_team_id, { overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' })}
                     <Badge name={f.away_team_name} />
                   </div>
                 </div>
