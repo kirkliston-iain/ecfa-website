@@ -113,6 +113,10 @@ export default function ScorersPage() {
   const [playerDirectory, setPlayerDirectory] = useState([])
 
   useEffect(() => {
+    window.scrollTo({ top: 0, left: 0, behavior: 'auto' })
+  }, [playerSearch])
+
+  useEffect(() => {
     let cancelled = false
 
     async function load() {
@@ -268,7 +272,7 @@ export default function ScorersPage() {
 
 
       {playerSearch && playerSeasonRows.length > 0 && (
-        <section style={{ marginBottom: 28 }}>
+        <section id="player-scoring-history" style={{ marginBottom: 28, scrollMarginTop: 24 }}>
           <h2 style={{ color: 'var(--brass)', fontSize: 18, paddingBottom: 8, borderBottom: '2px solid var(--line)' }}>
             Scoring history
           </h2>
@@ -310,11 +314,13 @@ export default function ScorersPage() {
             <tr key={row.player_name} style={{ borderBottom: '1px solid var(--line)' }}>
               <td style={{ padding: '10px 8px' }}>{i + 1}</td>
               <td style={{ padding: '10px 8px', fontWeight: 600 }}>
-                {row.player_id ? (
-                  <Link to={`/players/${row.player_id}`} style={{ color: 'var(--ink)' }}>{row.player_name}</Link>
-                ) : (
-                  <Link to={`/scorers?player=${encodeURIComponent(row.player_name)}`} style={{ color: 'var(--ink)' }}>{row.player_name}</Link>
-                )}
+                <Link
+                  to={`/scorers?player=${encodeURIComponent(row.player_name)}`}
+                  style={{ color: 'var(--ink)', textDecoration: 'underline', textDecorationColor: 'var(--brass)', textUnderlineOffset: 3 }}
+                  aria-label={`View ${row.player_name} season-by-season scoring history`}
+                >
+                  {row.player_name}
+                </Link>
               </td>
               {season !== 'overall' && (
                 <td style={{ padding: '10px 8px', color: 'var(--muted)' }}>
