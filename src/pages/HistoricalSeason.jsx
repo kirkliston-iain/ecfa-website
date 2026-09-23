@@ -262,7 +262,7 @@ export default function HistoricalSeason() {
         <section style={{ marginBottom: 30 }}>
           <h2 style={sectionHeadingStyle}>Seasons</h2>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(210px, 1fr))', gap: 12 }}>
-            {seasonSummaries.map((entry) => (
+            {seasonSummaries.filter((entry) => entry.fixtures > 0).map((entry) => (
               <button
                 key={entry.season}
                 type="button"
