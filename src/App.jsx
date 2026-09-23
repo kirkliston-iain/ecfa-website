@@ -60,6 +60,7 @@ export default function App() {
           <Route path="/scorers" element={<ScorersPage />} />
           <Route path="/stats" element={<StatsPage />} />
           <Route path="/honours" element={<HonoursPage />} />
+          <Route path="/archive" element={<HistoricalSeason />} />
           <Route path="/history" element={<HistoricalSeason />} />
           <Route path="/teams" element={<TeamsHub />} />
           <Route path="/referees" element={<RefereesHub />} />
