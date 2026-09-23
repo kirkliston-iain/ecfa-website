@@ -8,7 +8,7 @@ const TABS = [
   { to: '/teams', label: 'Teams' },
   { to: '/stats', label: 'Stats' },
   { to: '/honours', label: 'Honours' },
-  { to: '/history', label: 'History' },
+  { to: '/archive', label: 'Archive' },
   { to: '/sponsors', label: 'Sponsors' },
   { to: '/charity', label: 'Charity' },
   { to: '/downloads', label: 'Downloads' },

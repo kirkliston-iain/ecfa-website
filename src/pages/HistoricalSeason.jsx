@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { Link, useSearchParams } from 'react-router-dom'
 import { supabase } from '../supabaseClient'
 
 function Badge({ name, size = 20 }) {
@@ -40,8 +41,10 @@ function displayFixtureDate(value) {
 }
 
 export default function HistoricalSeason() {
+  const [params, setParams] = useSearchParams()
   const [seasons, setSeasons] = useState([])
-  const [season, setSeason] = useState('')
+  const [seasonSummaries, setSeasonSummaries] = useState([])
+  const [season, setSeason] = useState(params.get('season') || '')
   const [teams, setTeams] = useState([])
   const [teamId, setTeamId] = useState('')
   const [loading, setLoading] = useState(false)
@@ -50,18 +53,64 @@ export default function HistoricalSeason() {
   const [storedLeagueTable, setStoredLeagueTable] = useState([])
 
   useEffect(() => {
-    supabase
-      .from('historic_fixture_seasons')
-      .select('season')
-      .then(({ data }) => {
-        setSeasons((data || []).map((r) => r.season))
-      })
+    let cancelled = false
 
-    supabase
-      .from('teams')
-      .select('id, name')
-      .order('name')
-      .then(({ data }) => setTeams(data || []))
+    async function loadArchiveIndex() {
+      const [fixtureResult, scorerResult, honourResult, teamResult] = await Promise.all([
+        supabase
+          .from('historic_fixtures')
+          .select('season, competition_name, home_goals, away_goals'),
+        supabase.from('historic_scorers').select('season'),
+        supabase.from('honours').select('season, status'),
+        supabase.from('teams').select('id, name').order('name'),
+      ])
+
+      if (cancelled) return
+
+      const index = new Map()
+      const getSeason = (label) => {
+        if (!index.has(label)) {
+          index.set(label, {
+            season: label,
+            fixtures: 0,
+            results: 0,
+            competitions: new Set(),
+            hasScorers: false,
+            honours: 0,
+          })
+        }
+        return index.get(label)
+      }
+
+      for (const fixture of fixtureResult.data || []) {
+        if (!fixture.season) continue
+        const entry = getSeason(fixture.season)
+        entry.fixtures += 1
+        if (fixture.home_goals != null && fixture.away_goals != null) entry.results += 1
+        if (fixture.competition_name) entry.competitions.add(fixture.competition_name)
+      }
+      for (const scorer of scorerResult.data || []) {
+        if (scorer.season) getSeason(scorer.season).hasScorers = true
+      }
+      for (const honour of honourResult.data || []) {
+        if (!honour.season) continue
+        const entry = getSeason(honour.season)
+        if (honour.status === 'winner') entry.honours += 1
+      }
+
+      const summaries = [...index.values()]
+        .map((entry) => ({ ...entry, competitions: entry.competitions.size }))
+        .sort((left, right) => right.season.localeCompare(left.season, undefined, { numeric: true }))
+
+      setSeasonSummaries(summaries)
+      setSeasons(summaries.filter((entry) => entry.fixtures > 0).map((entry) => entry.season))
+      setTeams(teamResult.data || [])
+    }
+
+    loadArchiveIndex()
+    return () => {
+      cancelled = true
+    }
   }, [])
 
   useEffect(() => {
@@ -189,14 +238,83 @@ export default function HistoricalSeason() {
 
   return (
     <div className="container" style={{ padding: '32px 20px 48px' }}>
-      <h1 style={{ fontSize: 30, marginBottom: 4 }}>Historical Season</h1>
+      <h1 style={{ fontSize: 30, marginBottom: 4 }}>Archive</h1>
       <p style={{ color: 'var(--muted)', marginBottom: 24 }}>
-        Results from past ECFA seasons.
+        Explore past ECFA seasons, results, final tables and competition winners.
       </p>
 
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(210px, 1fr))', gap: 12, marginBottom: 30 }}>
+        <Link to="/honours" style={archiveLinkStyle}>
+          <strong>Honours archive</strong>
+          <span style={archiveLinkDescriptionStyle}>Season-by-season winners and all-time team totals.</span>
+        </Link>
+        <Link to="/scorers" style={archiveLinkStyle}>
+          <strong>Historical scorers</strong>
+          <span style={archiveLinkDescriptionStyle}>Recorded season totals. Match-level links are only available where the underlying data supports them.</span>
+        </Link>
+        <Link to="/stats" style={archiveLinkStyle}>
+          <strong>Current-season stats</strong>
+          <span style={archiveLinkDescriptionStyle}>Team records, streaks, scorers and referee statistics.</span>
+        </Link>
+      </div>
+
+      {!season && (
+        <section style={{ marginBottom: 30 }}>
+          <h2 style={sectionHeadingStyle}>Seasons</h2>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(210px, 1fr))', gap: 12 }}>
+            {seasonSummaries.filter((entry) => entry.fixtures > 0).map((entry) => (
+              <button
+                key={entry.season}
+                type="button"
+                onClick={() => {
+                  setSeason(entry.season)
+                  setTeamId('')
+                  setParams({ season: entry.season })
+                  window.scrollTo({ top: 0, left: 0, behavior: 'auto' })
+                }}
+                style={seasonCardStyle}
+              >
+                <strong style={{ fontSize: 21 }}>{entry.season}</strong>
+                <span style={{ color: 'var(--muted)', fontSize: 13 }}>
+                  {entry.results > 0
+                    ? `${entry.results} result${entry.results === 1 ? '' : 's'} · ${entry.competitions} competition${entry.competitions === 1 ? '' : 's'}`
+                    : 'Scoring or honours records available'}
+                </span>
+                <span style={{ color: 'var(--brass)', fontSize: 12, fontWeight: 800 }}>
+                  {entry.fixtures > 0 ? 'Open season →' : 'Use scorer or honours archive above'}
+                </span>
+              </button>
+            ))}
+          </div>
+        </section>
+      )}
+
+      {season && (
+        <button
+          type="button"
+          onClick={() => {
+            setSeason('')
+            setTeamId('')
+            setParams({})
+            window.scrollTo({ top: 0, left: 0, behavior: 'auto' })
+          }}
+          style={backButtonStyle}
+        >
+          ← All archived seasons
+        </button>
+      )}
+
+      <label style={selectLabelStyle}>
+        {season ? 'Change season' : 'Jump to a season'}
       <select
         value={season}
-        onChange={(e) => setSeason(e.target.value)}
+        onChange={(e) => {
+          const nextSeason = e.target.value
+          setSeason(nextSeason)
+          setTeamId('')
+          setParams(nextSeason ? { season: nextSeason } : {})
+          window.scrollTo({ top: 0, left: 0, behavior: 'auto' })
+        }}
         style={{
           width: '100%',
           boxSizing: 'border-box',
@@ -216,6 +334,25 @@ export default function HistoricalSeason() {
           </option>
         ))}
       </select>
+      </label>
+
+      {season && (
+        <div style={{ margin: '0 0 24px' }}>
+          <h2 style={{ fontSize: 25, margin: '0 0 8px' }}>{season} season</h2>
+          {(() => {
+            const summary = seasonSummaries.find((entry) => entry.season === season)
+            if (!summary) return null
+            return (
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                <span style={summaryPillStyle}>{summary.results} recorded results</span>
+                <span style={summaryPillStyle}>{summary.competitions} competitions</span>
+                {summary.hasScorers && <span style={summaryPillStyle}>Scoring totals held</span>}
+                {summary.honours > 0 && <span style={summaryPillStyle}>{summary.honours} winners recorded</span>}
+              </div>
+            )
+          })()}
+        </div>
+      )}
 
       {season && (
         <select
@@ -389,4 +526,74 @@ export default function HistoricalSeason() {
       )}
     </div>
   )
+}
+
+
+const archiveLinkStyle = {
+  display: 'grid',
+  gap: 6,
+  padding: 16,
+  border: '1px solid var(--line)',
+  borderRadius: 8,
+  color: 'var(--ink)',
+  textDecoration: 'none',
+  background: '#f5f8fa',
+}
+
+const archiveLinkDescriptionStyle = {
+  color: 'var(--muted)',
+  fontSize: 13,
+  lineHeight: 1.45,
+}
+
+const sectionHeadingStyle = {
+  color: 'var(--brass)',
+  fontSize: 15,
+  textTransform: 'uppercase',
+  letterSpacing: 0.5,
+  paddingBottom: 9,
+  borderBottom: '2px solid var(--line)',
+}
+
+const seasonCardStyle = {
+  display: 'grid',
+  gap: 8,
+  padding: 16,
+  border: '1px solid var(--line)',
+  borderRadius: 8,
+  background: '#fff',
+  color: 'var(--ink)',
+  textAlign: 'left',
+  cursor: 'pointer',
+  font: 'inherit',
+}
+
+const backButtonStyle = {
+  border: 0,
+  background: 'transparent',
+  color: 'var(--brass)',
+  fontWeight: 800,
+  padding: '0 0 14px',
+  cursor: 'pointer',
+}
+
+const selectLabelStyle = {
+  display: 'grid',
+  gap: 6,
+  color: 'var(--muted)',
+  fontSize: 12,
+  fontWeight: 800,
+  textTransform: 'uppercase',
+  letterSpacing: 0.4,
+  marginBottom: 24,
+}
+
+const summaryPillStyle = {
+  padding: '6px 9px',
+  borderRadius: 999,
+  background: '#f5f8fa',
+  border: '1px solid var(--line)',
+  color: 'var(--muted)',
+  fontSize: 12,
+  fontWeight: 700,
 }

@@ -7,7 +7,7 @@ const SITE_PAGES = [
   { label: 'Competitions', description: 'Tables, fixtures, results and next-round possibilities', to: '/standings' },
   { label: 'Scorers', description: 'Current and historical goalscorers', to: '/scorers' },
   { label: 'Honours', description: 'ECFA competition winners', to: '/honours' },
-  { label: 'History', description: 'Previous seasons and results', to: '/history' },
+  { label: 'Archive', description: 'Past seasons, results, tables, honours and historical scorers', to: '/archive' },
   { label: 'Teams', description: 'Team pages, squads, managers and fixtures', to: '/teams' },
   { label: 'Stats', description: 'Current-season team records, player scoring and referee statistics', to: '/stats' },
   { label: 'Referees', description: 'Officials, games, venues and cards', to: '/referees' },
