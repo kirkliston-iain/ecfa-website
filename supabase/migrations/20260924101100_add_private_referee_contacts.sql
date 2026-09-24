@@ -17,7 +17,8 @@ on public.referee_contacts
 for select
 to authenticated
 using (
-  exists (
+  lower(coalesce((select auth.jwt() ->> 'email'), '')) = 'managers@ecfa-website.org'
+  or exists (
     select 1
     from public.admin_profiles
     where admin_profiles.id = (select auth.uid())
