@@ -753,6 +753,10 @@ export default function AdminDashboard() {
         Manage downloads &rarr;
       </Link>
 
+      <Link to="/admin/data-export" style={{ ...linkButtonStyle, display: 'block', marginBottom: 8 }}>
+        Export admin data (Excel) &rarr;
+      </Link>
+
       <Link to="/admin/sponsors" style={{ ...linkButtonStyle, display: 'block', marginBottom: 8 }}>
         Manage sponsors &rarr;
       </Link>

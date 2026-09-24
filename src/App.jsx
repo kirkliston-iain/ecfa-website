@@ -40,6 +40,7 @@ import DownloadsAdmin from './pages/DownloadsAdmin'
 import SponsorsAdmin from './pages/SponsorsAdmin'
 import Charity from './pages/Charity'
 import RecordsAdmin from './pages/RecordsAdmin'
+import AdminDataExport from './pages/AdminDataExport'
 
 export default function App() {
   const location = useLocation()
@@ -175,6 +176,14 @@ export default function App() {
             element={
               <ProtectedRoute requireAdmin>
                 <RecordsAdmin />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/data-export"
+            element={
+              <ProtectedRoute requireAdmin>
+                <AdminDataExport />
               </ProtectedRoute>
             }
           />
