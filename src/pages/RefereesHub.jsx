@@ -50,6 +50,7 @@ export default function RefereesHub() {
   const [currentSeason, setCurrentSeason] = useState(CURRENT_SEASON_FALLBACK)
   const [isAdmin, setIsAdmin] = useState(false)
   const [leagueTable, setLeagueTable] = useState([])
+  const [refereeContacts, setRefereeContacts] = useState({})
 
   const [lastGame, setLastGame] = useState(null)
   const [nextGame, setNextGame] = useState(null)
@@ -85,6 +86,28 @@ export default function RefereesHub() {
         setSeasonFilter(s)
       })
   }, [])
+
+  useEffect(() => {
+    if (!isAdmin) {
+      setRefereeContacts({})
+      return
+    }
+
+    let cancelled = false
+    supabase
+      .from('referee_contacts')
+      .select('referee_id, mobile')
+      .then(({ data, error }) => {
+        if (cancelled || error) return
+        setRefereeContacts(
+          Object.fromEntries((data || []).map((contact) => [contact.referee_id, contact.mobile]))
+        )
+      })
+
+    return () => {
+      cancelled = true
+    }
+  }, [isAdmin])
 
   useEffect(() => {
     if (!isAdmin || referees.length === 0) {
@@ -267,6 +290,8 @@ export default function RefereesHub() {
     venueCounts[v] = (venueCounts[v] || 0) + 1
   }
   const venueCountsList = Object.entries(venueCounts).sort((a, b) => b[1] - a[1])
+  const selectedReferee = referees.find((referee) => referee.name === refName)
+  const selectedMobile = selectedReferee ? refereeContacts[selectedReferee.id] : ''
 
   return (
     <div className="container" style={{ padding: '32px 20px 48px' }}>
@@ -307,7 +332,7 @@ export default function RefereesHub() {
         </section>
       )}
 
-      <select value={refName} onChange={(e) => setRefName(e.target.value)} style={{ ...selectStyle, marginBottom: 24 }}>
+      <select value={refName} onChange={(e) => setRefName(e.target.value)} style={{ ...selectStyle, marginBottom: 16 }}>
         <option value="">Select a referee…</option>
         {referees.map((r) => (
           <option key={r.id} value={r.name}>
@@ -315,6 +340,24 @@ export default function RefereesHub() {
           </option>
         ))}
       </select>
+
+      {isAdmin && refName && selectedMobile && (
+        <section style={{ ...cardStyle, marginBottom: 24, background: '#fff8df', borderColor: 'var(--brass)' }}>
+          <div style={{ color: 'var(--brass)', fontSize: 11, fontWeight: 800, letterSpacing: 0.5, textTransform: 'uppercase', marginBottom: 5 }}>
+            Manager contact — private
+          </div>
+          <div style={{ fontWeight: 800, marginBottom: 3 }}>{refName}</div>
+          <a
+            href={`tel:${selectedMobile.replace(/\D/g, '')}`}
+            style={{ color: 'var(--ink)', fontSize: 18, fontWeight: 750, textDecoration: 'underline', textDecorationColor: 'var(--brass)', textUnderlineOffset: 3 }}
+          >
+            {selectedMobile}
+          </a>
+          <div style={{ color: 'var(--muted)', fontSize: 11, marginTop: 6 }}>
+            Visible only to signed-in managers.
+          </div>
+        </section>
+      )}
 
       {loading && <p style={{ color: 'var(--muted)' }}>Loading…</p>}
 
