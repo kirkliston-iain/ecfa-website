@@ -49,6 +49,7 @@ export default function RefereesHub() {
   const [loading, setLoading] = useState(false)
   const [currentSeason, setCurrentSeason] = useState(CURRENT_SEASON_FALLBACK)
   const [isAdmin, setIsAdmin] = useState(false)
+  const [signedIn, setSignedIn] = useState(false)
   const [leagueTable, setLeagueTable] = useState([])
   const [refereeContacts, setRefereeContacts] = useState({})
 
@@ -61,6 +62,14 @@ export default function RefereesHub() {
 
   useEffect(() => {
     window.scrollTo({ top: 0, left: 0, behavior: 'auto' })
+  }, [])
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data }) => setSignedIn(!!data.session))
+    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
+      setSignedIn(!!session)
+    })
+    return () => listener.subscription.unsubscribe()
   }, [])
 
   useEffect(() => {
@@ -88,7 +97,7 @@ export default function RefereesHub() {
   }, [])
 
   useEffect(() => {
-    if (!isAdmin) {
+    if (!signedIn) {
       setRefereeContacts({})
       return
     }
@@ -107,7 +116,7 @@ export default function RefereesHub() {
     return () => {
       cancelled = true
     }
-  }, [isAdmin])
+  }, [signedIn])
 
   useEffect(() => {
     if (!isAdmin || referees.length === 0) {
@@ -341,7 +350,7 @@ export default function RefereesHub() {
         ))}
       </select>
 
-      {isAdmin && refName && selectedMobile && (
+      {signedIn && refName && selectedMobile && (
         <section style={{ ...cardStyle, marginBottom: 24, background: '#fff8df', borderColor: 'var(--brass)' }}>
           <div style={{ color: 'var(--brass)', fontSize: 11, fontWeight: 800, letterSpacing: 0.5, textTransform: 'uppercase', marginBottom: 5 }}>
             Manager contact — private
