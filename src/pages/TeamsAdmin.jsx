@@ -339,6 +339,17 @@ export default function TeamsAdmin() {
         ))}
       </select>
 
+      {privateMessage && (
+        <div style={{ color: '#176B3A', fontSize: 13, fontWeight: 700, margin: '-8px 0 16px' }}>
+          {privateMessage}
+        </div>
+      )}
+      {privateError && (
+        <div role="alert" style={{ color: '#B3261E', fontSize: 13, fontWeight: 700, margin: '-8px 0 16px' }}>
+          {privateError}
+        </div>
+      )}
+
       {selectedTeamId && (
         <>
           <div style={{ marginBottom: 20 }}>
@@ -358,6 +369,16 @@ export default function TeamsAdmin() {
                       style={fullSelectStyle}
                       placeholder="Last name"
                     />
+                    <label style={privateLabelStyle}>
+                      Date of birth — private
+                      <input
+                        type="date"
+                        value={editDateOfBirth}
+                        max={new Date().toISOString().slice(0, 10)}
+                        onChange={(e) => setEditDateOfBirth(e.target.value)}
+                        style={{ ...fullSelectStyle, marginTop: 5 }}
+                      />
+                    </label>
                     <div style={{ display: 'flex', gap: 8 }}>
                       <button onClick={saveEdit} style={{ ...smallButtonStyle, flex: 1 }}>
                         Save
@@ -369,8 +390,15 @@ export default function TeamsAdmin() {
                   </div>
                 ) : (
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                    <span style={{ flex: 1, fontWeight: 600 }}>
-                      {p.first_name} {p.last_name}
+                    <span style={{ flex: 1, minWidth: 0 }}>
+                      <strong style={{ display: 'block', fontWeight: 600 }}>
+                        {p.first_name} {p.last_name}
+                      </strong>
+                      {p.date_of_birth && (
+                        <span style={{ display: 'block', color: 'var(--muted)', fontSize: 12, marginTop: 3 }}>
+                          Date of birth: {displayDateOfBirth(p.date_of_birth)} · Private
+                        </span>
+                      )}
                     </span>
                     {isAdmin && (
                       <>
@@ -411,6 +439,16 @@ export default function TeamsAdmin() {
                   style={{ ...fullSelectStyle, flex: 1 }}
                 />
               </div>
+              <label style={{ ...privateLabelStyle, marginBottom: 10 }}>
+                Date of birth — private and optional
+                <input
+                  type="date"
+                  value={newDateOfBirth}
+                  max={new Date().toISOString().slice(0, 10)}
+                  onChange={(e) => setNewDateOfBirth(e.target.value)}
+                  style={{ ...fullSelectStyle, marginTop: 5 }}
+                />
+              </label>
               <button onClick={addPlayer} style={{ ...smallButtonStyle, width: '100%' }}>
                 Add to squad
               </button>
@@ -453,4 +491,11 @@ const smallOutlineStyle = {
   fontSize: 13,
   borderRadius: 6,
   cursor: 'pointer',
+}
+
+const privateLabelStyle = {
+  display: 'block',
+  color: 'var(--muted)',
+  fontSize: 12,
+  fontWeight: 700,
 }
