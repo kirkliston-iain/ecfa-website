@@ -3,6 +3,15 @@ import { Link } from 'react-router-dom'
 import { supabase } from '../supabaseClient'
 import * as XLSX from 'xlsx'
 
+function displayDateOfBirth(value) {
+  if (!value) return ''
+  return new Date(`${value}T00:00:00`).toLocaleDateString('en-GB', {
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+  })
+}
+
 export default function TeamsAdmin() {
   const [teams, setTeams] = useState([])
   const [selectedTeamId, setSelectedTeamId] = useState('')
@@ -10,9 +19,13 @@ export default function TeamsAdmin() {
   const [isAdmin, setIsAdmin] = useState(false)
   const [newFirstName, setNewFirstName] = useState('')
   const [newLastName, setNewLastName] = useState('')
+  const [newDateOfBirth, setNewDateOfBirth] = useState('')
   const [editingId, setEditingId] = useState(null)
   const [editFirstName, setEditFirstName] = useState('')
   const [editLastName, setEditLastName] = useState('')
+  const [editDateOfBirth, setEditDateOfBirth] = useState('')
+  const [privateMessage, setPrivateMessage] = useState('')
+  const [privateError, setPrivateError] = useState('')
   const [exportTeamId, setExportTeamId] = useState('all')
   const [exporting, setExporting] = useState(false)
   const [exportMessage, setExportMessage] = useState('')
@@ -34,26 +47,69 @@ export default function TeamsAdmin() {
 
   useEffect(() => {
     if (selectedTeamId) loadSquad(selectedTeamId)
-  }, [selectedTeamId])
+  }, [selectedTeamId, isAdmin])
 
   async function loadSquad(teamId) {
-    const { data } = await supabase
+    const { data: players } = await supabase
       .from('players')
       .select('id, first_name, last_name')
       .eq('team_id', teamId)
       .order('last_name')
-    setSquad(data || [])
+
+    const squadPlayers = players || []
+    if (!isAdmin || squadPlayers.length === 0) {
+      setSquad(squadPlayers)
+      return
+    }
+
+    const { data: privateRows } = await supabase
+      .from('player_private_details')
+      .select('player_id, date_of_birth')
+      .in('player_id', squadPlayers.map((player) => player.id))
+
+    const birthDates = new Map((privateRows || []).map((row) => [row.player_id, row.date_of_birth]))
+    setSquad(squadPlayers.map((player) => ({
+      ...player,
+      date_of_birth: birthDates.get(player.id) || '',
+    })))
   }
 
   async function addPlayer() {
     if (!newFirstName.trim() || !newLastName.trim()) return
-    await supabase.from('players').insert({
-      first_name: newFirstName.trim(),
-      last_name: newLastName.trim(),
-      team_id: selectedTeamId,
-    })
+    setPrivateMessage('')
+    setPrivateError('')
+
+    const { data: player, error: playerError } = await supabase
+      .from('players')
+      .insert({
+        first_name: newFirstName.trim(),
+        last_name: newLastName.trim(),
+        team_id: selectedTeamId,
+      })
+      .select('id')
+      .single()
+
+    if (playerError || !player) {
+      setPrivateError('The player could not be added. Please try again.')
+      return
+    }
+
+    let birthDateFailed = false
+    if (newDateOfBirth) {
+      const { error: birthDateError } = await supabase
+        .from('player_private_details')
+        .insert({ player_id: player.id, date_of_birth: newDateOfBirth })
+      birthDateFailed = !!birthDateError
+    }
+
     setNewFirstName('')
     setNewLastName('')
+    setNewDateOfBirth('')
+    if (birthDateFailed) {
+      setPrivateError('The player was added, but the date of birth could not be saved.')
+    } else {
+      setPrivateMessage(newDateOfBirth ? 'Player and private date of birth saved.' : 'Player added.')
+    }
     loadSquad(selectedTeamId)
   }
 
@@ -61,14 +117,45 @@ export default function TeamsAdmin() {
     setEditingId(p.id)
     setEditFirstName(p.first_name)
     setEditLastName(p.last_name)
+    setEditDateOfBirth(p.date_of_birth || '')
+    setPrivateMessage('')
+    setPrivateError('')
   }
 
   async function saveEdit() {
-    await supabase
+    setPrivateMessage('')
+    setPrivateError('')
+
+    const { error: playerError } = await supabase
       .from('players')
       .update({ first_name: editFirstName.trim(), last_name: editLastName.trim() })
       .eq('id', editingId)
+
+    if (playerError) {
+      setPrivateError('The player details could not be saved.')
+      return
+    }
+
+    const privateResult = editDateOfBirth
+      ? await supabase
+          .from('player_private_details')
+          .upsert({
+            player_id: editingId,
+            date_of_birth: editDateOfBirth,
+            updated_at: new Date().toISOString(),
+          })
+      : await supabase
+          .from('player_private_details')
+          .delete()
+          .eq('player_id', editingId)
+
+    if (privateResult.error) {
+      setPrivateError('The name was saved, but the private date of birth could not be updated.')
+      return
+    }
+
     setEditingId(null)
+    setPrivateMessage('Player details saved.')
     loadSquad(selectedTeamId)
   }
 
@@ -252,6 +339,17 @@ export default function TeamsAdmin() {
         ))}
       </select>
 
+      {privateMessage && (
+        <div style={{ color: '#176B3A', fontSize: 13, fontWeight: 700, margin: '-8px 0 16px' }}>
+          {privateMessage}
+        </div>
+      )}
+      {privateError && (
+        <div role="alert" style={{ color: '#B3261E', fontSize: 13, fontWeight: 700, margin: '-8px 0 16px' }}>
+          {privateError}
+        </div>
+      )}
+
       {selectedTeamId && (
         <>
           <div style={{ marginBottom: 20 }}>
@@ -271,6 +369,16 @@ export default function TeamsAdmin() {
                       style={fullSelectStyle}
                       placeholder="Last name"
                     />
+                    <label style={privateLabelStyle}>
+                      Date of birth — private
+                      <input
+                        type="date"
+                        value={editDateOfBirth}
+                        max={new Date().toISOString().slice(0, 10)}
+                        onChange={(e) => setEditDateOfBirth(e.target.value)}
+                        style={{ ...fullSelectStyle, marginTop: 5 }}
+                      />
+                    </label>
                     <div style={{ display: 'flex', gap: 8 }}>
                       <button onClick={saveEdit} style={{ ...smallButtonStyle, flex: 1 }}>
                         Save
@@ -282,8 +390,15 @@ export default function TeamsAdmin() {
                   </div>
                 ) : (
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                    <span style={{ flex: 1, fontWeight: 600 }}>
-                      {p.first_name} {p.last_name}
+                    <span style={{ flex: 1, minWidth: 0 }}>
+                      <strong style={{ display: 'block', fontWeight: 600 }}>
+                        {p.first_name} {p.last_name}
+                      </strong>
+                      {p.date_of_birth && (
+                        <span style={{ display: 'block', color: 'var(--muted)', fontSize: 12, marginTop: 3 }}>
+                          Date of birth: {displayDateOfBirth(p.date_of_birth)} · Private
+                        </span>
+                      )}
                     </span>
                     {isAdmin && (
                       <>
@@ -324,6 +439,16 @@ export default function TeamsAdmin() {
                   style={{ ...fullSelectStyle, flex: 1 }}
                 />
               </div>
+              <label style={{ ...privateLabelStyle, marginBottom: 10 }}>
+                Date of birth — private and optional
+                <input
+                  type="date"
+                  value={newDateOfBirth}
+                  max={new Date().toISOString().slice(0, 10)}
+                  onChange={(e) => setNewDateOfBirth(e.target.value)}
+                  style={{ ...fullSelectStyle, marginTop: 5 }}
+                />
+              </label>
               <button onClick={addPlayer} style={{ ...smallButtonStyle, width: '100%' }}>
                 Add to squad
               </button>
@@ -366,4 +491,11 @@ const smallOutlineStyle = {
   fontSize: 13,
   borderRadius: 6,
   cursor: 'pointer',
+}
+
+const privateLabelStyle = {
+  display: 'block',
+  color: 'var(--muted)',
+  fontSize: 12,
+  fontWeight: 700,
 }
