@@ -20,6 +20,7 @@ import TeamsAdmin from './pages/TeamsAdmin'
 import HistoricalSeason from './pages/HistoricalSeason'
 import ListsAdmin from './pages/ListsAdmin'
 import TeamsHub from './pages/TeamsHub'
+import PreviousTeam from './pages/PreviousTeam'
 import SeasonAdmin from './pages/SeasonAdmin'
 import RefereesHub from './pages/RefereesHub'
 import FixtureTracker from './pages/FixtureTracker'
@@ -64,6 +65,7 @@ export default function App() {
           <Route path="/archive" element={<HistoricalSeason />} />
           <Route path="/history" element={<HistoricalSeason />} />
           <Route path="/teams" element={<TeamsHub />} />
+          <Route path="/teams/previous/:teamName" element={<PreviousTeam />} />
           <Route path="/referees" element={<RefereesHub />} />
           <Route path="/downloads" element={<Downloads />} />
           <Route path="/downloads/player-report" element={<PlayerReportDownload />} />
