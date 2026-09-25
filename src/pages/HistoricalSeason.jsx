@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { supabase } from '../supabaseClient'
+import { historicDisplayedScore, historicPenaltyWinnerName } from '../utils/historicFixtureOutcome'
 
 function Badge({ name, size = 20 }) {
   const initials = (name || '?')
@@ -135,7 +136,7 @@ export default function HistoricalSeason() {
 
     supabase
       .from('historic_fixtures')
-      .select('id, competition_name, fixture_date, home_team_name, home_team_id, home_goals, away_team_name, away_team_id, away_goals, comment')
+      .select('id, competition_name, fixture_date, home_team_name, home_team_id, home_goals, away_team_name, away_team_id, away_goals, comment, penalty_winner_name')
       .eq('season', season)
       .then(({ data }) => setSeasonFixtures(data || []))
 
@@ -155,7 +156,7 @@ export default function HistoricalSeason() {
 
     let query = supabase
       .from('historic_fixtures')
-      .select('id, competition_name, fixture_date, home_team_name, home_team_id, home_goals, away_team_name, away_team_id, away_goals, comment')
+      .select('id, competition_name, fixture_date, home_team_name, home_team_id, home_goals, away_team_name, away_team_id, away_goals, comment, penalty_winner_name')
       .eq('season', season)
 
     if (teamId) {
@@ -184,12 +185,11 @@ export default function HistoricalSeason() {
         ? { winner: f.home_team_name, runnerUp: f.away_team_name }
         : { winner: f.away_team_name, runnerUp: f.home_team_name }
     }
-    // Draw, or a missing score (decided on penalties) — try to read the comment
-    const comment = (f.comment || '').toLowerCase()
-    if (comment.includes(f.home_team_name.toLowerCase() + ' won')) {
+    const penaltyWinner = historicPenaltyWinnerName(f)
+    if (penaltyWinner === f.home_team_name) {
       return { winner: f.home_team_name, runnerUp: f.away_team_name }
     }
-    if (comment.includes(f.away_team_name.toLowerCase() + ' won')) {
+    if (penaltyWinner === f.away_team_name) {
       return { winner: f.away_team_name, runnerUp: f.home_team_name }
     }
     return null
@@ -589,7 +589,7 @@ export default function HistoricalSeason() {
                     {linkedTeamName(f.home_team_name, f.home_team_id, { overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' })}
                   </div>
                   <div style={{ minWidth: 60, textAlign: 'center', fontWeight: 800 }}>
-                    {f.home_goals != null && f.away_goals != null ? `${f.home_goals} - ${f.away_goals}` : 'v'}
+                    {historicDisplayedScore(f)}
                   </div>
                   <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 8, justifyContent: 'flex-end', minWidth: 0 }}>
                     {linkedTeamName(f.away_team_name, f.away_team_id, { overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' })}
