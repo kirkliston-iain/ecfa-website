@@ -499,12 +499,60 @@ const tbcDotStyle = {
   flexShrink: 0,
 }
 
-function MatchCard({ f }) {
+function recentForm(fixtures, teamId, currentFixture) {
+  if (!teamId) return []
+  const cutoff = currentFixture.fixture_date || ''
+  return fixtures
+    .filter((fixture) => {
+      if (fixture.status !== 'played' || fixture.home_score == null || fixture.away_score == null) return false
+      if (fixture.fixture_date > cutoff) return false
+      if (fixture.fixture_date === cutoff && fixture.id !== currentFixture.id) return false
+      return fixture.home_team?.id === teamId || fixture.away_team?.id === teamId
+    })
+    .sort((a, b) => a.fixture_date.localeCompare(b.fixture_date))
+    .slice(-5)
+    .map((fixture) => resultForTeam(fixture, teamId))
+    .filter(Boolean)
+}
+
+function FormStrip({ results, align = 'left', teamName }) {
+  if (!results.length) return <span style={{ color: 'var(--muted)', fontSize: 9 }}>No form yet</span>
+  return (
+    <span
+      aria-label={`${teamName} recent form: ${results.join(', ')}`}
+      style={{ display: 'flex', gap: 3, justifyContent: align === 'right' ? 'flex-end' : 'flex-start', marginTop: 4 }}
+    >
+      {results.map((result, index) => (
+        <span
+          key={`${result}-${index}`}
+          title={result === 'W' ? 'Win' : result === 'D' ? 'Draw' : 'Loss'}
+          style={{
+            display: 'inline-grid',
+            placeItems: 'center',
+            width: 16,
+            height: 16,
+            borderRadius: 3,
+            background: result === 'W' ? '#237A3B' : result === 'D' ? '#777' : '#B3261E',
+            color: '#fff',
+            fontSize: 9,
+            fontWeight: 800,
+          }}
+        >
+          {result}
+        </span>
+      ))}
+    </span>
+  )
+}
+
+function MatchCard({ f, allFixtures }) {
   const played = f.status === 'played'
   const kickoff = f.fixture_date && f.fixture_date.slice(11, 16) !== '00:00'
     ? f.fixture_date.slice(11, 16)
     : null
   const venueName = cleanVenueName(f.venue)
+  const homeForm = recentForm(allFixtures, f.home_team?.id, f)
+  const awayForm = recentForm(allFixtures, f.away_team?.id, f)
 
   return (
     <div
@@ -528,8 +576,11 @@ function MatchCard({ f }) {
         </div>
         <div className="match-card-teams" style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) auto minmax(0, 1fr)', alignItems: 'center', gap: 8 }}>
           <div className="match-card-team match-card-team-home" style={{ minWidth: 0, display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 6, fontWeight: 600, fontSize: 15, textAlign: 'right' }}>
-            <span className="match-card-team-name" style={{ minWidth: 0, overflowWrap: 'anywhere', lineHeight: 1.25, ...(!f.home_team ? { color: 'var(--muted)', fontStyle: 'italic', fontWeight: 400 } : {}) }}>
-              {f.home_team?.name || f.home_placeholder || 'TBC'}
+            <span style={{ minWidth: 0 }}>
+              <span className="match-card-team-name" style={{ display: 'block', minWidth: 0, overflowWrap: 'anywhere', lineHeight: 1.25, ...(!f.home_team ? { color: 'var(--muted)', fontStyle: 'italic', fontWeight: 400 } : {}) }}>
+                {f.home_team?.name || f.home_placeholder || 'TBC'}
+              </span>
+              {f.home_team && <FormStrip results={homeForm} align="right" teamName={f.home_team.name} />}
             </span>
             {f.home_team ? (
               <Badge logoUrl={f.home_team?.logo_url} name={f.home_team?.name} />
@@ -557,8 +608,11 @@ function MatchCard({ f }) {
             ) : (
               <span className="match-team-badge" style={tbcDotStyle}>?</span>
             )}
-            <span className="match-card-team-name" style={{ minWidth: 0, overflowWrap: 'anywhere', lineHeight: 1.25, ...(!f.away_team ? { color: 'var(--muted)', fontStyle: 'italic', fontWeight: 400 } : {}) }}>
-              {f.away_team?.name || f.away_placeholder || 'TBC'}
+            <span style={{ minWidth: 0 }}>
+              <span className="match-card-team-name" style={{ display: 'block', minWidth: 0, overflowWrap: 'anywhere', lineHeight: 1.25, ...(!f.away_team ? { color: 'var(--muted)', fontStyle: 'italic', fontWeight: 400 } : {}) }}>
+                {f.away_team?.name || f.away_placeholder || 'TBC'}
+              </span>
+              {f.away_team && <FormStrip results={awayForm} teamName={f.away_team.name} />}
             </span>
           </div>
         </div>
@@ -567,6 +621,9 @@ function MatchCard({ f }) {
             {outcomeNote(f)}
           </div>
         )}
+        <div style={{ fontSize: 10, color: 'var(--brass)', marginTop: 7, textAlign: 'center', fontWeight: 700 }}>
+          Click game to see previous meeting history
+        </div>
       </Link>
       {(kickoff || venueName || f.referee_name) && (
         <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 6, textAlign: 'center' }}>
@@ -689,6 +746,11 @@ export default function Home() {
     }
     return rows
   }, [competitions, selectedDate])
+
+  const allCurrentSeasonFixtures = useMemo(
+    () => competitions.flatMap((competition) => competition.fixtures),
+    [competitions]
+  )
 
   const recapParagraphs = useMemo(() => {
     if (!selectedDate) return []
@@ -944,7 +1006,7 @@ export default function Home() {
           })()
         ) : (
           <div className="desktop-card-grid">
-            {matchesForDate.map((f) => <MatchCard key={f.id} f={f} />)}
+            {matchesForDate.map((f) => <MatchCard key={f.id} f={f} allFixtures={allCurrentSeasonFixtures} />)}
           </div>
         )}
       </section>
@@ -969,7 +1031,7 @@ export default function Home() {
               style={index > 0 ? { borderTop: '2px solid var(--line)', marginTop: 24, paddingTop: 24 } : undefined}
             >
               <div className="desktop-card-grid">
-                {group.fixtures.map((fixture) => <MatchCard key={fixture.id} f={fixture} />)}
+                {group.fixtures.map((fixture) => <MatchCard key={fixture.id} f={fixture} allFixtures={allCurrentSeasonFixtures} />)}
               </div>
             </div>
           ))}
