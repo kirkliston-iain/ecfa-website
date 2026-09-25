@@ -3,6 +3,7 @@ import { useParams, useNavigate, Link } from 'react-router-dom'
 import { supabase } from '../supabaseClient'
 import { displayedScore, fullOutcomeNote } from '../utils/fixtureOutcome'
 import { isVenueLinkable, venueHistoryUrl } from '../utils/venueGrouping'
+import { historicDisplayedScore } from '../utils/historicFixtureOutcome'
 
 function Badge({ logoUrl, name, size = 56 }) {
   if (logoUrl) {
@@ -79,11 +80,11 @@ export default function FixtureDetail() {
       if (!f) {
         const { data: historicFixture } = await supabase
           .from('historic_fixtures')
-          .select('id, competition_name, season, fixture_date, home_team_id, home_team_name, home_goals, away_team_id, away_team_name, away_goals, comment, home_team:home_team_id(id, name, logo_url), away_team:away_team_id(id, name, logo_url)')
+          .select('id, competition_name, season, fixture_date, home_team_id, home_team_name, home_goals, away_team_id, away_team_name, away_goals, comment, penalty_winner_name, home_team:home_team_id(id, name, logo_url), away_team:away_team_id(id, name, logo_url)')
           .eq('id', id)
           .maybeSingle()
 
-        if (historicFixture && supportsDirectHistoricScorers(historicFixture.season)) {
+        if (historicFixture) {
           f = {
             id: historicFixture.id,
             round_name: `${historicFixture.competition_name} — ${historicFixture.season}`,
@@ -95,7 +96,7 @@ export default function FixtureDetail() {
             went_to_extra_time: false,
             home_extra_time_score: null,
             away_extra_time_score: null,
-            decided_by_penalties: false,
+            decided_by_penalties: Boolean(historicFixture.penalty_winner_name),
             home_penalty_score: null,
             away_penalty_score: null,
             status: 'played',
@@ -110,6 +111,10 @@ export default function FixtureDetail() {
               logo_url: null,
             },
             is_historic: true,
+            has_direct_historic_scorers: supportsDirectHistoricScorers(historicFixture.season),
+            penalty_winner_name: historicFixture.penalty_winner_name,
+            historic_home_team_name: historicFixture.home_team_name,
+            historic_away_team_name: historicFixture.away_team_name,
           }
         }
       }
@@ -124,7 +129,7 @@ export default function FixtureDetail() {
 
       let s = []
       let d = []
-      if (f.is_historic) {
+      if (f.is_historic && f.has_direct_historic_scorers) {
         const teamIds = [f.home_team?.id, f.away_team?.id].filter(Boolean)
         const [{ data: historicScorers }, { data: squadPlayers }] = await Promise.all([
           supabase
@@ -180,7 +185,7 @@ export default function FixtureDetail() {
         const [{ data: hf }, { data: liveFixtures }] = await Promise.all([
           supabase
             .from('historic_fixtures')
-            .select('id, competition_name, season, fixture_date, home_team_name, home_goals, away_team_name, away_goals, comment')
+            .select('id, competition_name, season, fixture_date, home_team_name, home_goals, away_team_name, away_goals, comment, penalty_winner_name')
             .or(teamPairFilter)
             .neq('id', id)
             .order('fixture_date', { ascending: false })
@@ -235,7 +240,7 @@ export default function FixtureDetail() {
 
         const historicMeetings = (hf || []).map((m) => ({
           ...m,
-          fixture_id: supportsDirectHistoricScorers(m.season) ? m.id : null,
+        fixture_id: m.id,
           scorers: supportsDirectHistoricScorers(m.season)
             ? archivedScorersByFixture[m.id] || []
             : [],
@@ -329,7 +334,15 @@ export default function FixtureDetail() {
         <div style={{ textAlign: 'center', minWidth: 100 }}>
           {played ? (
             <div style={{ fontSize: 36, fontWeight: 800, color: 'var(--ink)' }}>
-              {displayedScore(fixture)}
+              {fixture.is_historic
+                ? historicDisplayedScore({
+                    home_team_name: fixture.historic_home_team_name,
+                    home_goals: fixture.home_score,
+                    away_team_name: fixture.historic_away_team_name,
+                    away_goals: fixture.away_score,
+                    penalty_winner_name: fixture.penalty_winner_name,
+                  })
+                : displayedScore(fixture)}
             </div>
           ) : (
             <div style={{ fontSize: 18, fontWeight: 700, color: 'var(--muted)' }}>vs</div>
@@ -435,7 +448,7 @@ export default function FixtureDetail() {
                 >
                   <span style={{ flex: 1, textAlign: 'right', fontWeight: 600 }}>{m.home_team_name}</span>
                   <span style={{ fontWeight: 800, minWidth: 60, textAlign: 'center', color: 'var(--brass)' }}>
-                    {m.home_goals != null && m.away_goals != null ? `${m.home_goals} - ${m.away_goals}` : 'v'}
+                    {historicDisplayedScore(m)}
                   </span>
                   <span style={{ flex: 1, fontWeight: 600 }}>{m.away_team_name}</span>
                 </Link>
@@ -443,7 +456,7 @@ export default function FixtureDetail() {
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 14, marginBottom: m.scorers.length ? 6 : 0 }}>
                   <span style={{ flex: 1, textAlign: 'right', fontWeight: 600 }}>{m.home_team_name}</span>
                   <span style={{ fontWeight: 800, minWidth: 60, textAlign: 'center' }}>
-                    {m.home_goals != null && m.away_goals != null ? `${m.home_goals} - ${m.away_goals}` : 'v'}
+                    {historicDisplayedScore(m)}
                   </span>
                   <span style={{ flex: 1, fontWeight: 600 }}>{m.away_team_name}</span>
                 </div>
