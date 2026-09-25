@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { supabase } from '../supabaseClient'
 import { displayedScore, outcomeNote } from '../utils/fixtureOutcome'
 import { historicDisplayedScore } from '../utils/historicFixtureOutcome'
+import { historicTeamName, previousTeamUrl } from '../utils/historicTeams'
 
 function Badge({ logoUrl, name, size = 24 }) {
   if (logoUrl) {
@@ -43,42 +44,15 @@ function Badge({ logoUrl, name, size = 24 }) {
 
 const CURRENT_SEASON = '2026/27'
 
-const HISTORIC_TEAM_ALIASES = {
-  'AC Oxgangs FC': 'AC Oxgangs',
-  'Barclay Viewforth FC': 'Barclay Viewforth Church',
-  'Bingham FC': 'Hope Church',
-  'Bristo Memorial FC': 'South East Saints',
-  'Broxburn Baptist Church FC': 'Broxburn Baptist Church',
-  Carrubbers: 'Carrubbers Church',
-  'Carrubbers FC': 'Carrubbers Church',
-  Central: 'Liberton Church',
-  'Central FC': 'Liberton Church',
-  'Charlotte Chapel FC': 'Charlotte Chapel',
-  'Gorgie United': 'Gorgie United Salvation Army',
-  'Gorgie United FC': 'Gorgie United Salvation Army',
-  Ladywell: 'Ladywell Baptist Church',
-  'Ladywell Baptist Church FC': 'Ladywell Baptist Church',
-  Niddrie: 'The Mission',
-  'Niddrie FC': 'The Mission',
-  'Port Seton FC': 'Port Seton',
-  'South East Saints FC': 'South East Saints',
-  "St Columba's FC": 'St Columbas',
-  "St Mary's Metropolitan FC": 'St Marys Metropolitan Church',
-  'St Marys': 'St Marys Metropolitan Church',
-  "St Marys Metropolitan Church's FC": 'St Marys Metropolitan Church',
-  'The Mission FC': 'The Mission',
-  'White Lightning': 'White Lightning Bruntsfield Church',
-  'White Lightning FC': 'White Lightning Bruntsfield Church',
-}
-
 function canonicalTeamName(name, teamId, currentTeams) {
   const currentTeam = teamId ? currentTeams.find((entry) => entry.id === teamId) : null
   if (currentTeam) return currentTeam.name
-  return HISTORIC_TEAM_ALIASES[name] || name
+  return historicTeamName(name)
 }
 
 export default function TeamsHub() {
   const [teams, setTeams] = useState([])
+  const [previousTeams, setPreviousTeams] = useState([])
   const [teamId, setTeamId] = useState('')
   const [team, setTeam] = useState(null)
   const [loading, setLoading] = useState(false)
@@ -118,6 +92,30 @@ export default function TeamsHub() {
       .order('name')
       .then(({ data }) => setTeams(data || []))
   }, [])
+
+  useEffect(() => {
+    if (teams.length === 0) return
+    let cancelled = false
+    async function loadPreviousTeams() {
+      const [{ data: fixtures }, { data: scorers }, { data: honoursRows }] = await Promise.all([
+        loadAllHistoricFixtures(),
+        supabase.from('historic_scorers').select('team_name'),
+        supabase.from('honours').select('winner_name'),
+      ])
+      if (cancelled) return
+      const currentNames = new Set(teams.map((entry) => entry.name))
+      const names = new Set()
+      for (const fixture of fixtures || []) {
+        names.add(historicTeamName(fixture.home_team_name))
+        names.add(historicTeamName(fixture.away_team_name))
+      }
+      for (const scorer of scorers || []) names.add(historicTeamName(scorer.team_name))
+      for (const honour of honoursRows || []) names.add(historicTeamName(honour.winner_name))
+      setPreviousTeams([...names].filter((name) => name && !currentNames.has(name)).sort((a, b) => a.localeCompare(b, 'en-GB')))
+    }
+    loadPreviousTeams()
+    return () => { cancelled = true }
+  }, [teams])
 
   useEffect(() => {
     if (!teamId) {
@@ -341,6 +339,22 @@ export default function TeamsHub() {
           </option>
         ))}
       </select>
+
+      {previousTeams.length > 0 && (
+        <section style={{ marginBottom: 28 }}>
+          <h2 style={{ ...sectionHeaderStyle, marginTop: 0 }}>Previous teams</h2>
+          <p style={{ color: 'var(--muted)', fontSize: 14, marginTop: -4, marginBottom: 12 }}>
+            Former ECFA teams with records held in the archive.
+          </p>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(210px, 1fr))', gap: 8 }}>
+            {previousTeams.map((name) => (
+              <Link key={name} to={previousTeamUrl(name)} style={{ ...cardStyle, color: 'var(--ink)', textDecoration: 'none', fontWeight: 700 }}>
+                {name} <span aria-hidden="true" style={{ color: 'var(--brass)', float: 'right' }}>→</span>
+              </Link>
+            ))}
+          </div>
+        </section>
+      )}
 
       {loading && <p style={{ color: 'var(--muted)' }}>Loading…</p>}
 
