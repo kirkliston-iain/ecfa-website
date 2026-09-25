@@ -27,6 +27,10 @@ export default function DownloadsAdmin() {
   const [allowView, setAllowView] = useState(true)
   const [allowDownload, setAllowDownload] = useState(true)
   const [working, setWorking] = useState(false)
+  const [editingId, setEditingId] = useState(null)
+  const [editTitle, setEditTitle] = useState('')
+  const [editDescription, setEditDescription] = useState('')
+  const [editFile, setEditFile] = useState(null)
   const [message, setMessage] = useState('')
   const [error, setError] = useState('')
 
@@ -138,14 +142,87 @@ export default function DownloadsAdmin() {
     }
   }
 
+  function startEditing(item) {
+    setEditingId(item.id)
+    setEditTitle(item.title || '')
+    setEditDescription(item.description || '')
+    setEditFile(null)
+    setError('')
+    setMessage('')
+  }
+
+  function cancelEditing() {
+    setEditingId(null)
+    setEditTitle('')
+    setEditDescription('')
+    setEditFile(null)
+  }
+
+  async function saveDownload(event, item) {
+    event.preventDefault()
+    setError('')
+    setMessage('')
+    if (!editTitle.trim()) {
+      setError('Add a clear title.')
+      return
+    }
+    if (editFile && editFile.size > MAX_FILE_SIZE) {
+      setError('The replacement file is larger than the 25 MB limit.')
+      return
+    }
+
+    setWorking(true)
+    let replacementPath = null
+    const updates = {
+      title: editTitle.trim(),
+      description: editDescription.trim() || null,
+    }
+
+    if (editFile) {
+      replacementPath = `${new Date().getFullYear()}/${crypto.randomUUID()}-${safeFileName(editFile.name)}`
+      const { error: uploadError } = await supabase.storage
+        .from('website-downloads')
+        .upload(replacementPath, editFile, { contentType: editFile.type || undefined, upsert: false })
+      if (uploadError) {
+        setError(uploadError.message)
+        setWorking(false)
+        return
+      }
+      Object.assign(updates, {
+        file_name: editFile.name,
+        storage_path: replacementPath,
+        public_url: null,
+        mime_type: editFile.type || null,
+        file_size_bytes: editFile.size,
+        is_system_managed: false,
+      })
+    }
+
+    const { error: updateError } = await supabase
+      .from('site_downloads')
+      .update(updates)
+      .eq('id', item.id)
+    if (updateError) {
+      if (replacementPath) await supabase.storage.from('website-downloads').remove([replacementPath])
+      setError(updateError.message)
+      setWorking(false)
+      return
+    }
+
+    if (replacementPath && item.storage_path) {
+      const { error: removeError } = await supabase.storage.from('website-downloads').remove([item.storage_path])
+      if (removeError) setError(`Changes saved, but the old stored file could not be removed: ${removeError.message}`)
+    }
+    cancelEditing()
+    setMessage(editFile ? 'File and details updated.' : 'File details updated.')
+    setWorking(false)
+    loadDownloads()
+  }
+
   async function deleteDownload(item) {
     if (!window.confirm(`Delete “${item.title}”? This cannot be undone.`)) return
     setError('')
     setMessage('')
-    if (item.is_system_managed) {
-      setError('This guide is maintained with the website and cannot be deleted here. You can hide it instead.')
-      return
-    }
     if (item.storage_path) {
       const { error: storageError } = await supabase.storage
         .from('website-downloads')
@@ -254,8 +331,33 @@ export default function DownloadsAdmin() {
                     <button onClick={() => setDownloadPublished(item, !item.is_published)} style={outlineButtonStyle}>
                       {item.is_published ? 'Hide' : 'Publish'}
                     </button>
-                    {!item.is_system_managed && <button onClick={() => deleteDownload(item)} style={{ ...outlineButtonStyle, color: '#B3261E', borderColor: '#B3261E' }}>Delete</button>}
+                    <button onClick={() => startEditing(item)} style={outlineButtonStyle}>Edit</button>
+                    <button onClick={() => deleteDownload(item)} style={{ ...outlineButtonStyle, color: '#B3261E', borderColor: '#B3261E' }}>Delete</button>
                   </div>
+                  {editingId === item.id && (
+                    <form onSubmit={(event) => saveDownload(event, item)} style={editPanelStyle}>
+                      <h3 style={{ margin: '0 0 14px', fontSize: 18 }}>Edit file</h3>
+                      <label style={labelStyle}>
+                        Public title <span style={{ color: '#B3261E' }}>*</span>
+                        <input value={editTitle} onChange={(event) => setEditTitle(event.target.value)} style={inputStyle} maxLength={120} required />
+                      </label>
+                      <label style={labelStyle}>
+                        Short description
+                        <textarea value={editDescription} onChange={(event) => setEditDescription(event.target.value)} style={{ ...inputStyle, minHeight: 96, resize: 'vertical' }} maxLength={500} />
+                      </label>
+                      <label style={labelStyle}>
+                        Replace file <span style={{ color: 'var(--muted)', fontWeight: 400 }}>(optional)</span>
+                        <input type="file" accept={ACCEPTED_TYPES} onChange={(event) => setEditFile(event.target.files?.[0] || null)} style={fileInputStyle} />
+                        <span style={{ color: 'var(--muted)', fontSize: 13, fontWeight: 400 }}>
+                          Leave this blank to keep the existing file. Maximum 25 MB.
+                        </span>
+                      </label>
+                      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                        <button type="submit" disabled={working} style={buttonStyle}>{working ? 'Saving…' : 'Save changes'}</button>
+                        <button type="button" disabled={working} onClick={cancelEditing} style={outlineButtonStyle}>Cancel</button>
+                      </div>
+                    </form>
+                  )}
                 </article>
               )
             })}
@@ -268,6 +370,7 @@ export default function DownloadsAdmin() {
 
 const backStyle = { color: 'var(--brass)', fontWeight: 700, textDecoration: 'none' }
 const panelStyle = { padding: 20, border: '1px solid var(--line)', borderRadius: 10, background: '#fff' }
+const editPanelStyle = { marginTop: 18, padding: 16, border: '1px solid var(--line)', borderRadius: 8, background: '#fafafa' }
 const noticeStyle = { padding: 13, marginBottom: 18, border: '1px solid', borderRadius: 8, fontWeight: 700 }
 const labelStyle = { display: 'grid', gap: 7, marginBottom: 16, fontWeight: 700 }
 const inputStyle = { width: '100%', padding: '12px 13px', border: '1px solid var(--line)', borderRadius: 7, font: 'inherit' }
