@@ -4,6 +4,7 @@ import { supabase } from '../supabaseClient'
 import { displayedScore, outcomeNote } from '../utils/fixtureOutcome'
 import MatchdayCarousel from '../components/MatchdayCarousel'
 import StandingsTable from '../components/StandingsTable'
+import { cleanVenueName, isVenueLinkable, venueHistoryUrl } from '../utils/venueGrouping'
 
 const APPIN_LOGO = '/sponsors/appin-sports.png'
 const MATCH_HUB_DATE_KEY = 'ecfa-match-hub-selected-date'
@@ -503,7 +504,7 @@ function MatchCard({ f }) {
   const kickoff = f.fixture_date && f.fixture_date.slice(11, 16) !== '00:00'
     ? f.fixture_date.slice(11, 16)
     : null
-  const detailsBeforeReferee = [kickoff, f.venue || null].filter(Boolean)
+  const venueName = cleanVenueName(f.venue)
 
   return (
     <div
@@ -567,10 +568,21 @@ function MatchCard({ f }) {
           </div>
         )}
       </Link>
-      {(detailsBeforeReferee.length > 0 || f.referee_name) && (
+      {(kickoff || venueName || f.referee_name) && (
         <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 6, textAlign: 'center' }}>
-          {detailsBeforeReferee.join(' · ')}
-          {detailsBeforeReferee.length > 0 && f.referee_name ? ' · ' : ''}
+          {kickoff}
+          {kickoff && venueName ? ' · ' : ''}
+          {venueName && (
+            isVenueLinkable(f.venue) ? (
+              <Link
+                to={venueHistoryUrl(f.venue)}
+                style={{ color: 'inherit', fontWeight: 600, textDecoration: 'underline', textUnderlineOffset: 2 }}
+              >
+                {venueName}
+              </Link>
+            ) : venueName
+          )}
+          {(kickoff || venueName) && f.referee_name ? ' · ' : ''}
           {f.referee_name && (
             <Link
               to={`/referees?ref=${encodeURIComponent(f.referee_name)}`}
