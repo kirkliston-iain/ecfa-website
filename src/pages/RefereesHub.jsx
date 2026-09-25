@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
-import { useSearchParams } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
 import { supabase } from '../supabaseClient'
+import { historicDisplayedScore } from '../utils/historicFixtureOutcome'
 
 const CURRENT_SEASON_FALLBACK = ''
 
@@ -24,21 +25,27 @@ function teamCode(name) {
 
 function GameRow({ f, showResult }) {
   return (
-    <div style={cardStyle}>
+    <Link
+      to={`/fixtures/${f.id}`}
+      style={{ ...cardStyle, display: 'block', color: 'inherit', textDecoration: 'none' }}
+      aria-label={`View ${f.home_name} versus ${f.away_name}`}
+    >
       <div style={{ fontSize: 11, textTransform: 'uppercase', letterSpacing: 0.4, color: 'var(--brass)', marginBottom: 4 }}>
         {f.compName}
         {f.round_name ? ` — ${f.round_name}` : ''}
       </div>
       <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 4 }}>
         {f.home_name} v {f.away_name}
-        {showResult && f.home_score != null && f.away_score != null ? ` (${f.home_score}-${f.away_score})` : ''}
+        {showResult && f.home_score != null && f.away_score != null
+          ? ` (${f.isHistoric ? historicDisplayedScore(f) : `${f.home_score}-${f.away_score}`})`
+          : ''}
       </div>
       <div style={{ fontSize: 12, color: 'var(--muted)' }}>
         {new Date(f.fixture_date).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' })}
         {f.fixture_date.slice(11, 16) !== '00:00' ? `, ${f.fixture_date.slice(11, 16)}` : ''}
         {f.venue ? ` · ${f.venue}` : ''}
       </div>
-    </div>
+    </Link>
   )
 }
 
@@ -237,7 +244,7 @@ export default function RefereesHub() {
 
       const { data: hist } = await supabase
         .from('historic_fixtures')
-        .select('id, season, competition_name, fixture_date, home_team_name, home_goals, away_team_name, away_goals')
+        .select('id, season, competition_name, fixture_date, home_team_name, home_goals, away_team_name, away_goals, comment, penalty_winner_name')
         .eq('referee_name', refName)
         .order('fixture_date', { ascending: false })
 
@@ -251,6 +258,13 @@ export default function RefereesHub() {
           home_score: h.home_goals,
           away_score: h.away_goals,
           compName: h.competition_name,
+          home_team_name: h.home_team_name,
+          home_goals: h.home_goals,
+          away_team_name: h.away_team_name,
+          away_goals: h.away_goals,
+          comment: h.comment,
+          penalty_winner_name: h.penalty_winner_name,
+          isHistoric: true,
         }))
       )
 

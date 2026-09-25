@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { supabase } from '../supabaseClient'
 import { displayedScore, outcomeNote } from '../utils/fixtureOutcome'
+import { historicDisplayedScore } from '../utils/historicFixtureOutcome'
 
 function Badge({ logoUrl, name, size = 24 }) {
   if (logoUrl) {
@@ -100,7 +101,7 @@ export default function TeamsHub() {
     for (let from = 0; ; from += pageSize) {
       const result = await supabase
         .from('historic_fixtures')
-        .select('id, season, competition_name, fixture_date, home_team_id, home_team_name, home_goals, away_team_id, away_team_name, away_goals')
+        .select('id, season, competition_name, fixture_date, home_team_id, home_team_name, home_goals, away_team_id, away_team_name, away_goals, comment, penalty_winner_name')
         .order('fixture_date', { ascending: false })
         .range(from, from + pageSize - 1)
       if (result.error) return result
@@ -495,7 +496,7 @@ export default function TeamsHub() {
               historicForSeason.map((f) => (
                 <div key={f.id} style={resultRowStyle}>
                   <span>
-                    {f.home_team_name} {f.home_goals ?? '?'} - {f.away_goals ?? '?'} {f.away_team_name}
+                    {f.home_team_name} {historicDisplayedScore(f)} {f.away_team_name}
                   </span>
                   <span style={{ color: 'var(--muted)', fontSize: 12 }}>{f.competition_name}</span>
                 </div>
