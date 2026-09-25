@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { supabase } from '../supabaseClient'
+import { cleanVenueName, isVenueLinkable, venueGroupKey, venueHistoryUrl } from '../utils/venueGrouping'
 
 const SITE_PAGES = [
   { label: 'Match Hub', description: 'Fixtures and results by date', to: '/' },
@@ -57,29 +58,31 @@ export default function Search() {
   const [input, setInput] = useState(params.get('q') || '')
   const query = (params.get('q') || '').trim()
   const [loading, setLoading] = useState(false)
-  const [dynamic, setDynamic] = useState({ players: [], referees: [], teams: [], competitions: [] })
+  const [dynamic, setDynamic] = useState({ players: [], referees: [], teams: [], competitions: [], venues: [] })
   const [error, setError] = useState('')
 
   useEffect(() => {
     let cancelled = false
     async function run() {
       if (query.length < 2) {
-        setDynamic({ players: [], referees: [], teams: [], competitions: [] })
+        setDynamic({ players: [], referees: [], teams: [], competitions: [], venues: [] })
         return
       }
       setLoading(true)
       setError('')
 
       const pattern = `%${query}%`
-      const [playersResult, historicResult, refereesResult, teamsResult, competitionsResult] = await Promise.all([
+      const [playersResult, historicResult, refereesResult, teamsResult, competitionsResult, venuesResult, fixtureVenuesResult] = await Promise.all([
         supabase.from('players').select('id, first_name, last_name, team:team_id(name)').limit(1000),
         supabase.from('historic_scorers').select('player_name, team_name, season').ilike('player_name', pattern).limit(100),
         supabase.from('referees').select('id, name').ilike('name', pattern).order('name').limit(20),
         supabase.from('teams').select('id, name, manager_name').or(`name.ilike.${pattern},manager_name.ilike.${pattern}`).order('name').limit(20),
         supabase.from('competitions').select('slug, name, season').ilike('name', pattern).order('name').limit(20),
+        supabase.from('venues').select('id, name').ilike('name', pattern).order('name').limit(50),
+        supabase.from('fixtures').select('venue').ilike('venue', pattern).eq('hidden_from_public', false).limit(1000),
       ])
 
-      const failed = [playersResult, historicResult, refereesResult, teamsResult, competitionsResult].find((result) => result.error)
+      const failed = [playersResult, historicResult, refereesResult, teamsResult, competitionsResult, venuesResult, fixtureVenuesResult].find((result) => result.error)
       if (failed) {
         if (!cancelled) setError('Search could not be completed. Please try again.')
         setLoading(false)
@@ -108,6 +111,20 @@ export default function Search() {
         })
       }
 
+      const venueMap = new Map()
+      for (const venue of [...(venuesResult.data || []), ...(fixtureVenuesResult.data || [])]) {
+        const name = cleanVenueName(venue.name || venue.venue)
+        if (!isVenueLinkable(name)) continue
+        const key = venueGroupKey(name)
+        if (!key || venueMap.has(key)) continue
+        venueMap.set(key, {
+          key: `venue-${key}`,
+          label: name,
+          description: 'Venue · Current-season match history',
+          to: venueHistoryUrl(name),
+        })
+      }
+
       if (!cancelled) {
         setDynamic({
           players: Array.from(playerMap.values()).slice(0, 20),
@@ -129,6 +146,9 @@ export default function Search() {
             description: competition.season ? `Competition · ${competition.season}` : 'Competition',
             to: `/competitions/${competition.slug}`,
           })),
+          venues: Array.from(venueMap.values())
+            .sort((a, b) => a.label.localeCompare(b.label))
+            .slice(0, 30),
         })
       }
       setLoading(false)
@@ -142,7 +162,7 @@ export default function Search() {
     return SITE_PAGES.filter((page) => includes(page.label, query) || includes(page.description, query))
   }, [query])
 
-  const total = pages.length + dynamic.players.length + dynamic.referees.length + dynamic.teams.length + dynamic.competitions.length
+  const total = pages.length + dynamic.players.length + dynamic.referees.length + dynamic.teams.length + dynamic.competitions.length + dynamic.venues.length
 
   function submit(event) {
     event.preventDefault()
@@ -154,7 +174,7 @@ export default function Search() {
     <div className="container" style={{ padding: '32px 20px 48px', maxWidth: 760 }}>
       <h1 style={{ fontSize: 30, marginBottom: 4 }}>Search</h1>
       <p style={{ color: 'var(--muted)', marginBottom: 22 }}>
-        Find players, referees, teams, competitions and pages across the ECFA website.
+        Find players, referees, teams, venues, competitions and pages across the ECFA website.
       </p>
 
       <form onSubmit={submit} style={{ display: 'flex', gap: 8, marginBottom: 30 }}>
@@ -183,6 +203,7 @@ export default function Search() {
           <ResultGroup title="Players" rows={dynamic.players} />
           <ResultGroup title="Referees" rows={dynamic.referees} />
           <ResultGroup title="Teams and managers" rows={dynamic.teams} />
+          <ResultGroup title="Venues" rows={dynamic.venues} />
           <ResultGroup title="Competitions" rows={dynamic.competitions} />
           <ResultGroup title="Website sections" rows={pages} />
         </>
