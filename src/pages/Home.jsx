@@ -956,6 +956,18 @@ export default function Home() {
 
       <MatchdayCarousel days={allDays} selected={selectedDate} onSelect={setSelectedDate} />
 
+      {showKnockoutBracket && (
+        <section style={{ marginBottom: 40 }}>
+          <h2 style={{ fontSize: 13, textTransform: 'uppercase', letterSpacing: 0.5, color: 'var(--muted)', marginBottom: 12 }}>
+            ECFA Knockout Cup · {new Date(`${selectedDate}T12:00:00`).toLocaleDateString('en-GB', { day: 'numeric', month: 'long' })}
+          </h2>
+          <KnockoutBracket fixtures={featuredCompetition.fixtures} />
+          <Link to="/competitions/knockout-cup" style={{ display: 'inline-block', marginTop: 18, fontWeight: 700, color: 'var(--ink)' }}>
+            View the full knockout cup →
+          </Link>
+        </section>
+      )}
+
       {hasResultsToday && recapParagraphs.length > 0 && (
         <section style={{ marginBottom: 28 }}>
           <h2 style={{ fontSize: 13, textTransform: 'uppercase', letterSpacing: 0.5, color: 'var(--brass)', marginBottom: 10 }}>
@@ -969,12 +981,12 @@ export default function Home() {
         </section>
       )}
 
-      {!hasResultsToday && previewParagraphs.length > 0 && (
+      {!hasResultsToday && previewParagraphs.some((p) => !showKnockoutBracket || p.compName !== 'ECFA Knockout Cup') && (
         <section style={{ marginBottom: 28 }}>
           <h2 style={{ fontSize: 13, textTransform: 'uppercase', letterSpacing: 0.5, color: 'var(--brass)', marginBottom: 10 }}>
             Match Preview
           </h2>
-          {previewParagraphs.map((p) => (
+          {previewParagraphs.filter((p) => !showKnockoutBracket || p.compName !== 'ECFA Knockout Cup').map((p) => (
             <div key={p.fixtureId} style={{ marginBottom: 14 }}>
               <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 2 }}>
                 {p.homeName} v {p.awayName}
@@ -982,18 +994,6 @@ export default function Home() {
               <p style={{ fontSize: 14, lineHeight: 1.6, color: 'var(--muted)', margin: 0 }}>{p.text}</p>
             </div>
           ))}
-        </section>
-      )}
-
-      {showKnockoutBracket && (
-        <section style={{ marginBottom: 40 }}>
-          <h2 style={{ fontSize: 13, textTransform: 'uppercase', letterSpacing: 0.5, color: 'var(--muted)', marginBottom: 12 }}>
-            ECFA Knockout Cup · {new Date(`${selectedDate}T12:00:00`).toLocaleDateString('en-GB', { day: 'numeric', month: 'long' })}
-          </h2>
-          <KnockoutBracket fixtures={featuredCompetition.fixtures} />
-          <Link to="/competitions/knockout-cup" style={{ display: 'inline-block', marginTop: 18, fontWeight: 700, color: 'var(--ink)' }}>
-            View the full knockout cup →
-          </Link>
         </section>
       )}
 
