@@ -1360,11 +1360,14 @@ export default function AdminDashboard() {
                         style={fullSelectStyle}
                       >
                         <option value="">Select player…</option>
-                        {(disciplineSideSquad || []).map((p) => (
-                          <option key={p.id} value={p.id}>
-                            {p.first_name} {p.last_name}
-                          </option>
-                        ))}
+                        {[...(disciplineSideSquad || [])]
+                          .sort((a, b) => a.first_name.localeCompare(b.first_name, 'en', { sensitivity: 'base' })
+                            || a.last_name.localeCompare(b.last_name, 'en', { sensitivity: 'base' }))
+                          .map((p) => (
+                            <option key={p.id} value={p.id}>
+                              {p.first_name} {p.last_name}
+                            </option>
+                          ))}
                       </select>
                       <div style={{ display: 'flex', gap: 8 }}>
                         <select
