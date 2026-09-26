@@ -3,7 +3,6 @@ import { useParams } from 'react-router-dom'
 import { supabase } from '../supabaseClient'
 import StandingsTable, { TopScorersTable } from '../components/StandingsTable'
 import FixtureWeekNav from '../components/FixtureWeekNav'
-import KnockoutBracket from '../components/KnockoutBracket'
 
 export default function Competition() {
   const { slug } = useParams()
@@ -201,26 +200,10 @@ export default function Competition() {
                 />
               ))}
 
-          {competition.slug === 'knockout-cup' && stage.stage_type === 'knockout' ? (
-            <>
-              <KnockoutBracket fixtures={stage.fixtures} />
-              {stage.fixtures.some((fixture) => fixture.round_name === 'Preliminary Round') && (
-                <details style={{ marginTop: 32 }}>
-                  <summary style={{ cursor: 'pointer', fontWeight: 700 }}>Earlier rounds and results</summary>
-                  <div style={{ marginTop: 12 }}>
-                    <FixtureWeekNav fixtures={stage.fixtures.filter((fixture) => fixture.round_name === 'Preliminary Round')} />
-                  </div>
-                </details>
-              )}
-            </>
-          ) : (
-            <>
-              <h3 style={{ fontSize: 13, marginBottom: 10, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: 0.4 }}>
-                Fixtures &amp; Results
-              </h3>
-              <FixtureWeekNav fixtures={stage.fixtures} />
-            </>
-          )}
+          <h3 style={{ fontSize: 13, marginBottom: 10, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: 0.4 }}>
+            Fixtures &amp; Results
+          </h3>
+          <FixtureWeekNav fixtures={stage.fixtures} />
         </section>
       ))}
 

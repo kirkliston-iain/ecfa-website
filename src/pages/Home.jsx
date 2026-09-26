@@ -925,9 +925,6 @@ export default function Home() {
 
   const showKnockoutBracket = featuredCompetition?.slug === 'knockout-cup'
     && matchesForDate.some((fixture) => fixture.compSlug === 'knockout-cup' && fixture.round_name === 'Quarter-Final')
-  const regularMatchesForDate = showKnockoutBracket
-    ? matchesForDate.filter((fixture) => fixture.compSlug !== 'knockout-cup')
-    : matchesForDate
 
   if (loading) {
     return (
@@ -956,18 +953,6 @@ export default function Home() {
 
       <MatchdayCarousel days={allDays} selected={selectedDate} onSelect={setSelectedDate} />
 
-      {showKnockoutBracket && (
-        <section style={{ marginBottom: 40 }}>
-          <h2 style={{ fontSize: 13, textTransform: 'uppercase', letterSpacing: 0.5, color: 'var(--muted)', marginBottom: 12 }}>
-            ECFA Knockout Cup · {new Date(`${selectedDate}T12:00:00`).toLocaleDateString('en-GB', { day: 'numeric', month: 'long' })}
-          </h2>
-          <KnockoutBracket fixtures={featuredCompetition.fixtures} />
-          <Link to="/competitions/knockout-cup" style={{ display: 'inline-block', marginTop: 18, fontWeight: 700, color: 'var(--ink)' }}>
-            View the full knockout cup →
-          </Link>
-        </section>
-      )}
-
       {hasResultsToday && recapParagraphs.length > 0 && (
         <section style={{ marginBottom: 28 }}>
           <h2 style={{ fontSize: 13, textTransform: 'uppercase', letterSpacing: 0.5, color: 'var(--brass)', marginBottom: 10 }}>
@@ -981,12 +966,12 @@ export default function Home() {
         </section>
       )}
 
-      {!hasResultsToday && previewParagraphs.some((p) => !showKnockoutBracket || p.compName !== 'ECFA Knockout Cup') && (
+      {!hasResultsToday && previewParagraphs.length > 0 && (
         <section style={{ marginBottom: 28 }}>
           <h2 style={{ fontSize: 13, textTransform: 'uppercase', letterSpacing: 0.5, color: 'var(--brass)', marginBottom: 10 }}>
             Match Preview
           </h2>
-          {previewParagraphs.filter((p) => !showKnockoutBracket || p.compName !== 'ECFA Knockout Cup').map((p) => (
+          {previewParagraphs.map((p) => (
             <div key={p.fixtureId} style={{ marginBottom: 14 }}>
               <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 2 }}>
                 {p.homeName} v {p.awayName}
@@ -997,7 +982,7 @@ export default function Home() {
         </section>
       )}
 
-      {(!showKnockoutBracket || regularMatchesForDate.length > 0) && <section style={{ marginBottom: 40 }}>
+      <section style={{ marginBottom: 40 }}>
         <h2 style={{ fontSize: 13, textTransform: 'uppercase', letterSpacing: 0.5, color: 'var(--muted)', marginBottom: 12 }}>
           {hasResultsToday ? 'Full Time' : 'Upcoming Fixtures'}
         </h2>
@@ -1025,10 +1010,10 @@ export default function Home() {
           })()
         ) : (
           <div className="desktop-card-grid">
-            {regularMatchesForDate.map((f) => <MatchCard key={f.id} f={f} allFixtures={allCurrentSeasonFixtures} />)}
+            {matchesForDate.map((f) => <MatchCard key={f.id} f={f} allFixtures={allCurrentSeasonFixtures} />)}
           </div>
         )}
-      </section>}
+      </section>
 
       {featuredCompetition?.slug === 'appin-league' && appinStandings.length > 0 && (
         <section style={{ marginBottom: 40 }}>
@@ -1039,7 +1024,7 @@ export default function Home() {
         </section>
       )}
 
-      {featuredCompetition?.slug !== 'appin-league' && !showKnockoutBracket && featuredCupResults.length > 0 && (
+      {featuredCompetition?.slug !== 'appin-league' && featuredCupResults.length > 0 && (
         <section style={{ marginBottom: 40 }}>
           <h2 style={{ fontSize: 13, textTransform: 'uppercase', letterSpacing: 0.5, color: 'var(--muted)', marginBottom: 12 }}>
             {featuredCompetition.name} Results
@@ -1054,6 +1039,15 @@ export default function Home() {
               </div>
             </div>
           ))}
+        </section>
+      )}
+
+      {showKnockoutBracket && (
+        <section style={{ marginBottom: 40 }}>
+          <h2 style={{ fontSize: 13, textTransform: 'uppercase', letterSpacing: 0.5, color: 'var(--muted)', marginBottom: 12 }}>
+            Knockout Cup path
+          </h2>
+          <KnockoutBracket fixtures={featuredCompetition.fixtures} />
         </section>
       )}
 

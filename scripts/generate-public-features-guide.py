@@ -125,7 +125,7 @@ story.append(card_grid([
     ('Results and scores', 'Completed games show the score and link to an individual match page.'),
     ('Match details', 'Open a fixture to review match information and any recorded scorers or related public details.'),
     ('Current standings', 'A league-table snapshot provides a quick view of team positions and performance.'),
-    ('Weekend context', 'The front page automatically prioritises upcoming games or recent results depending on the day. On Knockout Cup quarter-final dates, a bracket shows which ties feed into each semi-final.'),
+    ('Weekend context', 'The front page prioritises upcoming games or recent results depending on the day. On Knockout Cup quarter-final dates, a winner path tree appears below the usual fixtures and results.'),
 ]))
 story.append(PageBreak())
 
@@ -134,7 +134,7 @@ story += section_title('3. Competitions, tables and cups', 'Competition pages se
 story.append(card_grid([
     ('League standings', 'View played, won, drawn, lost, goals for, goals against, goal difference and points.'),
     ('League fixtures and results', 'Review scheduled and completed games within the selected competition.'),
-    ('Cup progress', 'The Knockout Cup bracket links quarter-finals to semi-finals and the final, showing completed scores and the next opponent paths. Other cup pages show their rounds and group stages.'),
+    ('Cup progress', 'Follow rounds, group stages and knockout fixtures, including round labels and next-stage possibilities where available.'),
     ('Competition switching', 'Move between the Appin Sports League, ECFA Knockout Cup, ECFA League Cup and Brian Latto Cup.'),
 ]))
 story += [Spacer(1, 10)] + section_title('4. Scorers and player information')
