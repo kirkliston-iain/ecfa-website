@@ -98,7 +98,7 @@ cover = Table([[p('ECFA WEBSITE', 'CoverSub')], [p('Public Features Guide', 'Cov
               ]))
 story += [Spacer(1, 35*mm), cover, Spacer(1, 18*mm)]
 story.append(Table([[p('WEBSITE', 'Smallx'), p('https://ecfa-website.vercel.app', 'CardTitle')],
-                    [p('GUIDE UPDATED', 'Smallx'), p('22 September 2026', 'CardTitle')]],
+                    [p('GUIDE UPDATED', 'Smallx'), p('26 September 2026', 'CardTitle')]],
                    colWidths=[35*mm, 125*mm], style=TableStyle([
                        ('BOX', (0,0), (-1,-1), 0.7, LINE), ('INNERGRID', (0,0), (-1,-1), 0.5, LINE),
                        ('BACKGROUND', (0,0), (0,-1), PALE), ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
@@ -134,7 +134,7 @@ story += section_title('3. Competitions, tables and cups', 'Competition pages se
 story.append(card_grid([
     ('League standings', 'View played, won, drawn, lost, goals for, goals against, goal difference and points.'),
     ('League fixtures and results', 'Review scheduled and completed games within the selected competition.'),
-    ('Cup progress', 'Follow rounds, group stages and knockout fixtures, including round labels and next-stage possibilities where available.'),
+    ('Cup progress', 'The Knockout Cup bracket links quarter-finals to semi-finals and the final, showing completed scores and the next opponent paths. Other cup pages show their rounds and group stages.'),
     ('Competition switching', 'Move between the Appin Sports League, ECFA Knockout Cup, ECFA League Cup and Brian Latto Cup.'),
 ]))
 story += [Spacer(1, 10)] + section_title('4. Scorers and player information')
