@@ -4,6 +4,7 @@ import { supabase } from '../supabaseClient'
 import { displayedScore, outcomeNote } from '../utils/fixtureOutcome'
 import MatchdayCarousel from '../components/MatchdayCarousel'
 import StandingsTable from '../components/StandingsTable'
+import KnockoutBracket from '../components/KnockoutBracket'
 import { cleanVenueName, isVenueLinkable, venueHistoryUrl } from '../utils/venueGrouping'
 
 const APPIN_LOGO = '/sponsors/appin-sports.png'
@@ -922,6 +923,12 @@ export default function Home() {
     }, [])
   }, [featuredCupResults])
 
+  const showKnockoutBracket = featuredCompetition?.slug === 'knockout-cup'
+    && matchesForDate.some((fixture) => fixture.compSlug === 'knockout-cup' && fixture.round_name === 'Quarter-Final')
+  const regularMatchesForDate = showKnockoutBracket
+    ? matchesForDate.filter((fixture) => fixture.compSlug !== 'knockout-cup')
+    : matchesForDate
+
   if (loading) {
     return (
       <div className="container" style={{ padding: '48px 20px' }}>
@@ -978,7 +985,19 @@ export default function Home() {
         </section>
       )}
 
-      <section style={{ marginBottom: 40 }}>
+      {showKnockoutBracket && (
+        <section style={{ marginBottom: 40 }}>
+          <h2 style={{ fontSize: 13, textTransform: 'uppercase', letterSpacing: 0.5, color: 'var(--muted)', marginBottom: 12 }}>
+            ECFA Knockout Cup · {new Date(`${selectedDate}T12:00:00`).toLocaleDateString('en-GB', { day: 'numeric', month: 'long' })}
+          </h2>
+          <KnockoutBracket fixtures={featuredCompetition.fixtures} />
+          <Link to="/competitions/knockout-cup" style={{ display: 'inline-block', marginTop: 18, fontWeight: 700, color: 'var(--ink)' }}>
+            View the full knockout cup →
+          </Link>
+        </section>
+      )}
+
+      {(!showKnockoutBracket || regularMatchesForDate.length > 0) && <section style={{ marginBottom: 40 }}>
         <h2 style={{ fontSize: 13, textTransform: 'uppercase', letterSpacing: 0.5, color: 'var(--muted)', marginBottom: 12 }}>
           {hasResultsToday ? 'Full Time' : 'Upcoming Fixtures'}
         </h2>
@@ -1006,10 +1025,10 @@ export default function Home() {
           })()
         ) : (
           <div className="desktop-card-grid">
-            {matchesForDate.map((f) => <MatchCard key={f.id} f={f} allFixtures={allCurrentSeasonFixtures} />)}
+            {regularMatchesForDate.map((f) => <MatchCard key={f.id} f={f} allFixtures={allCurrentSeasonFixtures} />)}
           </div>
         )}
-      </section>
+      </section>}
 
       {featuredCompetition?.slug === 'appin-league' && appinStandings.length > 0 && (
         <section style={{ marginBottom: 40 }}>
@@ -1020,7 +1039,7 @@ export default function Home() {
         </section>
       )}
 
-      {featuredCompetition?.slug !== 'appin-league' && featuredCupResults.length > 0 && (
+      {featuredCompetition?.slug !== 'appin-league' && !showKnockoutBracket && featuredCupResults.length > 0 && (
         <section style={{ marginBottom: 40 }}>
           <h2 style={{ fontSize: 13, textTransform: 'uppercase', letterSpacing: 0.5, color: 'var(--muted)', marginBottom: 12 }}>
             {featuredCompetition.name} Results

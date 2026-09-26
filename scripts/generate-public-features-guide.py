@@ -125,7 +125,7 @@ story.append(card_grid([
     ('Results and scores', 'Completed games show the score and link to an individual match page.'),
     ('Match details', 'Open a fixture to review match information and any recorded scorers or related public details.'),
     ('Current standings', 'A league-table snapshot provides a quick view of team positions and performance.'),
-    ('Weekend context', 'The front page automatically prioritises upcoming games or recent results depending on the day.'),
+    ('Weekend context', 'The front page automatically prioritises upcoming games or recent results depending on the day. On Knockout Cup quarter-final dates, a bracket shows which ties feed into each semi-final.'),
 ]))
 story.append(PageBreak())
 
