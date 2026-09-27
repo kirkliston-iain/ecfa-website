@@ -34,6 +34,7 @@ import Search from './pages/Search'
 import PlayerDetail from './pages/PlayerDetail'
 import WeeklyDisciplineReport from './pages/WeeklyDisciplineReport'
 import MatchAppointments from './pages/MatchAppointments'
+import TeamPreferencesAdmin from './pages/TeamPreferencesAdmin'
 import AdminChangePassword from './pages/AdminChangePassword'
 import AdminAccounts from './pages/AdminAccounts'
 import AdminAudit from './pages/AdminAudit'
@@ -89,6 +90,14 @@ export default function App() {
             element={
               <ProtectedRoute>
                 <MatchAppointments />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/team-preferences"
+            element={
+              <ProtectedRoute>
+                <TeamPreferencesAdmin />
               </ProtectedRoute>
             }
           />

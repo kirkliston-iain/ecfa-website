@@ -745,6 +745,10 @@ export default function AdminDashboard() {
         Match appointments &rarr;
       </Link>
 
+      <Link to="/admin/team-preferences" style={{ ...linkButtonStyle, display: 'block', marginBottom: 8 }}>
+        Team venue &amp; time preferences &rarr;
+      </Link>
+
       <Link to="/admin/fixture-tracker" style={{ ...linkButtonStyle, display: 'block', marginBottom: 8 }}>
         Fixture tracker &rarr;
       </Link>
