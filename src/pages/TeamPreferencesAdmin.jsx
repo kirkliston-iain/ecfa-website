@@ -31,6 +31,7 @@ export default function TeamPreferencesAdmin() {
   const [dirty, setDirty] = useState(false)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
+  const [expandedTeam, setExpandedTeam] = useState(null)
   const [message, setMessage] = useState('')
   const [error, setError] = useState('')
 
@@ -73,6 +74,7 @@ export default function TeamPreferencesAdmin() {
   function chooseSeason(season) {
     const initial = preferencesForSeason(settings, season)
     setSelectedSeason(season)
+    setExpandedTeam(null)
     setDraft(initial.rows)
     setInherited(initial.inherited)
     setDirty(false)
@@ -178,9 +180,16 @@ export default function TeamPreferencesAdmin() {
       </label>
       {inherited && <p style={noticeStyle}>This season starts with a copy of the previous preferences. Save to keep a separate list for {selectedSeason}.</p>}
       {dirty && <p style={noticeStyle}>Save or discard your changes before switching seasons.</p>}
+      <div className="team-pref-list" role="table" aria-label="Team venue and time preferences">
+        <div className="team-pref-list-head" role="row"><span role="columnheader">TEAM</span><span role="columnheader">PREFERRED SLOTS</span><span role="columnheader">EDIT</span></div>
       {teamNames.map((team) => (
-        <section key={team} style={{ border: '1px solid var(--line)', borderRadius: 8, padding: 10, marginBottom: 10 }}>
-          <h2 style={{ fontSize: 15, lineHeight: 1.25, margin: '0 0 8px' }}>{team}</h2>
+        <section key={team} className="team-pref-team" role="row">
+          <div className="team-pref-summary" role="cell">
+            <strong>{team}</strong>
+            <span className="team-pref-slots">{(draft[team] || []).length ? (draft[team] || []).map((row, index) => <span key={index}>{row.venue} · {row.start}</span>) : <span>No preferences</span>}</span>
+            <button type="button" className="team-pref-toggle" aria-expanded={expandedTeam === team} aria-controls={`team-pref-editor-${team.replace(/[^a-z0-9]/gi, '-')}`} onClick={() => setExpandedTeam((current) => current === team ? null : team)}>{expandedTeam === team ? 'Done' : 'Edit'}</button>
+          </div>
+          {expandedTeam === team && <div className="team-pref-editor" id={`team-pref-editor-${team.replace(/[^a-z0-9]/gi, '-')}`}>
           {(draft[team] || []).map((row, index) => {
             const venue = settings.venues.find((item) => item.name === row.venue)
             const times = [...new Set([row.start, ...(venue?.slots || []).map((slot) => slot.start)].filter(Boolean))].sort()
@@ -201,8 +210,10 @@ export default function TeamPreferencesAdmin() {
             )
           })}
           <button type="button" onClick={() => addRow(team)} style={smallButton}>+ Add preference</button>
+          </div>}
         </section>
       ))}
+      </div>
       {error && <p role="alert" style={{ color: '#B3261E' }}>{error}</p>}
       {message && <p role="status" style={{ color: '#1B6E3C' }}>{message}</p>}
       <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
