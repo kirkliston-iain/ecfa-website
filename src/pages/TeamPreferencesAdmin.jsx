@@ -159,11 +159,11 @@ export default function TeamPreferencesAdmin() {
   if (!settings) return <div className="container" style={{ padding: 32 }}>{error}</div>
 
   return (
-    <div className="container" style={{ padding: '32px 20px 48px', maxWidth: 920 }}>
+    <div className="container team-pref-page" style={{ padding: '24px 16px 48px', maxWidth: 920 }}>
       <Link to="/admin/dashboard" style={{ color: 'var(--brass)', fontSize: 14 }}>← Admin dashboard</Link>
-      <h1 style={{ margin: '16px 0 6px', fontSize: 26 }}>Team venue &amp; time preferences</h1>
-      <p style={{ color: 'var(--muted)', margin: '0 0 20px' }}>
-        These are preferred venue slots for weekend placement. The slot start may differ from the published kick-off.
+      <h1 style={{ margin: '12px 0 6px', fontSize: 23, lineHeight: 1.2 }}>Team venue &amp; time preferences</h1>
+      <p style={{ color: 'var(--muted)', margin: '0 0 16px', fontSize: 14, lineHeight: 1.4 }}>
+        Preferred weekend slots. Slot times may differ from published kick-offs.
       </p>
       <label style={{ display: 'block', fontWeight: 700, marginBottom: 16 }}>
         Season
@@ -179,22 +179,24 @@ export default function TeamPreferencesAdmin() {
       {inherited && <p style={noticeStyle}>This season starts with a copy of the previous preferences. Save to keep a separate list for {selectedSeason}.</p>}
       {dirty && <p style={noticeStyle}>Save or discard your changes before switching seasons.</p>}
       {teamNames.map((team) => (
-        <section key={team} style={{ border: '1px solid var(--line)', borderRadius: 8, padding: 16, marginBottom: 14 }}>
-          <h2 style={{ fontSize: 17, margin: '0 0 12px' }}>{team}</h2>
+        <section key={team} style={{ border: '1px solid var(--line)', borderRadius: 8, padding: 12, marginBottom: 12 }}>
+          <h2 style={{ fontSize: 16, lineHeight: 1.3, margin: '0 0 10px' }}>{team}</h2>
           {(draft[team] || []).map((row, index) => {
             const venue = settings.venues.find((item) => item.name === row.venue)
             const times = [...new Set([row.start, ...(venue?.slots || []).map((slot) => slot.start)].filter(Boolean))].sort()
             return (
-              <div key={`${team}-${index}`} style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center', marginBottom: 8 }}>
-                <select aria-label={`${team} preference ${index + 1} venue`} value={row.venue} onChange={(event) => updateRow(team, index, 'venue', event.target.value)} style={{ ...inputStyle, flex: '2 1 210px' }}>
+              <div key={`${team}-${index}`} className="team-pref-entry">
+                <select aria-label={`${team} preference ${index + 1} venue`} value={row.venue} onChange={(event) => updateRow(team, index, 'venue', event.target.value)} style={inputStyle}>
                   {settings.venues.map((item) => <option key={item.name} value={item.name}>{item.name}</option>)}
                 </select>
-                <select aria-label={`${team} preference ${index + 1} time`} value={row.start} onChange={(event) => updateRow(team, index, 'start', event.target.value)} style={{ ...inputStyle, flex: '1 1 100px' }}>
+                <select aria-label={`${team} preference ${index + 1} time`} value={row.start} onChange={(event) => updateRow(team, index, 'start', event.target.value)} style={inputStyle}>
                   {times.map((time) => <option key={time} value={time}>{time}</option>)}
                 </select>
-                <button type="button" aria-label={`Move ${team} preference ${index + 1} up`} disabled={index === 0} onClick={() => moveRow(team, index, -1)} style={smallButton}>↑</button>
-                <button type="button" aria-label={`Move ${team} preference ${index + 1} down`} disabled={index === (draft[team] || []).length - 1} onClick={() => moveRow(team, index, 1)} style={smallButton}>↓</button>
-                <button type="button" onClick={() => changeRows(team, (draft[team] || []).filter((_, i) => i !== index))} style={smallButton}>Remove</button>
+                <div className="team-pref-actions">
+                  <button type="button" aria-label={`Move ${team} preference ${index + 1} up`} disabled={index === 0} onClick={() => moveRow(team, index, -1)} style={smallButton}>↑</button>
+                  <button type="button" aria-label={`Move ${team} preference ${index + 1} down`} disabled={index === (draft[team] || []).length - 1} onClick={() => moveRow(team, index, 1)} style={smallButton}>↓</button>
+                  <button type="button" onClick={() => changeRows(team, (draft[team] || []).filter((_, i) => i !== index))} style={smallButton}>Remove</button>
+                </div>
               </div>
             )
           })}
@@ -213,7 +215,7 @@ export default function TeamPreferencesAdmin() {
   )
 }
 
-const inputStyle = { padding: '10px', border: '1px solid var(--line)', borderRadius: 6, background: '#fff', color: 'var(--ink)', font: 'inherit', minHeight: 42 }
-const smallButton = { padding: '9px 12px', border: '1px solid var(--line)', borderRadius: 6, background: '#fff', color: 'var(--ink)', font: 'inherit', cursor: 'pointer', minHeight: 42 }
+const inputStyle = { padding: '8px', border: '1px solid var(--line)', borderRadius: 6, background: '#fff', color: 'var(--ink)', font: 'inherit', fontSize: 14, minHeight: 40, minWidth: 0, maxWidth: '100%' }
+const smallButton = { padding: '7px 10px', border: '1px solid var(--line)', borderRadius: 6, background: '#fff', color: 'var(--ink)', font: 'inherit', fontSize: 14, cursor: 'pointer', minHeight: 40 }
 const saveButton = { ...smallButton, background: 'var(--ink)', color: '#fff', fontWeight: 700 }
 const noticeStyle = { padding: 12, border: '1px solid var(--brass)', borderRadius: 6, background: '#fff8df', fontSize: 14 }

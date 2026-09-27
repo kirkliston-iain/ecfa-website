@@ -350,3 +350,16 @@ button {
   .bracket-connector::before { display: none; }
   .bracket-final { width: auto; margin-left: 17px; }
 }
+.team-pref-entry { display: grid; grid-template-columns: minmax(0, 1fr) 100px auto; align-items: center; gap: 8px; margin-bottom: 8px; }
+.team-pref-entry select { width: 100%; box-sizing: border-box; }
+.team-pref-actions { display: flex; gap: 6px; }
+@media (max-width: 680px) {
+  .team-pref-entry { grid-template-columns: minmax(0, 1fr) auto; gap: 6px; }
+  .team-pref-entry select:first-child { grid-column: 1 / -1; }
+  .team-pref-actions { grid-column: 2; }
+  .team-pref-actions button { padding-left: 8px !important; padding-right: 8px !important; }
+}
+@media (max-width: 350px) {
+  .team-pref-entry { grid-template-columns: minmax(0, 1fr); }
+  .team-pref-entry select:first-child, .team-pref-actions { grid-column: 1; }
+}
