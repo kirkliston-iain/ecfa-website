@@ -161,11 +161,11 @@ export default function TeamPreferencesAdmin() {
   return (
     <div className="container team-pref-page" style={{ padding: '24px 16px 48px', maxWidth: 920 }}>
       <Link to="/admin/dashboard" style={{ color: 'var(--brass)', fontSize: 14 }}>← Admin dashboard</Link>
-      <h1 style={{ margin: '12px 0 6px', fontSize: 23, lineHeight: 1.2 }}>Team venue &amp; time preferences</h1>
-      <p style={{ color: 'var(--muted)', margin: '0 0 16px', fontSize: 14, lineHeight: 1.4 }}>
-        Preferred weekend slots. Slot times may differ from published kick-offs.
+      <h1 style={{ margin: '10px 0 4px', fontSize: 20, lineHeight: 1.2 }}>Team venue &amp; time preferences</h1>
+      <p style={{ color: 'var(--muted)', margin: '0 0 12px', fontSize: 12, lineHeight: 1.35 }}>
+        Weekend venue slots; published kick-off times may differ.
       </p>
-      <label style={{ display: 'block', fontWeight: 700, marginBottom: 16 }}>
+      <label style={{ display: 'block', fontWeight: 700, fontSize: 14, marginBottom: 12 }}>
         Season
         <select
           value={selectedSeason}
@@ -179,8 +179,8 @@ export default function TeamPreferencesAdmin() {
       {inherited && <p style={noticeStyle}>This season starts with a copy of the previous preferences. Save to keep a separate list for {selectedSeason}.</p>}
       {dirty && <p style={noticeStyle}>Save or discard your changes before switching seasons.</p>}
       {teamNames.map((team) => (
-        <section key={team} style={{ border: '1px solid var(--line)', borderRadius: 8, padding: 12, marginBottom: 12 }}>
-          <h2 style={{ fontSize: 16, lineHeight: 1.3, margin: '0 0 10px' }}>{team}</h2>
+        <section key={team} style={{ border: '1px solid var(--line)', borderRadius: 8, padding: 10, marginBottom: 10 }}>
+          <h2 style={{ fontSize: 15, lineHeight: 1.25, margin: '0 0 8px' }}>{team}</h2>
           {(draft[team] || []).map((row, index) => {
             const venue = settings.venues.find((item) => item.name === row.venue)
             const times = [...new Set([row.start, ...(venue?.slots || []).map((slot) => slot.start)].filter(Boolean))].sort()
@@ -215,7 +215,7 @@ export default function TeamPreferencesAdmin() {
   )
 }
 
-const inputStyle = { padding: '8px', border: '1px solid var(--line)', borderRadius: 6, background: '#fff', color: 'var(--ink)', font: 'inherit', fontSize: 14, minHeight: 40, minWidth: 0, maxWidth: '100%' }
-const smallButton = { padding: '7px 10px', border: '1px solid var(--line)', borderRadius: 6, background: '#fff', color: 'var(--ink)', font: 'inherit', fontSize: 14, cursor: 'pointer', minHeight: 40 }
+const inputStyle = { padding: '6px', border: '1px solid var(--line)', borderRadius: 6, background: '#fff', color: 'var(--ink)', font: 'inherit', fontSize: 13, minHeight: 36, minWidth: 0, maxWidth: '100%' }
+const smallButton = { padding: '6px 8px', border: '1px solid var(--line)', borderRadius: 6, background: '#fff', color: 'var(--ink)', font: 'inherit', fontSize: 13, cursor: 'pointer', minHeight: 36 }
 const saveButton = { ...smallButton, background: 'var(--ink)', color: '#fff', fontWeight: 700 }
 const noticeStyle = { padding: 12, border: '1px solid var(--brass)', borderRadius: 6, background: '#fff8df', fontSize: 14 }
