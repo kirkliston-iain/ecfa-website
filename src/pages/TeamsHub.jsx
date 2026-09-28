@@ -62,6 +62,7 @@ export default function TeamsHub() {
 
   const [currentFixtures, setCurrentFixtures] = useState([])
   const [placeholderFixtures, setPlaceholderFixtures] = useState([])
+  const [calendarEvents, setCalendarEvents] = useState([])
   const [historicFixtures, setHistoricFixtures] = useState([])
   const [currentScorers, setCurrentScorers] = useState([])
   const [historicScorers, setHistoricScorers] = useState([])
@@ -72,6 +73,11 @@ export default function TeamsHub() {
   const [scorersSeason, setScorersSeason] = useState(CURRENT_SEASON)
   const [headToHeadSeason, setHeadToHeadSeason] = useState(CURRENT_SEASON)
   const [headToHeadSort, setHeadToHeadSort] = useState({ key: 'played', direction: 'desc' })
+
+  useEffect(() => {
+    supabase.from('calendar_events').select('event_date, title, description').order('event_date')
+      .then(({ data }) => setCalendarEvents(data || []))
+  }, [])
 
   async function loadAllHistoricFixtures() {
     const pageSize = 1000
@@ -206,20 +212,27 @@ export default function TeamsHub() {
     `${fixtureDay(fixture)}|${fixture.stage?.competition?.name}|${fixture.round_name || fixture.stage?.name}`,
     fixture,
   ])).values()]
-  const fixtureMonths = [...new Set([...scheduledFixtures, ...possibleDates].map((f) => fixtureDay(f).slice(0, 7)).filter(Boolean))].sort()
+  const upcomingEvents = calendarEvents.filter((event) => event.event_date >= new Date().toLocaleDateString('sv-SE', { timeZone: 'Europe/London' }))
+  const fixtureMonths = [...new Set([...scheduledFixtures, ...possibleDates].map((f) => fixtureDay(f).slice(0, 7)).concat(upcomingEvents.map((event) => event.event_date.slice(0, 7))).filter(Boolean))].sort()
   const filterDate = (fixture) => (!fixtureMonth || fixtureDay(fixture).startsWith(fixtureMonth)) && (!fixtureDate || fixtureDay(fixture) === fixtureDate)
   const visibleFixtures = scheduledFixtures.filter((f) =>
     filterDate(f)
   )
   const visiblePossibleDates = possibleDates.filter(filterDate)
+  const visibleEvents = upcomingEvents.filter((event) => (!fixtureMonth || event.event_date.startsWith(fixtureMonth)) && (!fixtureDate || event.event_date === fixtureDate))
+  const visibleSchedule = [
+    ...visibleFixtures.map((fixture) => ({ kind: 'fixture', date: fixtureDay(fixture), fixture })),
+    ...visiblePossibleDates.map((fixture) => ({ kind: 'possible', date: fixtureDay(fixture), fixture })),
+    ...visibleEvents.map((event) => ({ kind: 'event', date: event.event_date, event })),
+  ].sort((a, b) => a.date.localeCompare(b.date) || ({ event: 0, fixture: 1, possible: 2 }[a.kind] - { event: 0, fixture: 1, possible: 2 }[b.kind]))
 
   async function shareFixtureImage() {
-    if ((!visibleFixtures.length && !visiblePossibleDates.length) || sharingFixtures) return
+    if (!visibleSchedule.length || sharingFixtures) return
     setSharingFixtures(true)
     try {
       const canvas = document.createElement('canvas')
       canvas.width = 1080
-      canvas.height = 260 + (visibleFixtures.length + visiblePossibleDates.length) * 120
+      canvas.height = 260 + visibleSchedule.length * 120
       const ctx = canvas.getContext('2d')
       if (!ctx) throw new Error('Canvas unavailable')
       ctx.fillStyle = '#fff'
@@ -233,41 +246,31 @@ export default function TeamsHub() {
       ctx.fillStyle = '#6b6b6b'
       const label = fixtureDate ? new Date(`${fixtureDate}T12:00:00`).toLocaleDateString('en-GB', { dateStyle: 'long' }) : fixtureMonth ? new Date(`${fixtureMonth}-01T12:00:00`).toLocaleDateString('en-GB', { month: 'long', year: 'numeric' }) : 'All upcoming fixtures'
       ctx.fillText(label, 48, 112)
-      visibleFixtures.forEach((fixture, index) => {
+      visibleSchedule.forEach((item, index) => {
         const y = 160 + index * 120
         ctx.strokeStyle = '#e2e2e2'
         ctx.beginPath()
         ctx.moveTo(48, y)
         ctx.lineTo(1032, y)
         ctx.stroke()
-        const date = fixtureDay(fixture)
+        const date = item.date
         ctx.fillStyle = '#b8912b'
         ctx.font = 'bold 24px Arial, sans-serif'
         ctx.fillText(date ? new Date(`${date}T12:00:00`).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' }) : 'TBC', 48, y + 42)
-        const home = fixture.home_team?.id === teamId
         ctx.fillStyle = '#141414'
         ctx.font = 'bold 27px Arial, sans-serif'
-        ctx.fillText(`${home ? 'vs' : 'at'} ${home ? fixture.away_team?.name : fixture.home_team?.name}`, 305, y + 40, 725)
+        const fixture = item.fixture
+        const home = fixture?.home_team?.id === teamId
+        const title = item.kind === 'event' ? item.event.title
+          : item.kind === 'possible' ? `${fixture.stage?.competition?.name || 'Cup'} · ${fixture.round_name || fixture.stage?.name || 'Round'}`
+            : `${home ? 'vs' : 'at'} ${home ? fixture.away_team?.name : fixture.home_team?.name}`
+        ctx.fillText(title, 305, y + 40, 725)
         ctx.fillStyle = '#6b6b6b'
         ctx.font = '21px Arial, sans-serif'
-        ctx.fillText([fixture.stage?.competition?.name, fixture.round_name || fixture.stage?.name, fixture.fixture_date?.slice(11, 16) !== '00:00' ? fixture.fixture_date?.slice(11, 16) : '', fixture.venue].filter(Boolean).join(' · '), 305, y + 83, 725)
-      })
-      visiblePossibleDates.forEach((fixture, index) => {
-        const y = 160 + (visibleFixtures.length + index) * 120
-        ctx.strokeStyle = '#e2e2e2'
-        ctx.beginPath()
-        ctx.moveTo(48, y)
-        ctx.lineTo(1032, y)
-        ctx.stroke()
-        ctx.fillStyle = '#b8912b'
-        ctx.font = 'bold 24px Arial, sans-serif'
-        ctx.fillText(new Date(`${fixtureDay(fixture)}T12:00:00`).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' }), 48, y + 42)
-        ctx.fillStyle = '#141414'
-        ctx.font = 'bold 27px Arial, sans-serif'
-        ctx.fillText(`${fixture.stage?.competition?.name || 'Cup'} · ${fixture.round_name || fixture.stage?.name || 'Round'}`, 305, y + 40, 725)
-        ctx.fillStyle = '#6b6b6b'
-        ctx.font = '21px Arial, sans-serif'
-        ctx.fillText('Possible date — qualification and opponent to be confirmed', 305, y + 83, 725)
+        const detail = item.kind === 'event' ? item.event.description || 'League calendar'
+          : item.kind === 'possible' ? 'Possible date — qualification and opponent to be confirmed'
+            : [fixture.stage?.competition?.name, fixture.round_name || fixture.stage?.name, fixture.fixture_date?.slice(11, 16) !== '00:00' ? fixture.fixture_date?.slice(11, 16) : '', fixture.venue].filter(Boolean).join(' · ')
+        ctx.fillText(detail, 305, y + 83, 725)
       })
       ctx.fillStyle = '#6b6b6b'
       ctx.font = '20px Arial, sans-serif'
@@ -552,38 +555,39 @@ export default function TeamsHub() {
 
           <section id="all-fixtures" style={{ marginBottom: 36 }}>
             <h2 style={sectionHeaderStyle}>All upcoming fixtures</h2>
+            <p style={{ color: 'var(--muted)', fontSize: 12, margin: '0 0 12px' }}>Cup dates are conditional until qualification is confirmed. League calendar dates include breaks and events from Match Hub.</p>
             <div className="team-fixture-filters">
               <label>Month<select value={fixtureMonth} onChange={(event) => { setFixtureMonth(event.target.value); setFixtureDate('') }}>
                 <option value="">All months</option>
                 {fixtureMonths.map((month) => <option key={month} value={month}>{new Date(`${month}-01T12:00:00`).toLocaleDateString('en-GB', { month: 'long', year: 'numeric' })}</option>)}
               </select></label>
               <label>Date<input type="date" value={fixtureDate} onChange={(event) => { const date = event.target.value; setFixtureDate(date); if (date) setFixtureMonth(date.slice(0, 7)) }} /></label>
-              <button type="button" disabled={(!visibleFixtures.length && !visiblePossibleDates.length) || sharingFixtures} onClick={shareFixtureImage}>{sharingFixtures ? 'Preparing…' : 'Share picture'}</button>
+              <button type="button" disabled={!visibleSchedule.length || sharingFixtures} onClick={shareFixtureImage}>{sharingFixtures ? 'Preparing…' : 'Share picture'}</button>
             </div>
-            {visibleFixtures.length === 0 && visiblePossibleDates.length === 0 ? <p style={{ color: 'var(--muted)', fontSize: 14 }}>No upcoming fixtures or possible cup dates for this selection.</p> : (
+            {visibleSchedule.length === 0 ? <p style={{ color: 'var(--muted)', fontSize: 14 }}>No fixtures or calendar dates for this selection.</p> : (
               <ul style={{ listStyle: 'none', margin: 0, padding: 0 }}>
-                {visibleFixtures.map((fixture) => <li key={fixture.id} className="team-fixture-row">
-                  <Link to={`/fixtures/${fixture.id}`}>
-                    <span className="team-fixture-date">{fixtureDay(fixture) ? new Date(`${fixtureDay(fixture)}T12:00:00`).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' }) : 'TBC'}</span>
-                    <span className="team-fixture-opponent">{fixture.home_team?.id === teamId ? 'vs' : 'at'} {fixture.home_team?.id === teamId ? fixture.away_team?.name : fixture.home_team?.name}</span>
-                    <span className="team-fixture-location">{[fixture.stage?.competition?.name, fixture.round_name || fixture.stage?.name, fixture.fixture_date?.slice(11, 16) !== '00:00' ? fixture.fixture_date?.slice(11, 16) : null, fixture.venue].filter(Boolean).join(' · ')}</span>
-                  </Link>
-                </li>)}
+                {visibleSchedule.map((item) => {
+                  const date = item.date ? new Date(`${item.date}T12:00:00`).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' }) : 'TBC'
+                  if (item.kind === 'fixture') {
+                    const fixture = item.fixture
+                    return <li key={`fixture-${fixture.id}`} className="team-fixture-row">
+                      <Link to={`/fixtures/${fixture.id}`}>
+                        <span className="team-fixture-date">{date}</span>
+                        <span className="team-fixture-opponent">{fixture.home_team?.id === teamId ? 'vs' : 'at'} {fixture.home_team?.id === teamId ? fixture.away_team?.name : fixture.home_team?.name}</span>
+                        <span className="team-fixture-location">{[fixture.stage?.competition?.name, fixture.round_name || fixture.stage?.name, fixture.fixture_date?.slice(11, 16) !== '00:00' ? fixture.fixture_date?.slice(11, 16) : null, fixture.venue].filter(Boolean).join(' · ')}</span>
+                      </Link>
+                    </li>
+                  }
+                  return <li key={item.kind === 'event' ? `event-${item.date}-${item.event.title}` : `possible-${item.fixture.id}`} className="team-fixture-row">
+                    <div className="team-fixture-possible">
+                      <span className="team-fixture-date">{date}</span>
+                      <span className="team-fixture-opponent">{item.kind === 'event' ? item.event.title : `${item.fixture.stage?.competition?.name} · ${item.fixture.round_name || item.fixture.stage?.name}`}</span>
+                      <span className="team-fixture-location">{item.kind === 'event' ? item.event.description : 'Possible cup date · qualification to be confirmed'}</span>
+                    </div>
+                  </li>
+                })}
               </ul>
             )}
-            {visiblePossibleDates.length > 0 && <>
-              <h3 style={{ fontSize: 14, margin: '20px 0 4px' }}>Possible cup dates</h3>
-              <p style={{ color: 'var(--muted)', fontSize: 12, margin: '0 0 8px' }}>These rounds are scheduled, but this team’s qualification and opponent are not confirmed.</p>
-              <ul style={{ listStyle: 'none', margin: 0, padding: 0 }}>
-                {visiblePossibleDates.map((fixture) => <li key={fixture.id} className="team-fixture-row">
-                  <div className="team-fixture-possible">
-                    <span className="team-fixture-date">{new Date(`${fixtureDay(fixture)}T12:00:00`).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' })}</span>
-                    <span className="team-fixture-opponent">{fixture.stage?.competition?.name} · {fixture.round_name || fixture.stage?.name}</span>
-                    <span className="team-fixture-location">Possible date · teams to be confirmed</span>
-                  </div>
-                </li>)}
-              </ul>
-            </>}
           </section>
 
           <h2 style={sectionHeaderStyle}>Squad</h2>
