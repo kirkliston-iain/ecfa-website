@@ -56,6 +56,9 @@ export default function TeamsHub() {
   const [teamId, setTeamId] = useState('')
   const [team, setTeam] = useState(null)
   const [loading, setLoading] = useState(false)
+  const [fixtureMonth, setFixtureMonth] = useState('')
+  const [fixtureDate, setFixtureDate] = useState('')
+  const [sharingFixtures, setSharingFixtures] = useState(false)
 
   const [currentFixtures, setCurrentFixtures] = useState([])
   const [historicFixtures, setHistoricFixtures] = useState([])
@@ -126,6 +129,8 @@ export default function TeamsHub() {
     setResultsSeason(CURRENT_SEASON)
     setScorersSeason(CURRENT_SEASON)
     setHeadToHeadSeason(CURRENT_SEASON)
+    setFixtureMonth('')
+    setFixtureDate('')
 
     async function load() {
       setTeam(teams.find((t) => t.id === teamId) || null)
@@ -184,6 +189,74 @@ export default function TeamsHub() {
   const upcoming = currentFixtures
     .filter((f) => f.status === 'scheduled')
     .sort((a, b) => new Date(a.fixture_date) - new Date(b.fixture_date))[0]
+  const scheduledFixtures = currentFixtures.filter((f) => f.status === 'scheduled')
+  const fixtureDay = (fixture) => fixture.fixture_date?.slice(0, 10) || ''
+  const fixtureMonths = [...new Set(scheduledFixtures.map((f) => fixtureDay(f).slice(0, 7)).filter(Boolean))]
+  const visibleFixtures = scheduledFixtures.filter((f) =>
+    (!fixtureMonth || fixtureDay(f).startsWith(fixtureMonth)) &&
+    (!fixtureDate || fixtureDay(f) === fixtureDate)
+  )
+
+  async function shareFixtureImage() {
+    if (!visibleFixtures.length || sharingFixtures) return
+    setSharingFixtures(true)
+    try {
+      const canvas = document.createElement('canvas')
+      canvas.width = 1080
+      canvas.height = 260 + visibleFixtures.length * 120
+      const ctx = canvas.getContext('2d')
+      if (!ctx) throw new Error('Canvas unavailable')
+      ctx.fillStyle = '#fff'
+      ctx.fillRect(0, 0, canvas.width, canvas.height)
+      ctx.fillStyle = '#b8912b'
+      ctx.fillRect(0, 0, 1080, 12)
+      ctx.fillStyle = '#141414'
+      ctx.font = 'bold 38px Arial, sans-serif'
+      ctx.fillText(team.name, 48, 65, 980)
+      ctx.font = '26px Arial, sans-serif'
+      ctx.fillStyle = '#6b6b6b'
+      const label = fixtureDate ? new Date(`${fixtureDate}T12:00:00`).toLocaleDateString('en-GB', { dateStyle: 'long' }) : fixtureMonth ? new Date(`${fixtureMonth}-01T12:00:00`).toLocaleDateString('en-GB', { month: 'long', year: 'numeric' }) : 'All upcoming fixtures'
+      ctx.fillText(label, 48, 112)
+      visibleFixtures.forEach((fixture, index) => {
+        const y = 160 + index * 120
+        ctx.strokeStyle = '#e2e2e2'
+        ctx.beginPath()
+        ctx.moveTo(48, y)
+        ctx.lineTo(1032, y)
+        ctx.stroke()
+        const date = fixtureDay(fixture)
+        ctx.fillStyle = '#b8912b'
+        ctx.font = 'bold 24px Arial, sans-serif'
+        ctx.fillText(date ? new Date(`${date}T12:00:00`).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' }) : 'TBC', 48, y + 42)
+        const home = fixture.home_team?.id === teamId
+        ctx.fillStyle = '#141414'
+        ctx.font = 'bold 27px Arial, sans-serif'
+        ctx.fillText(`${home ? 'vs' : 'at'} ${home ? fixture.away_team?.name : fixture.home_team?.name}`, 305, y + 40, 725)
+        ctx.fillStyle = '#6b6b6b'
+        ctx.font = '21px Arial, sans-serif'
+        ctx.fillText([fixture.fixture_date?.includes('T') ? new Date(fixture.fixture_date).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }) : '', fixture.venue].filter(Boolean).join(' · '), 305, y + 83, 725)
+      })
+      ctx.fillStyle = '#6b6b6b'
+      ctx.font = '20px Arial, sans-serif'
+      ctx.fillText('Edinburgh Churches Football Association · ecfa-website.vercel.app', 48, canvas.height - 32)
+      const blob = await new Promise((resolve) => canvas.toBlob(resolve, 'image/png'))
+      if (!blob) throw new Error('Image unavailable')
+      const file = new File([blob], `${team.name.toLowerCase().replace(/[^a-z0-9]+/g, '-')}-fixtures.png`, { type: 'image/png' })
+      if (navigator.share && navigator.canShare?.({ files: [file] })) await navigator.share({ files: [file], title: `${team.name} fixtures` })
+      else {
+        const url = URL.createObjectURL(blob)
+        const link = document.createElement('a')
+        link.href = url
+        link.download = file.name
+        link.click()
+        setTimeout(() => URL.revokeObjectURL(url), 60000)
+      }
+    } catch (error) {
+      if (error.name !== 'AbortError') window.alert('Could not create the fixture image. Please try again.')
+    } finally {
+      setSharingFixtures(false)
+    }
+  }
   const lastResult = played[0]
   const form = played.slice(0, 5)
 
@@ -428,6 +501,44 @@ export default function TeamsHub() {
               </div>
             )}
           </div>
+
+          <section style={{ marginBottom: 32 }}>
+            <h2 style={sectionHeaderStyle}>Next five fixtures</h2>
+            {scheduledFixtures.length === 0 ? <p style={{ color: 'var(--muted)', fontSize: 14 }}>No upcoming fixtures scheduled.</p> : (
+              <ul style={{ listStyle: 'none', margin: 0, padding: 0 }}>
+                {scheduledFixtures.slice(0, 5).map((fixture) => <li key={fixture.id} className="team-fixture-row">
+                  <Link to={`/fixtures/${fixture.id}`}>
+                    <span className="team-fixture-date">{fixtureDay(fixture) ? new Date(`${fixtureDay(fixture)}T12:00:00`).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' }) : 'TBC'}</span>
+                    <span className="team-fixture-opponent">{fixture.home_team?.id === teamId ? 'vs' : 'at'} {fixture.home_team?.id === teamId ? fixture.away_team?.name : fixture.home_team?.name}</span>
+                    <span className="team-fixture-location">{fixture.venue || ''}</span>
+                  </Link>
+                </li>)}
+              </ul>
+            )}
+          </section>
+
+          <section id="all-fixtures" style={{ marginBottom: 36 }}>
+            <h2 style={sectionHeaderStyle}>All upcoming fixtures</h2>
+            <div className="team-fixture-filters">
+              <label>Month<select value={fixtureMonth} onChange={(event) => { setFixtureMonth(event.target.value); setFixtureDate('') }}>
+                <option value="">All months</option>
+                {fixtureMonths.map((month) => <option key={month} value={month}>{new Date(`${month}-01T12:00:00`).toLocaleDateString('en-GB', { month: 'long', year: 'numeric' })}</option>)}
+              </select></label>
+              <label>Date<input type="date" value={fixtureDate} onChange={(event) => { const date = event.target.value; setFixtureDate(date); if (date) setFixtureMonth(date.slice(0, 7)) }} /></label>
+              <button type="button" disabled={!visibleFixtures.length || sharingFixtures} onClick={shareFixtureImage}>{sharingFixtures ? 'Preparing…' : 'Share picture'}</button>
+            </div>
+            {visibleFixtures.length === 0 ? <p style={{ color: 'var(--muted)', fontSize: 14 }}>No upcoming fixtures for this selection.</p> : (
+              <ul style={{ listStyle: 'none', margin: 0, padding: 0 }}>
+                {visibleFixtures.map((fixture) => <li key={fixture.id} className="team-fixture-row">
+                  <Link to={`/fixtures/${fixture.id}`}>
+                    <span className="team-fixture-date">{fixtureDay(fixture) ? new Date(`${fixtureDay(fixture)}T12:00:00`).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' }) : 'TBC'}</span>
+                    <span className="team-fixture-opponent">{fixture.home_team?.id === teamId ? 'vs' : 'at'} {fixture.home_team?.id === teamId ? fixture.away_team?.name : fixture.home_team?.name}</span>
+                    <span className="team-fixture-location">{[fixture.fixture_date?.includes('T') ? new Date(fixture.fixture_date).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }) : null, fixture.venue].filter(Boolean).join(' · ')}</span>
+                  </Link>
+                </li>)}
+              </ul>
+            )}
+          </section>
 
           <h2 style={sectionHeaderStyle}>Squad</h2>
           {squad.length === 0 ? (

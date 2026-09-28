@@ -131,6 +131,7 @@ export default function TeamDetail() {
           'id, round_name, fixture_date, venue, home_score, away_score, went_to_extra_time, home_extra_time_score, away_extra_time_score, decided_by_penalties, home_penalty_score, away_penalty_score, status, home_team:home_team_id(id, name, logo_url), away_team:away_team_id(id, name, logo_url)'
         )
         .or(`home_team_id.eq.${id},away_team_id.eq.${id}`)
+        .eq('hidden_from_public', false)
         .order('fixture_date', { ascending: true })
 
       const played = (fixtures || [])
