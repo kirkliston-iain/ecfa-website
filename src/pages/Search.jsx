@@ -16,7 +16,7 @@ const SITE_PAGES = [
   { label: 'Sponsors', description: 'ECFA competition sponsors', to: '/sponsors' },
   { label: 'Charity', description: 'League and team charity events by season', to: '/charity' },
   { label: 'Downloads', description: 'Download ECFA statistics and the league handbook', to: '/downloads' },
-  { label: 'Web Stats', description: 'Website page-view statistics', to: '/web-stats' },
+  { label: 'Web Stats', description: 'Overall website page-view totals', to: '/web-stats' },
   { label: 'Contact Us', description: 'General queries and sponsorship enquiries', to: '/contact' },
 ]
 

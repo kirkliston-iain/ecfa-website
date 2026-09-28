@@ -1,7 +1,7 @@
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useEffect, useState } from 'react'
 import { supabase } from '../supabaseClient'
-import { recordVisit } from '../utils/webAnalytics'
+import { getVisitId, recordVisit } from '../utils/webAnalytics'
 
 export default function Footer() {
   const location = useLocation()
@@ -23,8 +23,10 @@ export default function Footer() {
     let cancelled = false
 
     async function track() {
-      await supabase.rpc('record_page_view', { view_path: location.pathname })
-      const { data } = await supabase.rpc('get_web_stats')
+      if (!location.pathname.startsWith('/admin') && !location.pathname.startsWith('/discipline')) {
+        await supabase.rpc('record_page_view', { view_path: location.pathname, p_visit_id: getVisitId() })
+      }
+      const { data } = await supabase.rpc('get_public_web_summary')
       if (!cancelled && data?.all_time != null) setViews(Number(data.all_time))
     }
 
@@ -93,7 +95,7 @@ export default function Footer() {
         }}
       >
         <span>Edinburgh Churches Football Association</span>
-        {views != null && <Link to="/web-stats">{views.toLocaleString()} site visits · View stats</Link>}
+        {views != null && <Link to="/web-stats">{views.toLocaleString()} page views · View stats</Link>}
         <div style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
           {signedIn ? (
             <button onClick={signOut} disabled={signingOut} style={footerButtonStyle}>

@@ -753,6 +753,10 @@ export default function AdminDashboard() {
         Fixture tracker &rarr;
       </Link>
 
+      <Link to="/admin/web-stats" style={{ ...linkButtonStyle, display: 'block', marginBottom: 8 }}>
+        Detailed Web Stats &rarr;
+      </Link>
+
       <Link to="/admin/downloads" style={{ ...linkButtonStyle, display: 'block', marginBottom: 8 }}>
         Manage downloads &rarr;
       </Link>

@@ -1,309 +1,41 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { supabase } from '../supabaseClient'
 
-function pageCategory(path) {
-  if (path.startsWith('/fixtures/')) return 'Matches'
-  if (path === '/competitions' || path === '/standings' || path.startsWith('/competitions/')) return 'Competitions'
-  if (path === '/teams' || path.startsWith('/teams/')) return 'Teams'
-  if (path === '/scorers') return 'Players'
-  return 'Other pages'
-}
-
-function makeDailySeries(rows) {
-  const byDate = Object.fromEntries((rows || []).map((row) => [String(row.date).slice(0, 10), Number(row.views)]))
-  const series = []
-  const today = new Date()
-  for (let offset = 6; offset >= 0; offset -= 1) {
-    const date = new Date(today)
-    date.setDate(today.getDate() - offset)
-    const key = date.toISOString().slice(0, 10)
-    series.push({ date: key, views: byDate[key] || 0 })
-  }
-  return series
-}
-
-function DailyChart({ rows }) {
-  const width = 720
-  const height = 250
-  const pad = { top: 18, right: 12, bottom: 42, left: 42 }
-  const maximum = Math.max(5, ...rows.map((row) => row.views))
-  const chartHeight = height - pad.top - pad.bottom
-  const chartWidth = width - pad.left - pad.right
-  const slot = chartWidth / rows.length
-  const tickMaximum = Math.ceil(maximum / 5) * 5
-
-  return (
-    <div style={{ overflowX: 'auto' }}>
-      <svg viewBox={`0 0 ${width} ${height}`} role="img" aria-label="Daily page views over the last 7 days" style={{ width: '100%', display: 'block' }}>
-        {[0, 0.25, 0.5, 0.75, 1].map((ratio) => {
-          const y = pad.top + chartHeight * (1 - ratio)
-          return (
-            <g key={ratio}>
-              <line x1={pad.left} x2={width - pad.right} y1={y} y2={y} stroke="#d8dee3" strokeWidth="1" />
-              <text x={pad.left - 7} y={y + 4} textAnchor="end" fontSize="11" fill="#69747d">
-                {Math.round(tickMaximum * ratio)}
-              </text>
-            </g>
-          )
-        })}
-        {rows.map((row, index) => {
-          const barHeight = (row.views / tickMaximum) * chartHeight
-          return (
-            <rect
-              key={row.date}
-              x={pad.left + index * slot + 1}
-              y={pad.top + chartHeight - barHeight}
-              width={Math.max(2, slot - 2)}
-              height={barHeight}
-              fill="var(--brass)"
-              rx="1"
-            >
-              <title>{row.date}: {row.views} page views</title>
-            </rect>
-          )
-        })}
-        {rows.map((row) => {
-          const index = rows.findIndex((item) => item.date === row.date)
-          return (
-            <text
-              key={row.date}
-              x={pad.left + index * slot + slot / 2}
-              y={height - 10}
-              textAnchor="middle"
-              fontSize="10"
-              fill="#69747d"
-            >
-              {new Date(row.date + 'T00:00:00').toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit' })}
-            </text>
-          )
-        })}
-      </svg>
-    </div>
-  )
-}
-
-function TotalCard({ title, value }) {
-  return (
-    <div style={totalCardStyle}>
-      <div style={{ color: 'var(--brass)', fontWeight: 800, fontSize: 14 }}>{title}</div>
-      <div style={{ fontSize: 38, lineHeight: 1.15, fontWeight: 900, marginTop: 8 }}>
-        {Number(value || 0).toLocaleString()}
-      </div>
-      <div style={{ color: 'var(--muted)', fontSize: 14 }}>Page views</div>
-    </div>
-  )
-}
-
-function formatDuration(seconds) {
-  const value = Number(seconds || 0)
-  return `${Math.floor(value / 60)}m ${String(value % 60).padStart(2, '0')}s`
-}
-
-function InteractionTable({ title, rows, empty }) {
-  return <section style={panelStyle}>
-    <h2 style={{ color: 'var(--brass)', fontSize: 18, margin: '0 0 10px' }}>{title}</h2>
-    {!rows.length ? <p style={{ color: 'var(--muted)', fontSize: 13, margin: 0 }}>{empty}</p> : (
-      <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
-        <thead><tr><th style={thStyle}>Item</th><th style={{ ...thStyle, textAlign: 'right' }}>Actions</th></tr></thead>
-        <tbody>{rows.slice(0, 15).map((row) => <tr key={`${row.action}-${row.item}`}>
-          <td style={tdStyle}>{row.item}</td><td style={viewsCellStyle}>{Number(row.count).toLocaleString()}</td>
-        </tr>)}</tbody>
-      </table>
-    )}
-  </section>
-}
-
-function PageTable({ title, rows }) {
-  if (rows.length === 0) return null
-  return (
-    <section style={panelStyle}>
-      <h2 style={{ color: 'var(--brass)', fontSize: 18, margin: '0 0 14px' }}>{title}</h2>
-      <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
-        <thead>
-          <tr>
-            <th style={thStyle}>Page</th>
-            <th style={{ ...thStyle, textAlign: 'right' }}>Page views</th>
-          </tr>
-        </thead>
-        <tbody>
-          {rows.slice(0, 10).map((row) => (
-            <tr key={row.path}>
-              <td style={tdStyle}>{row.label}</td>
-              <td style={viewsCellStyle}>{Number(row.views).toLocaleString()}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </section>
-  )
-}
-
 export default function WebStats() {
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState('')
   const [stats, setStats] = useState(null)
-  const [engagement, setEngagement] = useState(null)
-  const [labels, setLabels] = useState({})
+  const [error, setError] = useState('')
 
   useEffect(() => {
     let cancelled = false
-    async function load() {
-      try {
-        const [{ data, error: statsError }, { data: engagementData }, { data: fixtures }, { data: teams }, { data: competitions }] = await Promise.all([
-          supabase.rpc('get_web_stats'),
-          supabase.rpc('get_web_engagement_stats'),
-          supabase.from('fixtures').select('id, fixture_date, home_score, away_score, home_team:home_team_id(name), away_team:away_team_id(name)'),
-          supabase.from('teams').select('id, name'),
-          supabase.from('competitions').select('slug, name'),
-        ])
-        if (statsError) throw statsError
-
-        const pageLabels = {
-          '/': 'Match Hub',
-          '/standings': 'Competitions and standings',
-          '/competitions': 'Competitions',
-          '/stats': 'Football statistics',
-          '/scorers': 'Scorers',
-          '/honours': 'Honours',
-          '/archive': 'Archive',
-          '/history': 'Archive (legacy link)',
-          '/teams': 'Teams',
-          '/referees': 'Referees',
-          '/downloads': 'Downloads',
-          '/documents': 'Documents',
-        }
-        for (const fixture of fixtures || []) {
-          const date = fixture.fixture_date
-            ? new Date(fixture.fixture_date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })
-            : 'Match'
-          const score = fixture.home_score != null && fixture.away_score != null
-            ? ` ${fixture.home_score}-${fixture.away_score}`
-            : ''
-          pageLabels[`/fixtures/${fixture.id}`] = `${date}: ${fixture.home_team?.name || 'TBC'}${score} ${fixture.away_team?.name || 'TBC'}`
-        }
-        for (const team of teams || []) pageLabels[`/teams/${team.id}`] = team.name
-        for (const competition of competitions || []) pageLabels[`/competitions/${competition.slug}`] = competition.name
-
-        if (!cancelled) {
-          setStats(data)
-          setEngagement(engagementData)
-          setLabels(pageLabels)
-        }
-      } catch (err) {
-        if (!cancelled) setError(err.message || 'Web statistics could not be loaded.')
-      } finally {
-        if (!cancelled) setLoading(false)
-      }
-    }
-    load()
-    return () => {
-      cancelled = true
-    }
+    supabase.rpc('get_public_web_summary').then(({ data, error: loadError }) => {
+      if (cancelled) return
+      if (loadError) setError('Could not load web statistics.')
+      else setStats(data)
+    })
+    return () => { cancelled = true }
   }, [])
 
-  const daily = useMemo(() => makeDailySeries(stats?.daily || []), [stats])
-  const pages = useMemo(
-    () => (stats?.top_pages || []).map((row) => ({
-      ...row,
-      label: labels[row.path] || row.path,
-      category: pageCategory(row.path),
-    })),
-    [stats, labels]
-  )
-  const groups = ['Matches', 'Competitions', 'Teams', 'Players', 'Other pages']
-  const interactions = engagement?.top_interactions || []
+  const periods = [
+    ['This week', 'this_week'],
+    ['Last 7 days', 'last_7'],
+    ['Last 30 days', 'last_30'],
+    ['Last 90 days', 'last_90'],
+    ['Last year', 'last_year'],
+  ]
 
-  if (loading) return <div className="container" style={{ padding: 48 }}>Loading web statistics…</div>
-  if (error) return <div className="container" style={{ padding: 48, color: '#B3261E' }}>{error}</div>
-
-  return (
-    <div className="container" style={{ padding: '32px 20px 48px', maxWidth: 900 }}>
-      <h1 style={{ fontSize: 30, marginBottom: 4 }}>Web Stats</h1>
-      <p style={{ color: 'var(--muted)', marginBottom: 28 }}>
-        Actual page views across the ECFA website.
-      </p>
-
-      <section style={panelStyle}>
-        <h2 style={{ color: 'var(--brass)', fontSize: 20, margin: '0 0 8px' }}>Daily totals</h2>
-        <div style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 12 }}>Page views over the last 7 days</div>
-        <DailyChart rows={daily} />
-      </section>
-
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(170px, 1fr))', gap: 12, margin: '16px 0 34px' }}>
-        <TotalCard title="Last 30 days" value={stats?.last_30} />
-        <TotalCard title="Last 60 days" value={stats?.last_60} />
-        <TotalCard title="Last year" value={stats?.last_year} />
-        <TotalCard title="All time" value={stats?.all_time} />
+  return <div className="container" style={{ padding: '32px 20px 48px', maxWidth: 900 }}>
+    <h1 style={{ fontSize: 30, marginBottom: 6 }}>Web Stats</h1>
+    <p style={{ color: 'var(--muted)', margin: '0 0 24px' }}>Overall ECFA website page views.</p>
+    {error && <p role="alert" style={{ color: '#B3261E' }}>{error}</p>}
+    {!stats && !error && <p>Loading web statistics…</p>}
+    {stats && <>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 12 }}>
+        {periods.map(([title, key]) => <div key={key} style={{ padding: 18, border: '1px solid var(--line)', borderRadius: 8, background: '#f5f8fa' }}>
+          <div style={{ color: 'var(--brass)', fontSize: 14, fontWeight: 800 }}>{title}</div>
+          <div style={{ fontSize: 34, fontWeight: 900 }}>{Number(stats[key] || 0).toLocaleString()}</div>
+        </div>)}
       </div>
-
-      <h2 style={{ fontSize: 24, marginBottom: 4 }}>Visits and activity</h2>
-      <p style={{ color: 'var(--muted)', marginTop: 0, fontSize: 13 }}>New tracking, covering the last 30 days from when this feature was added. Time is an estimate while the tab is active; old page views cannot be used to calculate visit length.</p>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(170px, 1fr))', gap: 12, margin: '16px 0 20px' }}>
-        <div style={totalCardStyle}><div style={{ color: 'var(--brass)', fontWeight: 800 }}>Average time per visit</div><div style={{ fontSize: 30, fontWeight: 900 }}>{formatDuration(engagement?.average_seconds_30)}</div><small>{Number(engagement?.visits_30 || 0).toLocaleString()} tracked visits</small></div>
-        <div style={totalCardStyle}><div style={{ color: 'var(--brass)', fontWeight: 800 }}>Downloads</div><div style={{ fontSize: 30, fontWeight: 900 }}>{Number(engagement?.downloads_30 || 0).toLocaleString()}</div><small>Last 30 days</small></div>
-        <div style={totalCardStyle}><div style={{ color: 'var(--brass)', fontWeight: 800 }}>Document/report views</div><div style={{ fontSize: 30, fontWeight: 900 }}>{Number(engagement?.views_30 || 0).toLocaleString()}</div><small>Last 30 days</small></div>
-        <div style={totalCardStyle}><div style={{ color: 'var(--brass)', fontWeight: 800 }}>Search result opens</div><div style={{ fontSize: 30, fontWeight: 900 }}>{Number(engagement?.search_clicks_30 || 0).toLocaleString()}</div><small>Last 30 days</small></div>
-      </div>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: 14, marginBottom: 34 }}>
-        <InteractionTable title="What was downloaded" rows={interactions.filter((row) => row.action === 'download')} empty="No tracked downloads yet." />
-        <InteractionTable title="What was viewed" rows={interactions.filter((row) => row.action === 'view')} empty="No tracked document or report views yet." />
-        <InteractionTable title="Pages opened from Search" rows={interactions.filter((row) => row.action === 'search_result')} empty="No search result opens yet." />
-      </div>
-
-      <h2 style={{ fontSize: 24, marginBottom: 4 }}>Top pages</h2>
-      <p style={{ color: 'var(--muted)', marginTop: 0, marginBottom: 16 }}>
-        Page views during the last 30 days
-      </p>
-
-      <PageTable title="All pages" rows={pages} />
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 14, marginTop: 14 }}>
-        {groups.map((group) => (
-          <PageTable key={group} title={group} rows={pages.filter((page) => page.category === group)} />
-        ))}
-      </div>
-
-      <p style={{ marginTop: 22, color: 'var(--muted)', fontSize: 12 }}>
-        Page-view totals are separate from tracked visits. Engagement counts are anonymous aggregates; admin and discipline pages are excluded from visit timing.
-      </p>
-    </div>
-  )
-}
-
-const panelStyle = {
-  padding: 18,
-  background: '#f5f8fa',
-  border: '1px solid var(--line)',
-  borderRadius: 8,
-}
-
-const totalCardStyle = {
-  padding: 18,
-  background: '#f5f8fa',
-  border: '1px solid var(--line)',
-  borderRadius: 8,
-}
-
-const thStyle = {
-  padding: '7px 8px',
-  color: 'var(--muted)',
-  borderBottom: '1px solid var(--line)',
-  fontSize: 11,
-  textTransform: 'uppercase',
-  letterSpacing: 0.4,
-  textAlign: 'left',
-}
-
-const tdStyle = {
-  padding: '8px',
-  borderBottom: '1px solid var(--line)',
-  verticalAlign: 'middle',
-}
-
-const viewsCellStyle = {
-  ...tdStyle,
-  width: 86,
-  textAlign: 'right',
-  fontWeight: 800,
-  background: 'var(--brass)',
-  color: '#fff',
+      <p style={{ color: 'var(--muted)', fontSize: 13, marginTop: 18 }}>All time: {Number(stats.all_time || 0).toLocaleString()} page views. A page view is recorded when someone opens a page; it is not a unique visitor count.</p>
+    </>}
+  </div>
 }

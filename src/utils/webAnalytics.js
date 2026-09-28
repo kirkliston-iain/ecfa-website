@@ -2,7 +2,7 @@ import { supabase } from '../supabaseClient'
 
 const SESSION_KEY = 'ecfa-web-visit'
 
-function getVisitId() {
+export function getVisitId() {
   const now = Date.now()
   try {
     const saved = JSON.parse(sessionStorage.getItem(SESSION_KEY) || 'null')
@@ -25,6 +25,6 @@ export function recordVisit(seconds = 0) {
 }
 
 export function trackInteraction(action, item) {
-  supabase.rpc('record_web_interaction', { p_action: action, p_item: item })
+  supabase.rpc('record_web_interaction', { p_action: action, p_item: item, p_visit_id: getVisitId() })
     .then(() => {})
 }

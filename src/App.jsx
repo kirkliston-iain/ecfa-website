@@ -28,6 +28,7 @@ import Downloads from './pages/Downloads'
 import PlayerReportDownload from './pages/PlayerReportDownload'
 import RefereeReportDownload from './pages/RefereeReportDownload'
 import WebStats from './pages/WebStats'
+import AdminWebStats from './pages/AdminWebStats'
 import Contact from './pages/Contact'
 import Sponsors from './pages/Sponsors'
 import Search from './pages/Search'
@@ -72,6 +73,7 @@ export default function App() {
           <Route path="/downloads/player-report" element={<PlayerReportDownload />} />
           <Route path="/downloads/referee-report" element={<RefereeReportDownload />} />
           <Route path="/web-stats" element={<WebStats />} />
+          <Route path="/admin/web-stats" element={<ProtectedRoute requireAdmin><AdminWebStats /></ProtectedRoute>} />
           <Route path="/contact" element={<Contact />} />
           <Route path="/sponsors" element={<Sponsors />} />
           <Route path="/charity" element={<Charity />} />

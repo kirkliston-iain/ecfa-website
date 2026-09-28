@@ -210,11 +210,9 @@ story.append(PageBreak())
 # stats and contact
 story += section_title('11. Website statistics')
 story.append(card_grid([
-    ('Seven-day activity', 'A daily chart shows today and the previous six days of actual recorded page views.'),
-    ('Headline totals', 'Summary cards show recent and longer-term website usage.'),
-    ('Popular pages', 'Tables identify the most visited match, competition, team, player and other pages.'),
-    ('Visits and actions', 'New anonymous tracking estimates active time per visit and shows which files were downloaded, reports viewed and search results opened. Older page views do not include these details.'),
-    ('Public transparency', 'Visitors can see how the ECFA website is being used without accessing private administration data.'),
+    ('Overall page views', 'The public Web Stats page shows this week, the last 7, 30 and 90 days, the last year and all-time totals.'),
+    ('Private detail', 'Detailed page, visit, download, report and search-result activity is available only in the admin area.'),
+    ('Visitor privacy', 'A page view is not a unique visitor. Detailed visits are anonymous and do not identify individuals.'),
 ]))
 story += [Spacer(1, 10)] + section_title('12. Contacting the ECFA')
 story.append(card_grid([
