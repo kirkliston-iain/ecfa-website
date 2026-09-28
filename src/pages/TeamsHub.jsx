@@ -61,6 +61,7 @@ export default function TeamsHub() {
   const [sharingFixtures, setSharingFixtures] = useState(false)
 
   const [currentFixtures, setCurrentFixtures] = useState([])
+  const [placeholderFixtures, setPlaceholderFixtures] = useState([])
   const [historicFixtures, setHistoricFixtures] = useState([])
   const [currentScorers, setCurrentScorers] = useState([])
   const [historicScorers, setHistoricScorers] = useState([])
@@ -144,6 +145,16 @@ export default function TeamsHub() {
         .eq('hidden_from_public', false)
         .order('fixture_date')
       setCurrentFixtures(cf || [])
+      const competitionNames = new Set((cf || []).filter((fixture) => fixture.status === 'scheduled').map((fixture) => fixture.stage?.competition?.name).filter(Boolean))
+      const { data: placeholders } = await supabase
+        .from('fixtures')
+        .select('id, fixture_date, round_name, stage:stage_id(name, competition:competition_id(name))')
+        .eq('status', 'scheduled')
+        .eq('hidden_from_public', false)
+        .gte('fixture_date', new Date().toISOString())
+        .or('home_team_id.is.null,away_team_id.is.null')
+        .order('fixture_date')
+      setPlaceholderFixtures((placeholders || []).filter((fixture) => competitionNames.has(fixture.stage?.competition?.name)))
 
       const { data: hf } = await loadAllHistoricFixtures()
       const selectedTeamName = teams.find((entry) => entry.id === teamId)?.name
@@ -191,19 +202,24 @@ export default function TeamsHub() {
     .sort((a, b) => new Date(a.fixture_date) - new Date(b.fixture_date))[0]
   const scheduledFixtures = currentFixtures.filter((f) => f.status === 'scheduled')
   const fixtureDay = (fixture) => fixture.fixture_date?.slice(0, 10) || ''
-  const fixtureMonths = [...new Set(scheduledFixtures.map((f) => fixtureDay(f).slice(0, 7)).filter(Boolean))]
+  const possibleDates = [...new Map(placeholderFixtures.map((fixture) => [
+    `${fixtureDay(fixture)}|${fixture.stage?.competition?.name}|${fixture.round_name || fixture.stage?.name}`,
+    fixture,
+  ])).values()]
+  const fixtureMonths = [...new Set([...scheduledFixtures, ...possibleDates].map((f) => fixtureDay(f).slice(0, 7)).filter(Boolean))].sort()
+  const filterDate = (fixture) => (!fixtureMonth || fixtureDay(fixture).startsWith(fixtureMonth)) && (!fixtureDate || fixtureDay(fixture) === fixtureDate)
   const visibleFixtures = scheduledFixtures.filter((f) =>
-    (!fixtureMonth || fixtureDay(f).startsWith(fixtureMonth)) &&
-    (!fixtureDate || fixtureDay(f) === fixtureDate)
+    filterDate(f)
   )
+  const visiblePossibleDates = possibleDates.filter(filterDate)
 
   async function shareFixtureImage() {
-    if (!visibleFixtures.length || sharingFixtures) return
+    if ((!visibleFixtures.length && !visiblePossibleDates.length) || sharingFixtures) return
     setSharingFixtures(true)
     try {
       const canvas = document.createElement('canvas')
       canvas.width = 1080
-      canvas.height = 260 + visibleFixtures.length * 120
+      canvas.height = 260 + (visibleFixtures.length + visiblePossibleDates.length) * 120
       const ctx = canvas.getContext('2d')
       if (!ctx) throw new Error('Canvas unavailable')
       ctx.fillStyle = '#fff'
@@ -234,7 +250,24 @@ export default function TeamsHub() {
         ctx.fillText(`${home ? 'vs' : 'at'} ${home ? fixture.away_team?.name : fixture.home_team?.name}`, 305, y + 40, 725)
         ctx.fillStyle = '#6b6b6b'
         ctx.font = '21px Arial, sans-serif'
-        ctx.fillText([fixture.fixture_date?.includes('T') ? new Date(fixture.fixture_date).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }) : '', fixture.venue].filter(Boolean).join(' · '), 305, y + 83, 725)
+        ctx.fillText([fixture.stage?.competition?.name, fixture.round_name || fixture.stage?.name, fixture.fixture_date?.slice(11, 16) !== '00:00' ? fixture.fixture_date?.slice(11, 16) : '', fixture.venue].filter(Boolean).join(' · '), 305, y + 83, 725)
+      })
+      visiblePossibleDates.forEach((fixture, index) => {
+        const y = 160 + (visibleFixtures.length + index) * 120
+        ctx.strokeStyle = '#e2e2e2'
+        ctx.beginPath()
+        ctx.moveTo(48, y)
+        ctx.lineTo(1032, y)
+        ctx.stroke()
+        ctx.fillStyle = '#b8912b'
+        ctx.font = 'bold 24px Arial, sans-serif'
+        ctx.fillText(new Date(`${fixtureDay(fixture)}T12:00:00`).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' }), 48, y + 42)
+        ctx.fillStyle = '#141414'
+        ctx.font = 'bold 27px Arial, sans-serif'
+        ctx.fillText(`${fixture.stage?.competition?.name || 'Cup'} · ${fixture.round_name || fixture.stage?.name || 'Round'}`, 305, y + 40, 725)
+        ctx.fillStyle = '#6b6b6b'
+        ctx.font = '21px Arial, sans-serif'
+        ctx.fillText('Possible date — qualification and opponent to be confirmed', 305, y + 83, 725)
       })
       ctx.fillStyle = '#6b6b6b'
       ctx.font = '20px Arial, sans-serif'
@@ -510,7 +543,7 @@ export default function TeamsHub() {
                   <Link to={`/fixtures/${fixture.id}`}>
                     <span className="team-fixture-date">{fixtureDay(fixture) ? new Date(`${fixtureDay(fixture)}T12:00:00`).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' }) : 'TBC'}</span>
                     <span className="team-fixture-opponent">{fixture.home_team?.id === teamId ? 'vs' : 'at'} {fixture.home_team?.id === teamId ? fixture.away_team?.name : fixture.home_team?.name}</span>
-                    <span className="team-fixture-location">{fixture.venue || ''}</span>
+                    <span className="team-fixture-location">{[fixture.stage?.competition?.name, fixture.round_name || fixture.stage?.name, fixture.venue].filter(Boolean).join(' · ')}</span>
                   </Link>
                 </li>)}
               </ul>
@@ -525,19 +558,32 @@ export default function TeamsHub() {
                 {fixtureMonths.map((month) => <option key={month} value={month}>{new Date(`${month}-01T12:00:00`).toLocaleDateString('en-GB', { month: 'long', year: 'numeric' })}</option>)}
               </select></label>
               <label>Date<input type="date" value={fixtureDate} onChange={(event) => { const date = event.target.value; setFixtureDate(date); if (date) setFixtureMonth(date.slice(0, 7)) }} /></label>
-              <button type="button" disabled={!visibleFixtures.length || sharingFixtures} onClick={shareFixtureImage}>{sharingFixtures ? 'Preparing…' : 'Share picture'}</button>
+              <button type="button" disabled={(!visibleFixtures.length && !visiblePossibleDates.length) || sharingFixtures} onClick={shareFixtureImage}>{sharingFixtures ? 'Preparing…' : 'Share picture'}</button>
             </div>
-            {visibleFixtures.length === 0 ? <p style={{ color: 'var(--muted)', fontSize: 14 }}>No upcoming fixtures for this selection.</p> : (
+            {visibleFixtures.length === 0 && visiblePossibleDates.length === 0 ? <p style={{ color: 'var(--muted)', fontSize: 14 }}>No upcoming fixtures or possible cup dates for this selection.</p> : (
               <ul style={{ listStyle: 'none', margin: 0, padding: 0 }}>
                 {visibleFixtures.map((fixture) => <li key={fixture.id} className="team-fixture-row">
                   <Link to={`/fixtures/${fixture.id}`}>
                     <span className="team-fixture-date">{fixtureDay(fixture) ? new Date(`${fixtureDay(fixture)}T12:00:00`).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' }) : 'TBC'}</span>
                     <span className="team-fixture-opponent">{fixture.home_team?.id === teamId ? 'vs' : 'at'} {fixture.home_team?.id === teamId ? fixture.away_team?.name : fixture.home_team?.name}</span>
-                    <span className="team-fixture-location">{[fixture.fixture_date?.includes('T') ? new Date(fixture.fixture_date).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }) : null, fixture.venue].filter(Boolean).join(' · ')}</span>
+                    <span className="team-fixture-location">{[fixture.stage?.competition?.name, fixture.round_name || fixture.stage?.name, fixture.fixture_date?.slice(11, 16) !== '00:00' ? fixture.fixture_date?.slice(11, 16) : null, fixture.venue].filter(Boolean).join(' · ')}</span>
                   </Link>
                 </li>)}
               </ul>
             )}
+            {visiblePossibleDates.length > 0 && <>
+              <h3 style={{ fontSize: 14, margin: '20px 0 4px' }}>Possible cup dates</h3>
+              <p style={{ color: 'var(--muted)', fontSize: 12, margin: '0 0 8px' }}>These rounds are scheduled, but this team’s qualification and opponent are not confirmed.</p>
+              <ul style={{ listStyle: 'none', margin: 0, padding: 0 }}>
+                {visiblePossibleDates.map((fixture) => <li key={fixture.id} className="team-fixture-row">
+                  <div className="team-fixture-possible">
+                    <span className="team-fixture-date">{new Date(`${fixtureDay(fixture)}T12:00:00`).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' })}</span>
+                    <span className="team-fixture-opponent">{fixture.stage?.competition?.name} · {fixture.round_name || fixture.stage?.name}</span>
+                    <span className="team-fixture-location">Possible date · teams to be confirmed</span>
+                  </div>
+                </li>)}
+              </ul>
+            </>}
           </section>
 
           <h2 style={sectionHeaderStyle}>Squad</h2>
