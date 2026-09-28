@@ -50,6 +50,25 @@ function canonicalTeamName(name, teamId, currentTeams) {
   return historicTeamName(name)
 }
 
+function canvasLines(ctx, value, width, limit = 2) {
+  const lines = ['']
+  for (const word of String(value || '').split(/\s+/)) {
+    const index = lines.length - 1
+    const next = `${lines[index]} ${word}`.trim()
+    if (lines[index] && ctx.measureText(next).width > width) lines.push(word)
+    else lines[index] = next
+  }
+  if (lines.length > limit) {
+    const kept = lines.slice(0, limit)
+    kept[limit - 1] += '…'
+    while (ctx.measureText(kept[limit - 1]).width > width && kept[limit - 1].length > 1) {
+      kept[limit - 1] = `${kept[limit - 1].slice(0, -2)}…`
+    }
+    return kept
+  }
+  return lines
+}
+
 export default function TeamsHub() {
   const [teams, setTeams] = useState([])
   const [previousTeams, setPreviousTeams] = useState([])
@@ -231,50 +250,68 @@ export default function TeamsHub() {
     setSharingFixtures(true)
     try {
       const canvas = document.createElement('canvas')
-      canvas.width = 1080
-      canvas.height = 260 + visibleSchedule.length * 120
+      const columns = visibleSchedule.length > 12 ? 2 : 1
+      const rowsPerColumn = Math.ceil(visibleSchedule.length / columns)
+      const rowHeight = 132
+      const columnWidth = columns === 2 ? 736 : 984
+      canvas.width = columns === 2 ? 1600 : 1080
+      canvas.height = 230 + rowsPerColumn * rowHeight + 64
       const ctx = canvas.getContext('2d')
       if (!ctx) throw new Error('Canvas unavailable')
       ctx.fillStyle = '#fff'
       ctx.fillRect(0, 0, canvas.width, canvas.height)
       ctx.fillStyle = '#b8912b'
-      ctx.fillRect(0, 0, 1080, 12)
+      ctx.fillRect(0, 0, canvas.width, 12)
       ctx.fillStyle = '#141414'
-      ctx.font = 'bold 38px Arial, sans-serif'
-      ctx.fillText(team.name, 48, 65, 980)
-      ctx.font = '26px Arial, sans-serif'
+      ctx.font = 'bold 42px Arial, sans-serif'
+      ctx.fillText(team.name, 48, 72)
+      ctx.font = '25px Arial, sans-serif'
       ctx.fillStyle = '#6b6b6b'
       const label = fixtureDate ? new Date(`${fixtureDate}T12:00:00`).toLocaleDateString('en-GB', { dateStyle: 'long' }) : fixtureMonth ? new Date(`${fixtureMonth}-01T12:00:00`).toLocaleDateString('en-GB', { month: 'long', year: 'numeric' }) : 'All upcoming fixtures'
-      ctx.fillText(label, 48, 112)
+      ctx.fillText(label, 48, 117)
+      ctx.fillStyle = '#6b6b6b'
+      ctx.font = '20px Arial, sans-serif'
+      ctx.fillText('Fixtures · possible cup dates · league calendar', 48, 154)
       visibleSchedule.forEach((item, index) => {
-        const y = 160 + index * 120
+        const column = Math.floor(index / rowsPerColumn)
+        const x = 48 + column * (columnWidth + 32)
+        const y = 205 + (index % rowsPerColumn) * rowHeight
+        if (item.kind === 'event') {
+          ctx.fillStyle = '#f7f4eb'
+          ctx.fillRect(x, y, columnWidth, rowHeight - 4)
+        } else if (item.kind === 'possible') {
+          ctx.fillStyle = '#f7f8f9'
+          ctx.fillRect(x, y, columnWidth, rowHeight - 4)
+        }
         ctx.strokeStyle = '#e2e2e2'
         ctx.beginPath()
-        ctx.moveTo(48, y)
-        ctx.lineTo(1032, y)
+        ctx.moveTo(x, y)
+        ctx.lineTo(x + columnWidth, y)
         ctx.stroke()
         const date = item.date
         ctx.fillStyle = '#b8912b'
-        ctx.font = 'bold 24px Arial, sans-serif'
-        ctx.fillText(date ? new Date(`${date}T12:00:00`).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' }) : 'TBC', 48, y + 42)
+        ctx.font = 'bold 21px Arial, sans-serif'
+        ctx.fillText(date ? new Date(`${date}T12:00:00`).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' }) : 'TBC', x + 12, y + 36)
         ctx.fillStyle = '#141414'
-        ctx.font = 'bold 27px Arial, sans-serif'
+        ctx.font = 'bold 24px Arial, sans-serif'
         const fixture = item.fixture
         const home = fixture?.home_team?.id === teamId
         const title = item.kind === 'event' ? item.event.title
           : item.kind === 'possible' ? `${fixture.stage?.competition?.name || 'Cup'} · ${fixture.round_name || fixture.stage?.name || 'Round'}`
             : `${home ? 'vs' : 'at'} ${home ? fixture.away_team?.name : fixture.home_team?.name}`
-        ctx.fillText(title, 305, y + 40, 725)
+        const textX = x + 155
+        const textWidth = columnWidth - 170
+        canvasLines(ctx, title, textWidth).forEach((line, lineIndex) => ctx.fillText(line, textX, y + 35 + lineIndex * 28))
         ctx.fillStyle = '#6b6b6b'
-        ctx.font = '21px Arial, sans-serif'
+        ctx.font = '18px Arial, sans-serif'
         const detail = item.kind === 'event' ? item.event.description || 'League calendar'
           : item.kind === 'possible' ? 'Possible date — qualification and opponent to be confirmed'
-            : [fixture.stage?.competition?.name, fixture.round_name || fixture.stage?.name, fixture.fixture_date?.slice(11, 16) !== '00:00' ? fixture.fixture_date?.slice(11, 16) : '', fixture.venue].filter(Boolean).join(' · ')
-        ctx.fillText(detail, 305, y + 83, 725)
+            : [fixture.stage?.competition?.name, fixture.round_name || fixture.stage?.name, fixture.fixture_date?.slice(11, 16) !== '00:00' ? fixture.fixture_date?.slice(11, 16) : '', fixture.venue && fixture.venue !== 'N/A' ? fixture.venue : ''].filter(Boolean).join(' · ')
+        canvasLines(ctx, detail, textWidth).forEach((line, lineIndex) => ctx.fillText(line, textX, y + 91 + lineIndex * 21))
       })
       ctx.fillStyle = '#6b6b6b'
       ctx.font = '20px Arial, sans-serif'
-      ctx.fillText('Edinburgh Churches Football Association · ecfa-website.vercel.app', 48, canvas.height - 32)
+      ctx.fillText('Edinburgh Churches Football Association · ecfa-website.vercel.app', 48, canvas.height - 31)
       const blob = await new Promise((resolve) => canvas.toBlob(resolve, 'image/png'))
       if (!blob) throw new Error('Image unavailable')
       const file = new File([blob], `${team.name.toLowerCase().replace(/[^a-z0-9]+/g, '-')}-fixtures.png`, { type: 'image/png' })
