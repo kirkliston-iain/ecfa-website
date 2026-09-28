@@ -363,7 +363,21 @@ button {
 .team-pref-slots span { overflow-wrap: anywhere; }
 .team-pref-toggle { border: 0; padding: 6px 0; background: none; color: var(--brass); font-size: 12px; font-weight: 700; cursor: pointer; }
 .team-pref-editor { padding: 9px 8px 12px; background: #f8f8f8; border-radius: 6px; margin-bottom: 8px; }
+.team-fixture-filters { display: flex; align-items: end; flex-wrap: wrap; gap: 10px; margin-bottom: 16px; }
+.team-fixture-filters label { display: grid; gap: 4px; font-size: 12px; font-weight: 700; }
+.team-fixture-filters select, .team-fixture-filters input, .team-fixture-filters button { min-height: 40px; padding: 8px 10px; border: 1px solid var(--line); border-radius: 6px; background: #fff; color: var(--ink); font: inherit; font-size: 14px; }
+.team-fixture-filters button { background: var(--ink); color: #fff; cursor: pointer; }
+.team-fixture-filters button:disabled { opacity: .5; cursor: default; }
+.team-fixture-row { border-bottom: 1px solid var(--line); }
+.team-fixture-row a { display: grid; grid-template-columns: 135px minmax(0, 1fr) minmax(0, 220px); gap: 12px; padding: 12px 4px; align-items: center; font-size: 14px; }
+.team-fixture-date { color: var(--brass); font-weight: 700; }
+.team-fixture-opponent { font-weight: 700; }
+.team-fixture-location { color: var(--muted); font-size: 12px; }
 @media (max-width: 680px) {
+  .team-fixture-filters label { flex: 1 1 130px; }
+  .team-fixture-filters button { flex: 1 1 100%; }
+  .team-fixture-row a { grid-template-columns: 84px minmax(0, 1fr); gap: 3px 8px; font-size: 13px; }
+  .team-fixture-location { grid-column: 2; }
   .team-pref-list-head, .team-pref-summary { grid-template-columns: minmax(0, 38%) minmax(0, 1fr) 34px; gap: 5px; }
   .team-pref-summary { font-size: 12px; }
   .team-pref-list-head { font-size: 10px; }

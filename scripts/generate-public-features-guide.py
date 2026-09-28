@@ -149,7 +149,7 @@ story.append(card_grid([
 story += [Spacer(1, 10)] + section_title('5. Teams')
 story.append(card_grid([
     ('Team overview', 'Choose a club to see its badge, manager, squad and current information.'),
-    ('Form and fixtures', 'Review recent form, the latest result, the next fixture and a wider fixture list.'),
+    ('Form and fixtures', 'See the next five fixtures and all upcoming fixtures. Filter by month or date, then share the displayed list as a picture or download it for WhatsApp.'),
     ('Results by season', 'Switch between the current campaign and available historical seasons.'),
     ('Team scorers and honours', 'See season-by-season scorers and honours won by the club.'),
     ('Head-to-head comparisons', 'Filter the opponent table by season and sort any column in ascending or descending order.'),

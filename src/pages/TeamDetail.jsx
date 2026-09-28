@@ -74,6 +74,21 @@ function FormPill({ result, fixtureId }) {
   )
 }
 
+function fixtureDay(fixture) {
+  return fixture.fixture_date?.slice(0, 10) || ''
+}
+
+function wrapCanvasText(ctx, value, maxWidth) {
+  const lines = ['']
+  for (const word of value.split(' ')) {
+    const current = lines.length - 1
+    const combined = `${lines[current]} ${word}`.trim()
+    if (lines[current] && ctx.measureText(combined).width > maxWidth) lines.push(word)
+    else lines[current] = combined
+  }
+  return lines
+}
+
 export default function TeamDetail() {
   const { id } = useParams()
   const navigate = useNavigate()
@@ -85,6 +100,9 @@ export default function TeamDetail() {
   const [honours, setHonours] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
+  const [fixtureMonth, setFixtureMonth] = useState('')
+  const [fixtureDate, setFixtureDate] = useState('')
+  const [sharing, setSharing] = useState(false)
 
   useEffect(() => {
     let cancelled = false
@@ -174,7 +192,80 @@ export default function TeamDetail() {
 
   const form = playedFixtures.slice(0, 5)
   const nextFive = upcomingFixtures.slice(0, 5)
+  const months = [...new Set(upcomingFixtures.map((f) => fixtureDay(f).slice(0, 7)).filter(Boolean))]
+  const filteredFixtures = upcomingFixtures.filter((f) =>
+    (!fixtureMonth || fixtureDay(f).startsWith(fixtureMonth)) &&
+    (!fixtureDate || fixtureDay(f) === fixtureDate)
+  )
   const topScorers = scorers.slice(0, 5)
+
+  async function shareFixtures() {
+    if (!filteredFixtures.length || sharing) return
+    setSharing(true)
+    try {
+      const canvas = document.createElement('canvas')
+      const width = 1080
+      const rowHeight = 116
+      canvas.width = width
+      canvas.height = 240 + filteredFixtures.length * rowHeight + 100
+      const ctx = canvas.getContext('2d')
+      if (!ctx) throw new Error('Canvas unavailable')
+      ctx.fillStyle = '#fff'
+      ctx.fillRect(0, 0, canvas.width, canvas.height)
+      ctx.fillStyle = '#141414'
+      ctx.fillRect(0, 0, width, 12)
+      ctx.fillStyle = '#b8912b'
+      ctx.fillRect(0, 12, width, 8)
+      ctx.fillStyle = '#141414'
+      ctx.font = 'bold 42px Arial, sans-serif'
+      const title = wrapCanvasText(ctx, team.name, width - 100).slice(0, 2)
+      title.forEach((line, index) => ctx.fillText(line, 50, 72 + index * 47))
+      ctx.font = '28px Arial, sans-serif'
+      const label = fixtureDate ? new Date(`${fixtureDate}T12:00:00`).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' }) : fixtureMonth ? new Date(`${fixtureMonth}-01T12:00:00`).toLocaleDateString('en-GB', { month: 'long', year: 'numeric' }) : 'All upcoming fixtures'
+      ctx.fillStyle = '#6b6b6b'
+      ctx.fillText(label, 50, 190)
+      filteredFixtures.forEach((f, index) => {
+        const y = 240 + index * rowHeight
+        ctx.strokeStyle = '#e2e2e2'
+        ctx.beginPath()
+        ctx.moveTo(50, y - 15)
+        ctx.lineTo(width - 50, y - 15)
+        ctx.stroke()
+        const opponent = f.home_team?.id === team.id ? f.away_team?.name : f.home_team?.name
+        const date = fixtureDay(f)
+        ctx.fillStyle = '#b8912b'
+        ctx.font = 'bold 25px Arial, sans-serif'
+        ctx.fillText(date ? new Date(`${date}T12:00:00`).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' }) : 'TBC', 50, y + 22)
+        ctx.fillStyle = '#141414'
+        ctx.font = 'bold 28px Arial, sans-serif'
+        wrapCanvasText(ctx, `${f.home_team?.id === team.id ? 'vs' : 'at'} ${opponent || 'TBC'}`, width - 300).slice(0, 2).forEach((line, lineIndex) => ctx.fillText(line, 320, y + 20 + lineIndex * 31))
+        ctx.fillStyle = '#6b6b6b'
+        ctx.font = '22px Arial, sans-serif'
+        const time = f.fixture_date?.includes('T') ? new Date(f.fixture_date).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }) : ''
+        ctx.fillText([time, f.venue].filter(Boolean).join(' · ').slice(0, 75), 320, y + 87)
+      })
+      ctx.fillStyle = '#6b6b6b'
+      ctx.font = '22px Arial, sans-serif'
+      ctx.fillText('Edinburgh Churches Football Association · ecfa-website.vercel.app', 50, canvas.height - 35)
+      const blob = await new Promise((resolve) => canvas.toBlob(resolve, 'image/png'))
+      if (!blob) throw new Error('Image unavailable')
+      const file = new File([blob], `${team.name.toLowerCase().replace(/[^a-z0-9]+/g, '-')}-fixtures.png`, { type: 'image/png' })
+      if (navigator.share && navigator.canShare?.({ files: [file] })) {
+        await navigator.share({ files: [file], title: `${team.name} fixtures` })
+      } else {
+        const url = URL.createObjectURL(blob)
+        const link = document.createElement('a')
+        link.href = url
+        link.download = file.name
+        link.click()
+        setTimeout(() => URL.revokeObjectURL(url), 60000)
+      }
+    } catch (err) {
+      if (err.name !== 'AbortError') window.alert('Could not create the fixture image. Please try again.')
+    } finally {
+      setSharing(false)
+    }
+  }
 
   const honoursByCompetition = {}
   for (const h of honours) {
@@ -329,6 +420,40 @@ export default function TeamDetail() {
           </ul>
         </section>
       </div>
+
+      <section id="all-fixtures" style={{ marginBottom: 48 }}>
+        <h2 style={{ fontSize: 13, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 8, paddingBottom: 8, borderBottom: '1px solid var(--line)' }}>
+          All upcoming fixtures
+        </h2>
+        <p style={{ color: 'var(--muted)', fontSize: 13, margin: '0 0 14px' }}>Choose a month or a particular date. Share the displayed fixtures as a picture.</p>
+        <div className="team-fixture-filters">
+          <label>Month
+            <select value={fixtureMonth} onChange={(event) => { setFixtureMonth(event.target.value); setFixtureDate('') }}>
+              <option value="">All months</option>
+              {months.map((month) => <option key={month} value={month}>{new Date(`${month}-01T12:00:00`).toLocaleDateString('en-GB', { month: 'long', year: 'numeric' })}</option>)}
+            </select>
+          </label>
+          <label>Date
+            <input type="date" value={fixtureDate} onChange={(event) => { const date = event.target.value; setFixtureDate(date); if (date) setFixtureMonth(date.slice(0, 7)) }} />
+          </label>
+          <button type="button" disabled={!filteredFixtures.length || sharing} onClick={shareFixtures}>{sharing ? 'Preparing…' : 'Share picture'}</button>
+        </div>
+        {filteredFixtures.length === 0 ? <p style={{ color: 'var(--muted)', fontSize: 14 }}>No upcoming fixtures for this selection.</p> : (
+          <ul style={{ listStyle: 'none', margin: 0, padding: 0 }}>
+            {filteredFixtures.map((f) => {
+              const isHome = f.home_team?.id === team.id
+              const opponent = isHome ? f.away_team : f.home_team
+              return <li key={f.id} className="team-fixture-row">
+                <Link to={`/fixtures/${f.id}`}>
+                  <span className="team-fixture-date">{fixtureDay(f) ? new Date(`${fixtureDay(f)}T12:00:00`).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' }) : 'TBC'}</span>
+                  <span className="team-fixture-opponent">{isHome ? 'vs' : 'at'} {opponent?.name || 'TBC'}</span>
+                  <span className="team-fixture-location">{[f.fixture_date?.includes('T') ? new Date(f.fixture_date).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }) : null, f.venue].filter(Boolean).join(' · ')}</span>
+                </Link>
+              </li>
+            })}
+          </ul>
+        )}
+      </section>
 
       <section style={{ marginBottom: 48 }}>
         <h2 style={{ fontSize: 13, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 16, paddingBottom: 8, borderBottom: '1px solid var(--line)' }}>
