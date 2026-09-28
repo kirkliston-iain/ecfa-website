@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import * as XLSX from 'xlsx'
 import { supabase } from '../supabaseClient'
+import { trackInteraction } from '../utils/webAnalytics'
 
 const PAGE_SIZE = 1000
 
@@ -243,6 +244,7 @@ export default function Downloads() {
         if (downloadError) throw downloadError
         downloadFile(item.file_name, await data.arrayBuffer(), item.mime_type || 'application/octet-stream')
       }
+      trackInteraction('download', item.title || item.file_name)
     } catch (err) {
       setError(err.message || 'The file could not be downloaded.')
     } finally {
@@ -271,6 +273,7 @@ export default function Downloads() {
       } else {
         downloadCsv(item.filename, rows)
       }
+      trackInteraction('download', `${item.title} (${format.toUpperCase()})`)
     } catch (err) {
       setError(err.message || 'The download could not be created.')
     } finally {
@@ -295,6 +298,7 @@ export default function Downloads() {
         JSON.stringify(archive, null, 2),
         'application/json;charset=utf-8'
       )
+      trackInteraction('download', 'Complete public data archive')
     } catch (err) {
       setError(err.message || 'The archive could not be created.')
     } finally {
@@ -336,7 +340,7 @@ export default function Downloads() {
                     <div style={{ fontSize: 12, color: 'var(--muted)', marginTop: 5, overflowWrap: 'anywhere' }}>{item.file_name}</div>
                   </div>
                   <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                    {item.allow_view && <a href={viewUrl} target="_blank" rel="noreferrer" style={{ ...buttonStyle, textDecoration: 'none' }}>View</a>}
+                    {item.allow_view && <a href={viewUrl} target="_blank" rel="noreferrer" onClick={() => trackInteraction('view', item.title || item.file_name)} style={{ ...buttonStyle, textDecoration: 'none' }}>View</a>}
                     {item.allow_download && (
                       <button onClick={() => downloadUploaded(item)} disabled={!!working} style={buttonStyle}>
                         {working === `uploaded-${item.id}` ? 'Downloading…' : 'Download'}
@@ -360,13 +364,13 @@ export default function Downloads() {
             </div>
           </div>
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-            <a href="/documents/ECFA-League-Handbook-2026-27.pdf" target="_blank" rel="noreferrer" style={{ ...buttonStyle, textDecoration: 'none' }}>
+            <a href="/documents/ECFA-League-Handbook-2026-27.pdf" target="_blank" rel="noreferrer" onClick={() => trackInteraction('view', 'ECFA League Handbook 2026/27 PDF')} style={{ ...buttonStyle, textDecoration: 'none' }}>
               View PDF
             </a>
-            <a href="/documents/ECFA-League-Handbook-2026-27.pdf" download style={{ ...buttonStyle, textDecoration: 'none' }}>
+            <a href="/documents/ECFA-League-Handbook-2026-27.pdf" download onClick={() => trackInteraction('download', 'ECFA League Handbook 2026/27 PDF')} style={{ ...buttonStyle, textDecoration: 'none' }}>
               Download PDF
             </a>
-            <a href="/documents/ECFA-League-Handbook-2026-27.docx" download style={{ ...buttonStyle, textDecoration: 'none' }}>
+            <a href="/documents/ECFA-League-Handbook-2026-27.docx" download onClick={() => trackInteraction('download', 'ECFA League Handbook 2026/27 Word')} style={{ ...buttonStyle, textDecoration: 'none' }}>
               Download Word
             </a>
           </div>

@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { Document, Packer, Paragraph, Table, TableCell, TableRow, TextRun, WidthType } from 'docx'
 import { jsPDF } from 'jspdf'
 import { supabase } from '../supabaseClient'
+import { trackInteraction } from '../utils/webAnalytics'
 
 const PAGE_SIZE = 1000
 const CURRENT_SEASON = '2026/27'
@@ -238,6 +239,7 @@ export default function PlayerReportDownload() {
     setPlayerKey(player.key)
     setPlayerSearch(player.name)
     setShowPlayerResults(false)
+    trackInteraction('view', `Player pack: ${player.name}`)
   }
 
   const seasons = useMemo(() => {
@@ -316,6 +318,7 @@ export default function PlayerReportDownload() {
     try {
       if (format === 'pdf') pdfReport(report)
       else await wordReport(report)
+      trackInteraction('download', `Player pack: ${report.playerName} · ${report.selectionLabel} · ${format.toUpperCase()}`)
     } catch (err) {
       setError(err.message || 'The report could not be created.')
     } finally {

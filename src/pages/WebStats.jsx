@@ -94,6 +94,25 @@ function TotalCard({ title, value }) {
   )
 }
 
+function formatDuration(seconds) {
+  const value = Number(seconds || 0)
+  return `${Math.floor(value / 60)}m ${String(value % 60).padStart(2, '0')}s`
+}
+
+function InteractionTable({ title, rows, empty }) {
+  return <section style={panelStyle}>
+    <h2 style={{ color: 'var(--brass)', fontSize: 18, margin: '0 0 10px' }}>{title}</h2>
+    {!rows.length ? <p style={{ color: 'var(--muted)', fontSize: 13, margin: 0 }}>{empty}</p> : (
+      <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+        <thead><tr><th style={thStyle}>Item</th><th style={{ ...thStyle, textAlign: 'right' }}>Actions</th></tr></thead>
+        <tbody>{rows.slice(0, 15).map((row) => <tr key={`${row.action}-${row.item}`}>
+          <td style={tdStyle}>{row.item}</td><td style={viewsCellStyle}>{Number(row.count).toLocaleString()}</td>
+        </tr>)}</tbody>
+      </table>
+    )}
+  </section>
+}
+
 function PageTable({ title, rows }) {
   if (rows.length === 0) return null
   return (
@@ -123,14 +142,16 @@ export default function WebStats() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [stats, setStats] = useState(null)
+  const [engagement, setEngagement] = useState(null)
   const [labels, setLabels] = useState({})
 
   useEffect(() => {
     let cancelled = false
     async function load() {
       try {
-        const [{ data, error: statsError }, { data: fixtures }, { data: teams }, { data: competitions }] = await Promise.all([
+        const [{ data, error: statsError }, { data: engagementData }, { data: fixtures }, { data: teams }, { data: competitions }] = await Promise.all([
           supabase.rpc('get_web_stats'),
+          supabase.rpc('get_web_engagement_stats'),
           supabase.from('fixtures').select('id, fixture_date, home_score, away_score, home_team:home_team_id(name), away_team:away_team_id(name)'),
           supabase.from('teams').select('id, name'),
           supabase.from('competitions').select('slug, name'),
@@ -165,6 +186,7 @@ export default function WebStats() {
 
         if (!cancelled) {
           setStats(data)
+          setEngagement(engagementData)
           setLabels(pageLabels)
         }
       } catch (err) {
@@ -189,6 +211,7 @@ export default function WebStats() {
     [stats, labels]
   )
   const groups = ['Matches', 'Competitions', 'Teams', 'Players', 'Other pages']
+  const interactions = engagement?.top_interactions || []
 
   if (loading) return <div className="container" style={{ padding: 48 }}>Loading web statistics…</div>
   if (error) return <div className="container" style={{ padding: 48, color: '#B3261E' }}>{error}</div>
@@ -213,6 +236,20 @@ export default function WebStats() {
         <TotalCard title="All time" value={stats?.all_time} />
       </div>
 
+      <h2 style={{ fontSize: 24, marginBottom: 4 }}>Visits and activity</h2>
+      <p style={{ color: 'var(--muted)', marginTop: 0, fontSize: 13 }}>New tracking, covering the last 30 days from when this feature was added. Time is an estimate while the tab is active; old page views cannot be used to calculate visit length.</p>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(170px, 1fr))', gap: 12, margin: '16px 0 20px' }}>
+        <div style={totalCardStyle}><div style={{ color: 'var(--brass)', fontWeight: 800 }}>Average time per visit</div><div style={{ fontSize: 30, fontWeight: 900 }}>{formatDuration(engagement?.average_seconds_30)}</div><small>{Number(engagement?.visits_30 || 0).toLocaleString()} tracked visits</small></div>
+        <div style={totalCardStyle}><div style={{ color: 'var(--brass)', fontWeight: 800 }}>Downloads</div><div style={{ fontSize: 30, fontWeight: 900 }}>{Number(engagement?.downloads_30 || 0).toLocaleString()}</div><small>Last 30 days</small></div>
+        <div style={totalCardStyle}><div style={{ color: 'var(--brass)', fontWeight: 800 }}>Document/report views</div><div style={{ fontSize: 30, fontWeight: 900 }}>{Number(engagement?.views_30 || 0).toLocaleString()}</div><small>Last 30 days</small></div>
+        <div style={totalCardStyle}><div style={{ color: 'var(--brass)', fontWeight: 800 }}>Search result opens</div><div style={{ fontSize: 30, fontWeight: 900 }}>{Number(engagement?.search_clicks_30 || 0).toLocaleString()}</div><small>Last 30 days</small></div>
+      </div>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: 14, marginBottom: 34 }}>
+        <InteractionTable title="What was downloaded" rows={interactions.filter((row) => row.action === 'download')} empty="No tracked downloads yet." />
+        <InteractionTable title="What was viewed" rows={interactions.filter((row) => row.action === 'view')} empty="No tracked document or report views yet." />
+        <InteractionTable title="Pages opened from Search" rows={interactions.filter((row) => row.action === 'search_result')} empty="No search result opens yet." />
+      </div>
+
       <h2 style={{ fontSize: 24, marginBottom: 4 }}>Top pages</h2>
       <p style={{ color: 'var(--muted)', marginTop: 0, marginBottom: 16 }}>
         Page views during the last 30 days
@@ -226,7 +263,7 @@ export default function WebStats() {
       </div>
 
       <p style={{ marginTop: 22, color: 'var(--muted)', fontSize: 12 }}>
-        Tracking records only the page visited and the time of the visit. Admin and discipline pages are excluded.
+        Page-view totals are separate from tracked visits. Engagement counts are anonymous aggregates; admin and discipline pages are excluded from visit timing.
       </p>
     </div>
   )

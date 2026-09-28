@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { supabase } from '../supabaseClient'
 import { cleanVenueName, isVenueLinkable, venueGroupKey, venueHistoryUrl } from '../utils/venueGrouping'
+import { trackInteraction } from '../utils/webAnalytics'
 
 const SITE_PAGES = [
   { label: 'Match Hub', description: 'Fixtures and results by date', to: '/' },
@@ -40,7 +41,7 @@ function ResultGroup({ title, rows }) {
       <h2 style={headingStyle}>{title}</h2>
       <div style={{ borderTop: '1px solid var(--line)' }}>
         {rows.map((row) => (
-          <Link key={row.key || row.to} to={row.to} style={resultStyle}>
+          <Link key={row.key || row.to} to={row.to} onClick={() => trackInteraction('search_result', row.label)} style={resultStyle}>
             <span>
               <strong style={{ display: 'block', color: 'var(--ink)' }}>{row.label}</strong>
               {row.description && <span style={{ color: 'var(--muted)', fontSize: 13 }}>{row.description}</span>}

@@ -1,6 +1,7 @@
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useEffect, useState } from 'react'
 import { supabase } from '../supabaseClient'
+import { recordVisit } from '../utils/webAnalytics'
 
 export default function Footer() {
   const location = useLocation()
@@ -30,6 +31,34 @@ export default function Footer() {
     track()
     return () => {
       cancelled = true
+    }
+  }, [location.pathname])
+
+  useEffect(() => {
+    if (location.pathname.startsWith('/admin') || location.pathname.startsWith('/discipline')) return undefined
+    let lastPulse = Date.now()
+    let lastActivity = lastPulse
+    recordVisit()
+    const activity = () => { lastActivity = Date.now() }
+    const pulse = (leaving = false) => {
+      const now = Date.now()
+      const seconds = Math.floor(Math.max(0, Math.min(now, lastActivity + 60000) - lastPulse) / 1000)
+      if ((leaving || !document.hidden) && seconds > 0) recordVisit(seconds)
+      lastPulse = now
+    }
+    const visibility = () => { if (document.hidden) pulse(true); else { lastPulse = Date.now(); activity() } }
+    window.addEventListener('pointerdown', activity, { passive: true })
+    window.addEventListener('keydown', activity)
+    window.addEventListener('scroll', activity, { passive: true })
+    document.addEventListener('visibilitychange', visibility)
+    const timer = window.setInterval(() => pulse(), 15000)
+    return () => {
+      pulse(true)
+      clearInterval(timer)
+      window.removeEventListener('pointerdown', activity)
+      window.removeEventListener('keydown', activity)
+      window.removeEventListener('scroll', activity)
+      document.removeEventListener('visibilitychange', visibility)
     }
   }, [location.pathname])
 

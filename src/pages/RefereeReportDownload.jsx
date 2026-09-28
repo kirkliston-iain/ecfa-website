@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { Document, Packer, Paragraph, Table, TableCell, TableRow, TextRun, WidthType } from 'docx'
 import { jsPDF } from 'jspdf'
 import { supabase } from '../supabaseClient'
+import { trackInteraction } from '../utils/webAnalytics'
 
 const PAGE_SIZE = 1000
 const CURRENT_SEASON = '2026/27'
@@ -278,6 +279,7 @@ export default function RefereeReportDownload() {
     try {
       if (format === 'pdf') pdfReport(report)
       else await wordReport(report)
+      trackInteraction('download', `Referee report: ${refereeName} · ${season} · ${format.toUpperCase()}`)
     } catch (err) {
       setError(err.message || 'The report could not be created.')
     } finally {
@@ -307,7 +309,7 @@ export default function RefereeReportDownload() {
             style={inputStyle}
           />
           {showResults && <div style={searchResultsStyle}>
-            {filteredReferees.map((referee) => <button type="button" key={referee.id} onMouseDown={(e) => e.preventDefault()} onClick={() => { setRefereeName(referee.name); setSearch(referee.name); setShowResults(false) }} style={searchResultStyle}>{referee.name}</button>)}
+            {filteredReferees.map((referee) => <button type="button" key={referee.id} onMouseDown={(e) => e.preventDefault()} onClick={() => { setRefereeName(referee.name); setSearch(referee.name); setShowResults(false); trackInteraction('view', `Referee report: ${referee.name}`) }} style={searchResultStyle}>{referee.name}</button>)}
             {!filteredReferees.length && <div style={{ padding: 12, color: 'var(--muted)', fontWeight: 400 }}>No matching referees</div>}
           </div>}
         </label>

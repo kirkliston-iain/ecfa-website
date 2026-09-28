@@ -213,6 +213,7 @@ story.append(card_grid([
     ('Seven-day activity', 'A daily chart shows today and the previous six days of actual recorded page views.'),
     ('Headline totals', 'Summary cards show recent and longer-term website usage.'),
     ('Popular pages', 'Tables identify the most visited match, competition, team, player and other pages.'),
+    ('Visits and actions', 'New anonymous tracking estimates active time per visit and shows which files were downloaded, reports viewed and search results opened. Older page views do not include these details.'),
     ('Public transparency', 'Visitors can see how the ECFA website is being used without accessing private administration data.'),
 ]))
 story += [Spacer(1, 10)] + section_title('12. Contacting the ECFA')
