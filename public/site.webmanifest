@@ -8,9 +8,15 @@
   "theme_color": "#b48a38",
   "icons": [
     {
-      "src": "/badges/ecfa-logo.png",
+      "src": "/icons/ecfa-icon-192.png",
       "type": "image/png",
-      "sizes": "any",
+      "sizes": "192x192",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/ecfa-icon-512.png",
+      "type": "image/png",
+      "sizes": "512x512",
       "purpose": "any"
     }
   ]
