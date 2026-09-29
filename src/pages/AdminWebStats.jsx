@@ -6,7 +6,7 @@ function pageCategory(path) {
   if (path.startsWith('/fixtures/')) return 'Matches'
   if (path === '/competitions' || path === '/standings' || path.startsWith('/competitions/')) return 'Competitions'
   if (path === '/teams' || path.startsWith('/teams/')) return 'Teams'
-  if (path === '/scorers') return 'Players'
+  if (path === '/scorers' || path.startsWith('/players/')) return 'Players'
   return 'Other pages'
 }
 
@@ -100,6 +100,35 @@ function formatDuration(seconds) {
   return `${Math.floor(value / 60)}m ${String(value % 60).padStart(2, '0')}s`
 }
 
+function describePage(path, labels) {
+  if (path === '/search') return 'Opened site search'
+  if (path === '/teams') return 'Opened Teams'
+  if (path.startsWith('/players/')) return `Viewed player: ${labels[path] || 'profile no longer available'}`
+  if (path.startsWith('/teams/')) return `Viewed team: ${labels[path] || 'team no longer available'}`
+  if (path.startsWith('/fixtures/')) return `Viewed match: ${labels[path] || 'match no longer available'}`
+  if (path.startsWith('/competitions/')) return `Viewed competition: ${labels[path] || 'competition no longer available'}`
+  return `Opened ${labels[path] || path.replace(/^\//, '').replaceAll('-', ' ') || 'Match Hub'}`
+}
+
+function visitTimeline(visit, labels) {
+  const pages = (visit.pages || []).map((row) => ({ ...row, kind: 'page' }))
+  const actions = (visit.actions || []).map((row) => ({ ...row, kind: 'action' }))
+  return [...pages, ...actions].sort((a, b) => a.at.localeCompare(b.at)).flatMap((row) => {
+    if (row.kind === 'page') {
+      const matchingSearch = actions.some((action) => action.action === 'search_result'
+        && action.item === labels[row.path]
+        && Math.abs(new Date(action.at) - new Date(row.at)) < 4000)
+      if (matchingSearch) return []
+      return [{ at: row.at, text: describePage(row.path, labels) }]
+    }
+    const text = row.action === 'search_result' ? `Opened “${row.item}” from search`
+      : row.action === 'team_selection' ? `Selected ${row.item} in Teams`
+        : row.action === 'download' ? `Downloaded ${row.item}`
+          : row.action === 'view' ? `Viewed ${row.item}` : `${row.action}: ${row.item}`
+    return [{ at: row.at, text }]
+  })
+}
+
 function InteractionTable({ title, rows, empty, onSelect }) {
   return <section style={panelStyle}>
     <h2 style={{ color: 'var(--brass)', fontSize: 18, margin: '0 0 10px' }}>{title}</h2>
@@ -155,12 +184,13 @@ export default function AdminWebStats() {
     let cancelled = false
     async function load() {
       try {
-        const [{ data, error: statsError }, { data: engagementData }, { data: fixtures }, { data: teams }, { data: competitions }] = await Promise.all([
+        const [{ data, error: statsError }, { data: engagementData }, { data: fixtures }, { data: teams }, { data: competitions }, { data: players }] = await Promise.all([
           supabase.rpc('get_admin_web_stats'),
           supabase.rpc('get_admin_web_engagement_stats'),
           supabase.from('fixtures').select('id, fixture_date, home_score, away_score, home_team:home_team_id(name), away_team:away_team_id(name)'),
           supabase.from('teams').select('id, name'),
           supabase.from('competitions').select('slug, name'),
+          supabase.from('players').select('id, first_name, last_name').limit(1000),
         ])
         if (statsError) throw statsError
 
@@ -174,6 +204,9 @@ export default function AdminWebStats() {
           '/archive': 'Archive',
           '/history': 'Archive (legacy link)',
           '/teams': 'Teams',
+          '/search': 'Site search',
+          '/downloads/player-report': 'Player scoring report',
+          '/downloads/referee-report': 'Referee report',
           '/referees': 'Referees',
           '/downloads': 'Downloads',
           '/documents': 'Documents',
@@ -188,6 +221,7 @@ export default function AdminWebStats() {
           pageLabels[`/fixtures/${fixture.id}`] = `${date}: ${fixture.home_team?.name || 'TBC'}${score} ${fixture.away_team?.name || 'TBC'}`
         }
         for (const team of teams || []) pageLabels[`/teams/${team.id}`] = team.name
+        for (const player of players || []) pageLabels[`/players/${player.id}`] = `${player.first_name || ''} ${player.last_name || ''}`.trim()
         for (const competition of competitions || []) pageLabels[`/competitions/${competition.slug}`] = competition.name
 
         if (!cancelled) {
@@ -308,11 +342,13 @@ export default function AdminWebStats() {
               <span>Anonymous visit {historyOffset + index + 1} · {new Date(visit.started_at).toLocaleString('en-GB')}</span>
               <strong>{formatDuration(visit.active_seconds)}</strong>
             </button>
-            {expandedVisit === visit.id && <ol style={{ margin: '8px 0 8px 20px', padding: 0, fontSize: 13 }}>
-              {[...(visit.pages || []).map((row) => ({ at: row.at, text: `Page: ${labels[row.path] || row.path}` })), ...(visit.actions || []).map((row) => ({ at: row.at, text: `${row.action === 'search_result' ? 'Search opened' : row.action}: ${row.item}` }))]
-                .sort((a, b) => a.at.localeCompare(b.at)).map((row, i) => <li key={i} style={{ padding: '3px 0' }}>{new Date(row.at).toLocaleTimeString('en-GB')} — {row.text}</li>)}
+            {expandedVisit === visit.id && <ul style={{ listStyle: 'none', margin: '8px 0', padding: 0, fontSize: 13 }}>
+              {visitTimeline(visit, labels).map((row, i) => <li key={i} style={{ display: 'grid', gridTemplateColumns: '62px minmax(0, 1fr)', gap: 8, padding: '7px 0', borderTop: '1px solid var(--line)', lineHeight: 1.35 }}>
+                <time style={{ color: 'var(--muted)', fontVariantNumeric: 'tabular-nums' }}>{new Date(row.at).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}</time>
+                <span style={{ overflowWrap: 'anywhere' }}>{row.text}</span>
+              </li>)}
               {!(visit.pages?.length || visit.actions?.length) && <li>No linked actions recorded for this visit.</li>}
-            </ol>}
+            </ul>}
           </div>)}
           {Number(history.total) > 50 && <div style={{ display: 'flex', gap: 12, marginTop: 12 }}>
             <button type="button" disabled={historyOffset === 0} onClick={() => { setHistoryOffset((n) => Math.max(0, n - 50)); setExpandedVisit(null) }}>Previous</button>

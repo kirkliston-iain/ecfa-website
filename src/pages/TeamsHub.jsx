@@ -4,6 +4,7 @@ import { supabase } from '../supabaseClient'
 import { displayedScore, outcomeNote } from '../utils/fixtureOutcome'
 import { historicDisplayedScore } from '../utils/historicFixtureOutcome'
 import { historicTeamName, previousTeamUrl } from '../utils/historicTeams'
+import { trackInteraction } from '../utils/webAnalytics'
 
 function Badge({ logoUrl, name, size = 24 }) {
   if (logoUrl) {
@@ -475,7 +476,11 @@ export default function TeamsHub() {
 
       <select
         value={teamId}
-        onChange={(e) => setTeamId(e.target.value)}
+        onChange={(e) => {
+          const selected = teams.find((entry) => entry.id === e.target.value)
+          setTeamId(e.target.value)
+          if (selected) trackInteraction('team_selection', selected.name)
+        }}
         style={{ ...selectStyle, marginBottom: 24 }}
       >
         <option value="">Select a team…</option>
