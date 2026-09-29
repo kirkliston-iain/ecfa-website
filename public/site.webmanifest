@@ -1,0 +1,17 @@
+{
+  "name": "Edinburgh Churches Football Association",
+  "short_name": "ECFA",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#b48a38",
+  "icons": [
+    {
+      "src": "/badges/ecfa-logo.png",
+      "type": "image/png",
+      "sizes": "any",
+      "purpose": "any"
+    }
+  ]
+}
