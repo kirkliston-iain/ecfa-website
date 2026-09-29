@@ -104,6 +104,24 @@ function drawTable(ctx, { x, y, width, columns, rows, rowHeight = 48 }) {
     let cellX = x + 16
     columns.forEach((column) => {
       const value = row[column.key] ?? ''
+      if (column.key === 'cards' && value) {
+        const cards = [...String(value).matchAll(/(\d+)([YR])/g)]
+        cards.forEach((card, cardIndex) => {
+          const centerX = cellX + 18 + cardIndex * 37
+          const centerY = top + rowHeight / 2
+          ctx.beginPath()
+          ctx.arc(centerX, centerY, 15, 0, Math.PI * 2)
+          ctx.fillStyle = card[2] === 'Y' ? '#e7b82c' : '#ba3030'
+          ctx.fill()
+          ctx.fillStyle = card[2] === 'Y' ? '#17212b' : '#ffffff'
+          ctx.font = '800 16px Arial'
+          ctx.textAlign = 'center'
+          ctx.fillText(card[1], centerX, centerY + 6)
+          ctx.textAlign = 'left'
+        })
+        cellX += width * column.ratio
+        return
+      }
       const lines = wrapLines(ctx, value, width * column.ratio - 22).slice(0, 2)
       lines.forEach((line, lineIndex) => ctx.fillText(line, cellX, top + 20 + lineIndex * 17))
       cellX += width * column.ratio
@@ -437,16 +455,27 @@ export default function WeeklyDisciplineReport() {
       const before = total - Number(row.weekend)
       return THRESHOLDS
         .filter((threshold) => before < threshold.points && total >= threshold.points)
-        .map((threshold) => ({ player: row.player, team: row.team, ban: threshold.ban }))
+        .map((threshold) => ({
+          player: row.player, team: row.team, ban: threshold.ban,
+          reason: `Discipline points threshold (${threshold.points} points)`,
+          duration: `${Number.parseInt(threshold.ban, 10)} match${threshold.ban.startsWith('1-') ? '' : 'es'}`,
+        }))
     })
 
     const seriousBansThisMatchday = records
       .filter((record) => dateKey(record.fixture?.fixture_date) === reportDate && record.serious_offence)
-      .map((record) => ({
-        player: fullName(record.player),
-        team: record.team?.name || 'No team',
-        ban: SERIOUS_RULES[record.serious_offence]?.label || 'Serious-offence ban',
-      }))
+      .map((record) => {
+        const rule = SERIOUS_RULES[record.serious_offence]
+        const count = records.filter((prior) => prior.player?.id === record.player?.id && prior.serious_offence === record.serious_offence && dateKey(prior.fixture?.fixture_date) <= reportDate).length
+        const tier = rule?.tiers[Math.min(count - 1, rule.tiers.length - 1)]
+        return {
+          player: fullName(record.player),
+          team: record.team?.name || 'No team',
+          ban: rule?.label || 'Serious-offence ban',
+          reason: rule?.label || 'Serious offence',
+          duration: tier?.lifetime ? 'Indefinite' : tier?.months ? `${tier.months} months` : tier?.ban ? `${tier.ban} matches` : 'Not specified',
+        }
+      })
 
     const manualBansThisMatchday = suspensions
       .filter((suspension) => dateKey(suspension.start_date || suspension.created_at) === reportDate)
@@ -454,12 +483,17 @@ export default function WeeklyDisciplineReport() {
         player: fullName(suspension.player),
         team: suspension.team?.name || 'No team',
         ban: suspension.reason || (suspension.is_lifetime ? 'Indefinite ban' : `${suspension.games_banned || ''}-match suspension`),
+        reason: suspension.reason || 'Suspension',
+        duration: suspension.is_lifetime ? 'Indefinite' : suspension.available_from
+          ? `Until ${new Date(`${suspension.available_from}T00:00:00`).toLocaleDateString('en-GB')}`
+          : suspension.games_banned ? `${suspension.games_banned} match${Number(suspension.games_banned) === 1 ? '' : 'es'}` : 'Not specified',
+        manual: true,
       }))
 
     const newBanMap = new Map()
     for (const ban of [...thresholdBans, ...seriousBansThisMatchday, ...manualBansThisMatchday]) {
       const key = `${normalName(ban.player)}::${normalName(ban.ban)}`
-      if (ban.player && !newBanMap.has(key)) newBanMap.set(key, ban)
+      if (ban.player && (!newBanMap.has(key) || ban.manual)) newBanMap.set(key, ban)
     }
     const newBans = Array.from(newBanMap.values())
 
@@ -644,21 +678,16 @@ export default function WeeklyDisciplineReport() {
   async function share() {
     if (!graphicBlob) return
     const file = new File([graphicBlob], `ecfa-weekly-discipline-${reportDate}.png`, { type: 'image/png' })
-    const shareBanMap = new Map()
-    for (const ban of reportData.newBans) {
-      const key = normalName(ban.player)
-      if (!shareBanMap.has(key)) {
-        shareBanMap.set(key, { player: ban.player, team: ban.team, reasons: [] })
-      }
-      const item = shareBanMap.get(key)
-      if ((!item.team || item.team === 'No team') && ban.team && ban.team !== 'No team') item.team = ban.team
-      if (ban.ban && !item.reasons.includes(ban.ban)) item.reasons.push(ban.ban)
-    }
-    const shareBans = Array.from(shareBanMap.values()).sort((a, b) =>
+    const shareBans = [...reportData.newBans].sort((a, b) =>
       a.team.localeCompare(b.team) || a.player.localeCompare(b.player)
     )
     const newBanText = shareBans.length
-      ? ['NEW BANS:', ...shareBans.map((ban) => `${ban.player} (${ban.team}) — ${ban.reasons.join(' — ')}`)].join('\n')
+      ? `NEW BANS:\n\n${shareBans.map((ban) => [
+        `Player: ${ban.player}`,
+        `Team: ${ban.team}`,
+        `Reason: ${ban.reason || ban.ban}`,
+        `Games banned for: ${ban.duration || 'Not specified'}`,
+      ].join('\n')).join('\n\n')}`
       : 'NEW BANS: None picked up this matchday.'
     const thresholdText = reportData.nearThresholds.length
       ? ['CLOSE TO A THRESHOLD BAN:', ...reportData.nearThresholds.map((player) => `${player.player} (${player.team}) — ${player.points} points; ${player.threshold - player.points} point${player.threshold - player.points === 1 ? '' : 's'} from ${player.ban}`)].join('\n')
