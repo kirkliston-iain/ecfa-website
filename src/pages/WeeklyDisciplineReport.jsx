@@ -41,6 +41,10 @@ function normalName(value) {
   return String(value || '').trim().replace(/\s+/g, ' ').toLowerCase()
 }
 
+function hasCurrentTeam(ban) {
+  return Boolean(ban.team && normalName(ban.team) !== 'no team')
+}
+
 function gamesPlayedSince(fixtures, teamId, startDate) {
   if (!teamId || !startDate) return 0
   const start = dateKey(startDate)
@@ -82,7 +86,8 @@ function drawTitle(ctx, title, x, y) {
 
 function drawTable(ctx, { x, y, width, columns, rows, rowHeight = 48 }) {
   const headerHeight = 44
-  roundRect(ctx, x, y, width, headerHeight + rows.length * rowHeight, 10, '#f4f6f8')
+  const bodyHeight = rows.reduce((total, row) => total + (row.separator ? 36 : rowHeight), 0)
+  roundRect(ctx, x, y, width, headerHeight + bodyHeight, 10, '#f4f6f8')
   ctx.fillStyle = '#17212b'
   ctx.fillRect(x, y, width, headerHeight)
   ctx.font = '700 16px Arial'
@@ -93,8 +98,17 @@ function drawTable(ctx, { x, y, width, columns, rows, rowHeight = 48 }) {
     cursor += width * column.ratio
   }
 
+  let top = y + headerHeight
   rows.forEach((row, rowIndex) => {
-    const top = y + headerHeight + rowIndex * rowHeight
+    if (row.separator) {
+      ctx.fillStyle = '#e7e1ce'
+      ctx.fillRect(x, top, width, 36)
+      ctx.fillStyle = '#17212b'
+      ctx.font = '700 15px Arial'
+      ctx.fillText(row.separator.toUpperCase(), x + 16, top + 24)
+      top += 36
+      return
+    }
     if (rowIndex % 2 === 1) {
       ctx.fillStyle = '#e9edf0'
       ctx.fillRect(x, top, width, rowHeight)
@@ -129,8 +143,9 @@ function drawTable(ctx, { x, y, width, columns, rows, rowHeight = 48 }) {
       lines.forEach((line, lineIndex) => ctx.fillText(line, cellX, top + 20 + lineIndex * 17))
       cellX += width * column.ratio
     })
+    top += rowHeight
   })
-  return y + headerHeight + rows.length * rowHeight
+  return y + headerHeight + bodyHeight
 }
 
 function drawTeamChart(ctx, { x, y, width, rows }) {
@@ -181,12 +196,17 @@ function makeGraphic({ reportDate, weekendRows, teamRows, bans, season }) {
   const indefiniteBans = Array.from(new Map(
     bans.filter((ban) => ban.indefinite).map((ban) => [normalName(ban.player), ban])
   ).values())
-  const bansHeight = 44 + Math.max(1, currentBans.length) * 58
-  const indefiniteRows = Math.ceil(indefiniteBans.length / 5)
+  const assignedCurrent = currentBans.filter(hasCurrentTeam)
+  const unassignedCurrent = currentBans.filter((ban) => !hasCurrentTeam(ban))
+  const assignedIndefinite = indefiniteBans.filter(hasCurrentTeam)
+  const unassignedIndefinite = indefiniteBans.filter((ban) => !hasCurrentTeam(ban))
+  const bansHeight = 44 + Math.max(1, currentBans.length) * 58 + (unassignedCurrent.length ? 36 : 0)
+  const indefiniteContentHeight = 20 + Math.ceil(assignedIndefinite.length / 5) * 49
+    + (unassignedIndefinite.length ? 31 + Math.ceil(unassignedIndefinite.length / 5) * 49 : 0)
   const bansY = firstSectionBottom + 55
   const tableEnd = bansY + 20 + bansHeight
   const indefiniteY = tableEnd + 60
-  const endY = indefiniteBans.length ? indefiniteY + 40 + indefiniteRows * 49 : tableEnd
+  const endY = indefiniteBans.length ? indefiniteY + indefiniteContentHeight + 20 : tableEnd
   const height = Math.max(980, endY + 115)
 
   const canvas = document.createElement('canvas')
@@ -240,7 +260,9 @@ function makeGraphic({ reportDate, weekendRows, teamRows, bans, season }) {
   })
 
   drawTitle(ctx, 'Current bans', margin, bansY)
-  const banData = currentBans.length ? currentBans : [{ player: 'No current match or date bans', team: '', ban: '', progress: '' }]
+  const banData = currentBans.length
+    ? [...assignedCurrent, ...(unassignedCurrent.length ? [{ separator: 'No current team' }, ...unassignedCurrent] : [])]
+    : [{ player: 'No current match or date bans', team: '', ban: '', progress: '' }]
   drawTable(ctx, {
     x: margin,
     y: bansY + 20,
@@ -261,15 +283,22 @@ function makeGraphic({ reportDate, weekendRows, teamRows, bans, season }) {
     ctx.fillStyle = '#58636d'
     ctx.fillText('Players currently banned indefinitely', margin + 235, indefiniteY)
     const cellWidth = (width - margin * 2 - 4 * 12) / 5
-    indefiniteBans.forEach((ban, index) => {
+    const drawNames = (items, startY) => items.forEach((ban, index) => {
       const x = margin + (index % 5) * (cellWidth + 12)
-      const y = indefiniteY + 20 + Math.floor(index / 5) * 49
+      const y = startY + Math.floor(index / 5) * 49
       roundRect(ctx, x, y, cellWidth, 39, 5, '#e9edf0')
       ctx.fillStyle = '#17212b'
       ctx.font = '700 16px Arial'
-      const name = ban.player || 'Unknown player'
-      ctx.fillText(name, x + 11, y + 25, cellWidth - 22)
+      ctx.fillText(ban.player || 'Unknown player', x + 11, y + 25, cellWidth - 22)
     })
+    drawNames(assignedIndefinite, indefiniteY + 20)
+    if (unassignedIndefinite.length) {
+      const labelY = indefiniteY + 20 + Math.ceil(assignedIndefinite.length / 5) * 49
+      ctx.fillStyle = '#58636d'
+      ctx.font = '700 15px Arial'
+      ctx.fillText('NO CURRENT TEAM', margin, labelY + 20)
+      drawNames(unassignedIndefinite, labelY + 31)
+    }
   }
 
   ctx.fillStyle = '#b59025'
