@@ -129,6 +129,20 @@ function visitTimeline(visit, labels) {
   })
 }
 
+function visitGroup(dateValue, period) {
+  const parts = Object.fromEntries(new Intl.DateTimeFormat('en-GB', {
+    timeZone: 'Europe/London', year: 'numeric', month: '2-digit', day: '2-digit',
+  }).formatToParts(new Date(dateValue)).map((part) => [part.type, part.value]))
+  const day = new Date(Date.UTC(Number(parts.year), Number(parts.month) - 1, Number(parts.day)))
+  if (period === 'week') day.setUTCDate(day.getUTCDate() - (day.getUTCDay() + 6) % 7)
+  if (period === 'month') day.setUTCDate(1)
+  const key = day.toISOString().slice(0, 10)
+  const date = day.toLocaleDateString('en-GB', {
+    timeZone: 'UTC', day: period === 'month' ? undefined : 'numeric', month: 'long', year: 'numeric',
+  })
+  return { key, label: period === 'week' ? `Week of ${date}` : date }
+}
+
 function InteractionTable({ title, rows, empty, onSelect }) {
   return <section style={panelStyle}>
     <h2 style={{ color: 'var(--brass)', fontSize: 18, margin: '0 0 10px' }}>{title}</h2>
@@ -178,6 +192,8 @@ export default function AdminWebStats() {
   const [history, setHistory] = useState(null)
   const [historyOffset, setHistoryOffset] = useState(0)
   const [expandedVisit, setExpandedVisit] = useState(null)
+  const [visitGrouping, setVisitGrouping] = useState('day')
+  const [expandedGroup, setExpandedGroup] = useState(null)
   const [historyError, setHistoryError] = useState('')
 
   useEffect(() => {
@@ -264,10 +280,21 @@ export default function AdminWebStats() {
     setSelection(next)
     setHistoryOffset(0)
     setExpandedVisit(null)
+    setExpandedGroup(null)
     window.setTimeout(() => document.getElementById('visit-history')?.scrollIntoView({ behavior: 'smooth' }), 50)
   }
 
   const daily = useMemo(() => makeDailySeries(stats?.daily || []), [stats])
+  const groupedVisits = useMemo(() => {
+    const groupsByDate = new Map()
+    const visits = history?.visits || []
+    visits.forEach((visit, index) => {
+      const group = visitGroup(visit.started_at, visitGrouping)
+      if (!groupsByDate.has(group.key)) groupsByDate.set(group.key, { ...group, visits: [] })
+      groupsByDate.get(group.key).visits.push({ ...visit, displayNumber: historyOffset + index + 1 })
+    })
+    return Array.from(groupsByDate.values())
+  }, [history, historyOffset, visitGrouping])
   const pages = useMemo(
     () => (stats?.top_pages || []).map((row) => ({
       ...row,
@@ -356,22 +383,35 @@ export default function AdminWebStats() {
         {selection && !history && !historyError && <p>Loading visits…</p>}
         {history && <>
           <p style={{ fontSize: 13, fontWeight: 700 }}>{Number(history.total || 0).toLocaleString()} linked visits</p>
-          {(history.visits || []).map((visit, index) => <div key={visit.id} style={{ borderTop: '1px solid var(--line)', padding: '8px 0' }}>
-            <button type="button" onClick={() => setExpandedVisit((current) => current === visit.id ? null : visit.id)} style={{ ...tableButtonStyle, width: '100%', display: 'flex', justifyContent: 'space-between', gap: 8 }}>
-              <span>Anonymous visit {historyOffset + index + 1} · {new Date(visit.started_at).toLocaleString('en-GB')}</span>
-              <strong>{formatDuration(visit.active_seconds)}</strong>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', margin: '12px 0' }}>
+            <span style={{ fontSize: 13, color: 'var(--muted)' }}>Group by</span>
+            {['day', 'week', 'month'].map((period) => <button key={period} type="button" aria-pressed={visitGrouping === period} onClick={() => { setVisitGrouping(period); setExpandedGroup(null); setExpandedVisit(null) }} style={{ padding: '7px 12px', border: '1px solid var(--line)', borderRadius: 6, background: visitGrouping === period ? 'var(--ink)' : '#fff', color: visitGrouping === period ? '#fff' : 'var(--ink)', fontWeight: 700, cursor: 'pointer' }}>{period[0].toUpperCase() + period.slice(1)}</button>)}
+          </div>
+          <p style={{ color: 'var(--muted)', fontSize: 12, margin: '0 0 10px' }}>Groups show the visits loaded on this page, up to 50 at a time.</p>
+          {groupedVisits.map((group) => <div key={group.key} style={{ borderTop: '1px solid var(--line)' }}>
+            <button type="button" aria-expanded={expandedGroup === group.key} onClick={() => { setExpandedGroup((current) => current === group.key ? null : group.key); setExpandedVisit(null) }} style={{ width: '100%', padding: '12px 0', display: 'flex', justifyContent: 'space-between', gap: 12, border: 0, background: 'transparent', color: 'var(--ink)', font: 'inherit', fontWeight: 800, textAlign: 'left', cursor: 'pointer' }}>
+              <span>{expandedGroup === group.key ? '▾' : '▸'} {group.label}</span>
+              <span>{group.visits.length} shown</span>
             </button>
-            {expandedVisit === visit.id && <ul style={{ listStyle: 'none', margin: '8px 0', padding: 0, fontSize: 13 }}>
-              {visitTimeline(visit, labels).map((row, i) => <li key={i} style={{ display: 'grid', gridTemplateColumns: '62px minmax(0, 1fr)', gap: 8, padding: '7px 0', borderTop: '1px solid var(--line)', lineHeight: 1.35 }}>
-                <time style={{ color: 'var(--muted)', fontVariantNumeric: 'tabular-nums' }}>{new Date(row.at).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}</time>
-                <span style={{ overflowWrap: 'anywhere' }}>{row.text}</span>
-              </li>)}
-              {!(visit.pages?.length || visit.actions?.length) && <li>No linked actions recorded for this visit.</li>}
-            </ul>}
+            {expandedGroup === group.key && <div style={{ paddingLeft: 12 }}>
+              {group.visits.map((visit) => <div key={visit.id} style={{ borderTop: '1px solid var(--line)', padding: '8px 0' }}>
+                <button type="button" aria-expanded={expandedVisit === visit.id} onClick={() => setExpandedVisit((current) => current === visit.id ? null : visit.id)} style={{ ...tableButtonStyle, width: '100%', display: 'flex', justifyContent: 'space-between', gap: 8 }}>
+                  <span>Anonymous visit {visit.displayNumber} · {new Date(visit.started_at).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', second: '2-digit', timeZone: 'Europe/London' })}</span>
+                  <strong>{formatDuration(visit.active_seconds)}</strong>
+                </button>
+                {expandedVisit === visit.id && <ul style={{ listStyle: 'none', margin: '8px 0', padding: 0, fontSize: 13 }}>
+                  {visitTimeline(visit, labels).map((row, i) => <li key={i} style={{ display: 'grid', gridTemplateColumns: '62px minmax(0, 1fr)', gap: 8, padding: '7px 0', borderTop: '1px solid var(--line)', lineHeight: 1.35 }}>
+                    <time style={{ color: 'var(--muted)', fontVariantNumeric: 'tabular-nums' }}>{new Date(row.at).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', second: '2-digit', timeZone: 'Europe/London' })}</time>
+                    <span style={{ overflowWrap: 'anywhere' }}>{row.text}</span>
+                  </li>)}
+                  {!(visit.pages?.length || visit.actions?.length) && <li>No linked actions recorded for this visit.</li>}
+                </ul>}
+              </div>)}
+            </div>}
           </div>)}
           {Number(history.total) > 50 && <div style={{ display: 'flex', gap: 12, marginTop: 12 }}>
-            <button type="button" disabled={historyOffset === 0} onClick={() => { setHistoryOffset((n) => Math.max(0, n - 50)); setExpandedVisit(null) }}>Previous</button>
-            <button type="button" disabled={historyOffset + 50 >= Number(history.total)} onClick={() => { setHistoryOffset((n) => n + 50); setExpandedVisit(null) }}>Next</button>
+            <button type="button" disabled={historyOffset === 0} onClick={() => { setHistoryOffset((n) => Math.max(0, n - 50)); setExpandedGroup(null); setExpandedVisit(null) }}>Previous</button>
+            <button type="button" disabled={historyOffset + 50 >= Number(history.total)} onClick={() => { setHistoryOffset((n) => n + 50); setExpandedGroup(null); setExpandedVisit(null) }}>Next</button>
           </div>}
         </>}
       </section>
