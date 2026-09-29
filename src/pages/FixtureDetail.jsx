@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { useParams, useNavigate, Link } from 'react-router-dom'
+import { useParams, useNavigate, useLocation, Link } from 'react-router-dom'
 import { supabase } from '../supabaseClient'
 import { displayedScore, fullOutcomeNote } from '../utils/fixtureOutcome'
 import { isVenueLinkable, venueHistoryUrl } from '../utils/venueGrouping'
@@ -53,6 +53,7 @@ function normalizedPlayerName(name) {
 export default function FixtureDetail() {
   const { id } = useParams()
   const navigate = useNavigate()
+  const location = useLocation()
   const [fixture, setFixture] = useState(null)
   const [scorers, setScorers] = useState([])
   const [discipline, setDiscipline] = useState([])
@@ -279,6 +280,14 @@ export default function FixtureDetail() {
     }
   }, [id])
 
+  useEffect(() => {
+    if (loading || location.hash !== '#previous-meetings') return undefined
+    const frame = window.requestAnimationFrame(() => {
+      document.getElementById('previous-meetings')?.scrollIntoView({ block: 'start' })
+    })
+    return () => window.cancelAnimationFrame(frame)
+  }, [loading, location.hash])
+
   if (loading) return <div className="container" style={{ padding: 48 }}>Loading…</div>
   if (error) return <div className="container" style={{ padding: 48 }}>{error}</div>
 
@@ -419,8 +428,8 @@ export default function FixtureDetail() {
         <p style={{ color: 'var(--muted)', textAlign: 'center' }}>This fixture hasn't been played yet.</p>
       )}
 
-      {previousMeetings.length > 0 && (
-        <section style={{ marginTop: 40 }}>
+      {(
+        <section id="previous-meetings" style={{ marginTop: 40, scrollMarginTop: 20 }}>
           <h2
             style={{
               fontSize: 13,
@@ -434,6 +443,7 @@ export default function FixtureDetail() {
           >
             Previous Meetings
           </h2>
+          {previousMeetings.length === 0 && <p style={{ color: 'var(--muted)', fontSize: 14 }}>No previous meetings recorded.</p>}
           {previousMeetings.map((m) => (
             <div key={m.id} style={{ padding: '12px 0', borderBottom: '1px solid var(--line)' }}>
               <div style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 4 }}>

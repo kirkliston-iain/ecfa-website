@@ -1,11 +1,13 @@
 import { useEffect, useMemo, useState } from 'react'
-import { useParams } from 'react-router-dom'
+import { useLocation, useParams } from 'react-router-dom'
 import { supabase } from '../supabaseClient'
 import StandingsTable, { TopScorersTable } from '../components/StandingsTable'
 import FixtureWeekNav from '../components/FixtureWeekNav'
+import KnockoutBracket from '../components/KnockoutBracket'
 
 export default function Competition() {
   const { slug } = useParams()
+  const location = useLocation()
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [competition, setCompetition] = useState(null)
@@ -107,6 +109,14 @@ export default function Competition() {
     )].sort((a, b) => b.localeCompare(a))
   }, [competition, stages])
 
+  useEffect(() => {
+    if (loading || !location.hash) return undefined
+    const frame = window.requestAnimationFrame(() => {
+      document.getElementById(decodeURIComponent(location.hash.slice(1)))?.scrollIntoView({ block: 'start' })
+    })
+    return () => window.cancelAnimationFrame(frame)
+  }, [loading, location.hash, stages])
+
   function rowsForDate(stage, groupId) {
     if (tableDate === 'current') return stage.standingsByGroup[groupId] || []
     const fixturesToDate = stage.fixtures.filter(
@@ -131,6 +141,12 @@ export default function Competition() {
         {competition.name}
       </h1>
       <p style={{ color: 'var(--muted)', marginBottom: 32 }}>{competition.season} season</p>
+
+      {competition.slug === 'knockout-cup' && ['Quarter-Final', 'Semi-Final'].every((round) => stages.some((stage) => stage.fixtures.some((fixture) => fixture.round_name === round))) && (
+        <section id="draw" style={{ marginBottom: 44, scrollMarginTop: 20 }}>
+          <KnockoutBracket fixtures={stages.flatMap((stage) => stage.fixtures)} />
+        </section>
+      )}
 
       {stages.map((stage) => (
         <section key={stage.id} style={{ marginBottom: 44 }}>
@@ -193,11 +209,12 @@ export default function Competition() {
             (stage.groups || [])
               .sort((a, b) => a.sort_order - b.sort_order)
               .map((group) => (
-                <StandingsTable
-                  key={group.id}
-                  groupName={stage.groups.length > 1 ? group.name : null}
-                  rows={rowsForDate(stage, group.id)}
-                />
+                <div key={group.id} id={competition.slug === 'appin-league' ? 'table' : `group-${group.id}`} style={{ scrollMarginTop: 20 }}>
+                  <StandingsTable
+                    groupName={stage.groups.length > 1 ? group.name : null}
+                    rows={rowsForDate(stage, group.id)}
+                  />
+                </div>
               ))}
 
           <h3 style={{ fontSize: 13, marginBottom: 10, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: 0.4 }}>

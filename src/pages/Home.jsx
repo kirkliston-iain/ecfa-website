@@ -867,7 +867,9 @@ export default function Home() {
         if (!text) continue
         items.push({
           fixtureId: f.id,
+          compSlug: comp.slug,
           compName: comp.name,
+          groupId: f.group_id,
           groupName: comp.groupNames?.[f.group_id],
           homeName: f.home_team?.name,
           awayName: f.away_team?.name,
@@ -977,13 +979,15 @@ export default function Home() {
           </h2>
           {previewParagraphs.map((p) => (
             <div key={p.fixtureId} style={{ marginBottom: 14 }}>
-              <div style={{ fontSize: 12, fontWeight: 800, color: 'var(--brass)', marginBottom: 3 }}>
+              <Link to={`/competitions/${p.compSlug}${p.compSlug === 'league-cup' && p.groupId ? `#group-${p.groupId}` : p.compSlug === 'knockout-cup' ? '#draw' : p.compSlug === 'appin-league' ? '#table' : ''}`} style={{ display: 'inline-block', fontSize: 12, fontWeight: 800, color: 'var(--brass)', marginBottom: 3 }}>
                 {p.compName}{p.groupName ? ` · ${p.groupName}` : ''}
-              </div>
-              <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 2 }}>
-                {p.homeName} v {p.awayName}
-              </div>
-              <p style={{ fontSize: 14, lineHeight: 1.6, color: 'var(--muted)', margin: 0 }}>{p.text}</p>
+              </Link>
+              <Link to={`/fixtures/${p.fixtureId}#previous-meetings`} aria-label={`View previous meetings for ${p.homeName} versus ${p.awayName}`} style={{ display: 'block', color: 'inherit', textDecoration: 'none' }}>
+                <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 2 }}>
+                  {p.homeName} v {p.awayName}
+                </div>
+                <p style={{ fontSize: 14, lineHeight: 1.6, color: 'var(--muted)', margin: 0 }}>{p.text}</p>
+              </Link>
             </div>
           ))}
         </section>
