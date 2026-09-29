@@ -112,16 +112,61 @@ function drawTable(ctx, { x, y, width, columns, rows, rowHeight = 48 }) {
   return y + headerHeight + rows.length * rowHeight
 }
 
+function drawTeamChart(ctx, { x, y, width, rows }) {
+  const data = rows.length ? rows : [{ team: 'No points recorded', points: '0' }]
+  const rowHeight = 51
+  const chartHeight = 44 + data.length * rowHeight
+  const labelWidth = width * 0.51
+  const barWidth = width - labelWidth - 73
+  const maximum = Math.max(10, ...data.map((row) => Number(row.points) || 0))
+  roundRect(ctx, x, y, width, chartHeight, 10, '#f4f6f8')
+  ctx.fillStyle = '#17212b'
+  ctx.fillRect(x, y, width, 44)
+  ctx.fillStyle = '#ffffff'
+  ctx.font = '700 16px Arial'
+  ctx.fillText('TEAM', x + 16, y + 28)
+  ctx.fillText('SEASON DISCIPLINE POINTS', x + labelWidth, y + 28)
+
+  data.forEach((row, index) => {
+    const top = y + 44 + index * rowHeight
+    if (index % 2 === 1) {
+      ctx.fillStyle = '#e9edf0'
+      ctx.fillRect(x, top, width, rowHeight)
+    }
+    ctx.fillStyle = '#17212b'
+    ctx.font = '600 16px Arial'
+    const nameLines = wrapLines(ctx, row.team, labelWidth - 25).slice(0, 2)
+    nameLines.forEach((line, lineIndex) => ctx.fillText(line, x + 16, top + (nameLines.length === 2 ? 19 : 31) + lineIndex * 17))
+    const value = Math.max(0, Number(row.points) || 0)
+    roundRect(ctx, x + labelWidth, top + 17, barWidth, 17, 4, '#d8dee3')
+    if (value > 0) roundRect(ctx, x + labelWidth, top + 17, Math.max(5, barWidth * value / maximum), 17, 4, '#b59025')
+    ctx.textAlign = 'right'
+    ctx.font = '800 19px Arial'
+    ctx.fillText(String(value), x + width - 16, top + 32)
+    ctx.textAlign = 'left'
+  })
+  return y + chartHeight
+}
+
 function makeGraphic({ reportDate, weekendRows, teamRows, bans, season }) {
   const width = 1600
   const margin = 60
   const columnGap = 40
   const columnWidth = (width - margin * 2 - columnGap) / 2
   const weekendHeight = 44 + Math.max(1, weekendRows.length) * 54
-  const teamHeight = 44 + Math.max(1, teamRows.length) * 44
-  const firstSectionBottom = 190 + Math.max(weekendHeight, teamHeight)
-  const bansHeight = 44 + Math.max(1, bans.length) * 58
-  const height = Math.max(980, firstSectionBottom + bansHeight + 170)
+  const teamHeight = 44 + Math.max(1, teamRows.length) * 51
+  const firstSectionBottom = 210 + Math.max(weekendHeight, teamHeight)
+  const currentBans = bans.filter((ban) => !ban.indefinite)
+  const indefiniteBans = Array.from(new Map(
+    bans.filter((ban) => ban.indefinite).map((ban) => [normalName(ban.player), ban])
+  ).values())
+  const bansHeight = 44 + Math.max(1, currentBans.length) * 58
+  const indefiniteRows = Math.ceil(indefiniteBans.length / 5)
+  const bansY = firstSectionBottom + 55
+  const tableEnd = bansY + 20 + bansHeight
+  const indefiniteY = tableEnd + 60
+  const endY = indefiniteBans.length ? indefiniteY + 40 + indefiniteRows * 49 : tableEnd
+  const height = Math.max(980, endY + 115)
 
   const canvas = document.createElement('canvas')
   canvas.width = width
@@ -130,27 +175,29 @@ function makeGraphic({ reportDate, weekendRows, teamRows, bans, season }) {
 
   ctx.fillStyle = '#ffffff'
   ctx.fillRect(0, 0, width, height)
-  ctx.fillStyle = '#b59025'
-  ctx.fillRect(0, 0, width, 22)
-
   ctx.fillStyle = '#17212b'
+  ctx.fillRect(0, 0, width, 145)
+  ctx.fillStyle = '#b59025'
+  ctx.fillRect(0, 0, width, 13)
+
+  ctx.fillStyle = '#ffffff'
   ctx.font = '800 42px Arial'
-  ctx.fillText('ECFA WEEKLY DISCIPLINE', margin, 82)
+  ctx.fillText('ECFA WEEKLY DISCIPLINE', margin, 76)
   ctx.font = '600 21px Arial'
-  ctx.fillStyle = '#58636d'
-  ctx.fillText(`${season} · Matchday: ${displayDate(reportDate)}`, margin, 120)
+  ctx.fillStyle = '#d8dee3'
+  ctx.fillText(`${season}  ·  Matchday: ${displayDate(reportDate)}`, margin, 113)
 
   ctx.textAlign = 'right'
   ctx.font = '700 17px Arial'
-  ctx.fillStyle = '#b59025'
-  ctx.fillText('YELLOW = 2 POINTS · RED = 4 POINTS', width - margin, 82)
+  ctx.fillStyle = '#f4cb59'
+  ctx.fillText('YELLOW  2 PTS    ·    RED  4 PTS', width - margin, 76)
   ctx.textAlign = 'left'
 
-  drawTitle(ctx, 'Cards this matchday', margin, 170)
+  drawTitle(ctx, 'Cards this matchday', margin, 190)
   const weekendData = weekendRows.length ? weekendRows : [{ player: 'No cards recorded', team: '', cards: '', weekend: '', season: '' }]
   drawTable(ctx, {
     x: margin,
-    y: 190,
+    y: 210,
     width: columnWidth,
     rowHeight: 54,
     columns: [
@@ -163,24 +210,17 @@ function makeGraphic({ reportDate, weekendRows, teamRows, bans, season }) {
     rows: weekendData,
   })
 
-  drawTitle(ctx, 'Total points by team', margin + columnWidth + columnGap, 170)
-  const teamData = teamRows.length ? teamRows : [{ team: 'No points recorded', points: '' }]
-  drawTable(ctx, {
+  drawTitle(ctx, 'Total points by team', margin + columnWidth + columnGap, 190)
+  drawTeamChart(ctx, {
     x: margin + columnWidth + columnGap,
-    y: 190,
+    y: 210,
     width: columnWidth,
-    rowHeight: 44,
-    columns: [
-      { key: 'team', label: 'Team', ratio: 0.82 },
-      { key: 'points', label: 'Points', ratio: 0.18 },
-    ],
-    rows: teamData,
+    rows: teamRows,
   })
 
-  const bansY = firstSectionBottom + 70
   drawTitle(ctx, 'Current bans', margin, bansY)
-  const banData = bans.length ? bans : [{ player: 'No current bans', team: '', ban: '', progress: '' }]
-  const endY = drawTable(ctx, {
+  const banData = currentBans.length ? currentBans : [{ player: 'No current match or date bans', team: '', ban: '', progress: '' }]
+  drawTable(ctx, {
     x: margin,
     y: bansY + 20,
     width: width - margin * 2,
@@ -194,11 +234,28 @@ function makeGraphic({ reportDate, weekendRows, teamRows, bans, season }) {
     rows: banData,
   })
 
+  if (indefiniteBans.length) {
+    drawTitle(ctx, 'Indefinite bans', margin, indefiniteY)
+    ctx.font = '16px Arial'
+    ctx.fillStyle = '#58636d'
+    ctx.fillText('Players currently banned indefinitely', margin + 235, indefiniteY)
+    const cellWidth = (width - margin * 2 - 4 * 12) / 5
+    indefiniteBans.forEach((ban, index) => {
+      const x = margin + (index % 5) * (cellWidth + 12)
+      const y = indefiniteY + 20 + Math.floor(index / 5) * 49
+      roundRect(ctx, x, y, cellWidth, 39, 5, '#e9edf0')
+      ctx.fillStyle = '#17212b'
+      ctx.font = '700 16px Arial'
+      const name = ban.player || 'Unknown player'
+      ctx.fillText(name, x + 11, y + 25, cellWidth - 22)
+    })
+  }
+
   ctx.fillStyle = '#b59025'
-  ctx.fillRect(margin, endY + 42, width - margin * 2, 4)
+  ctx.fillRect(margin, endY + 27, width - margin * 2, 3)
   ctx.font = '16px Arial'
   ctx.fillStyle = '#58636d'
-  ctx.fillText('Generated from the live Edinburgh Churches Football Association website.', margin, endY + 78)
+  ctx.fillText('Generated from the live Edinburgh Churches Football Association website.', margin, endY + 58)
 
   return canvas
 }
@@ -456,7 +513,7 @@ export default function WeeklyDisciplineReport() {
         ban += ' - minimum 12-month ban'
         progress = `Available ${available.toLocaleDateString('en-GB')}`
       }
-      return active ? { ...row, ban, progress } : null
+      return active ? { ...row, ban, progress, indefinite: Boolean(tier.lifetime) } : null
     }).filter(Boolean)
 
     const manualBans = activeManual.map((row) => {
@@ -467,6 +524,7 @@ export default function WeeklyDisciplineReport() {
         player: fullName(row.player),
         team: row.team?.name || 'No team',
         ban: row.reason || (row.is_lifetime ? 'Indefinite ban' : 'Suspension'),
+        indefinite: Boolean(row.is_lifetime),
         progress: row.is_lifetime
           ? 'Indefinite / lifetime'
           : row.available_from
@@ -480,6 +538,7 @@ export default function WeeklyDisciplineReport() {
       team: row.team?.name || 'No team',
       ban: row.ban,
       progress: row.progress,
+      indefinite: row.indefinite,
     }))
 
     const bans = [...automaticBans, ...manualBans].sort((a, b) => {
