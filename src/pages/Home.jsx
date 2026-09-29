@@ -106,7 +106,7 @@ function computeStandings(teams, fixtures) {
 
 async function loadCompetition(meta) {
   const { data: comp } = await supabase.from('competitions').select('id').eq('slug', meta.slug).single()
-  if (!comp) return { ...meta, fixtures: [], groupTeams: {} }
+  if (!comp) return { ...meta, fixtures: [], groupTeams: {}, groupNames: {} }
 
   const { data: stages } = await supabase
     .from('stages')
@@ -125,9 +125,11 @@ async function loadCompetition(meta) {
     .eq('hidden_from_public', false)
 
   const groupTeams = {}
+  const groupNames = {}
   for (const stage of stages || []) {
     if (stage.stage_type !== 'group') continue
     for (const group of stage.groups || []) {
+      groupNames[group.id] = group.name
       const { data: stageTeams } = await supabase
         .from('stage_teams')
         .select('team:team_id(id, name, logo_url)')
@@ -144,7 +146,7 @@ async function loadCompetition(meta) {
     isGroupStage: groupStageIds.has(f.stage_id),
   }))
 
-  return { ...meta, fixtures: taggedFixtures, groupTeams }
+  return { ...meta, fixtures: taggedFixtures, groupTeams, groupNames }
 }
 
 function pickDefaultDate(days, todayStr, mode) {
@@ -225,9 +227,10 @@ function previewSentenceForFixture(f, comp, groupTeams, info) {
 
     const homeRank = projectedRank(f.home_team?.id)
     const awayRank = projectedRank(f.away_team?.id)
+    const groupContext = `${comp.name} ${comp.groupNames?.[f.group_id] || 'group'}`
     const bits = []
-    if (homeRank) bits.push(`a win could move ${homeName} to ${ordinal(homeRank)}`)
-    if (awayRank) bits.push(`a win for ${awayName} could take them to ${ordinal(awayRank)}`)
+    if (homeRank) bits.push(`a win could move ${homeName} to ${ordinal(homeRank)} in ${groupContext}`)
+    if (awayRank) bits.push(`a win for ${awayName} could take them to ${ordinal(awayRank)} in ${groupContext}`)
     if (bits.length) parts.push(bits.join(', while ') + ' — depending on other results.')
   } else if (info?.cupRun) {
     const describeCupRun = (teamName, run, teamId) => {
@@ -865,6 +868,7 @@ export default function Home() {
         items.push({
           fixtureId: f.id,
           compName: comp.name,
+          groupName: comp.groupNames?.[f.group_id],
           homeName: f.home_team?.name,
           awayName: f.away_team?.name,
           text,
@@ -973,6 +977,9 @@ export default function Home() {
           </h2>
           {previewParagraphs.map((p) => (
             <div key={p.fixtureId} style={{ marginBottom: 14 }}>
+              <div style={{ fontSize: 12, fontWeight: 800, color: 'var(--brass)', marginBottom: 3 }}>
+                {p.compName}{p.groupName ? ` · ${p.groupName}` : ''}
+              </div>
               <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 2 }}>
                 {p.homeName} v {p.awayName}
               </div>
@@ -1018,7 +1025,7 @@ export default function Home() {
       {featuredCompetition?.slug === 'appin-league' && appinStandings.length > 0 && (
         <section style={{ marginBottom: 40 }}>
           <h2 style={{ fontSize: 13, textTransform: 'uppercase', letterSpacing: 0.5, color: 'var(--muted)', marginBottom: 12 }}>
-            League Table
+            Appin Sports League Table
           </h2>
           <StandingsTable rows={appinStandings} />
         </section>
