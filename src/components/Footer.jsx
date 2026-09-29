@@ -3,6 +3,15 @@ import { useEffect, useState } from 'react'
 import { supabase } from '../supabaseClient'
 import { getVisitId, recordVisit } from '../utils/webAnalytics'
 
+const entryId = crypto.randomUUID()
+const isExternalEntry = (() => {
+  const navigation = performance.getEntriesByType('navigation')[0]
+  if (navigation?.type === 'reload') return false
+  try { return !document.referrer || new URL(document.referrer).origin !== window.location.origin }
+  catch { return true }
+})()
+let entryRecorded = false
+
 export default function Footer() {
   const location = useLocation()
   const navigate = useNavigate()
@@ -24,6 +33,10 @@ export default function Footer() {
 
     async function track() {
       if (!location.pathname.startsWith('/admin') && !location.pathname.startsWith('/discipline')) {
+        if (isExternalEntry && !entryRecorded) {
+          entryRecorded = true
+          supabase.rpc('record_site_arrival', { p_arrival_id: entryId }).then(() => {})
+        }
         await supabase.rpc('record_page_view', { view_path: location.pathname, p_visit_id: getVisitId() })
       }
       const { data } = await supabase.rpc('get_public_web_summary')

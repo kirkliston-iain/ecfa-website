@@ -26,7 +26,7 @@ function makeDailySeries(rows) {
 function DailyChart({ rows }) {
   const width = 720
   const height = 250
-  const pad = { top: 18, right: 12, bottom: 42, left: 42 }
+  const pad = { top: 30, right: 12, bottom: 42, left: 42 }
   const maximum = Math.max(5, ...rows.map((row) => row.views))
   const chartHeight = height - pad.top - pad.bottom
   const chartWidth = width - pad.left - pad.right
@@ -50,17 +50,17 @@ function DailyChart({ rows }) {
         {rows.map((row, index) => {
           const barHeight = (row.views / tickMaximum) * chartHeight
           return (
-            <rect
-              key={row.date}
-              x={pad.left + index * slot + 1}
-              y={pad.top + chartHeight - barHeight}
-              width={Math.max(2, slot - 2)}
-              height={barHeight}
-              fill="var(--brass)"
-              rx="1"
-            >
-              <title>{row.date}: {row.views} page views</title>
-            </rect>
+            <g key={row.date}>
+              <rect
+                x={pad.left + index * slot + 1}
+                y={pad.top + chartHeight - barHeight}
+                width={Math.max(2, slot - 2)}
+                height={barHeight}
+                fill="var(--brass)"
+                rx="1"
+              ><title>{row.date}: {row.views} page views</title></rect>
+              <text x={pad.left + index * slot + slot / 2} y={pad.top + chartHeight - barHeight - 6} textAnchor="middle" fontSize="12" fontWeight="700" fill="var(--ink)">{row.views.toLocaleString()}</text>
+            </g>
           )
         })}
         {rows.map((row) => {
@@ -290,6 +290,23 @@ export default function AdminWebStats() {
         Actual page views across the ECFA website.
       </p>
 
+      <section style={{ ...panelStyle, marginBottom: 16 }}>
+        <h2 style={{ color: 'var(--brass)', fontSize: 20, margin: '0 0 8px' }}>Individual visits</h2>
+        <p style={{ color: 'var(--muted)', fontSize: 13, margin: '0 0 14px' }}>One visit when someone enters ECFA from another site or directly. Moving between ECFA pages does not add another. Someone returning later can count again. Tracking starts with this update.</p>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 24, marginBottom: 14 }}>
+          <div><strong style={{ fontSize: 27 }}>{Number(stats?.arrivals_today || 0).toLocaleString()}</strong><div>Today</div></div>
+          <div><strong style={{ fontSize: 27 }}>{Number(stats?.arrivals_7 || 0).toLocaleString()}</strong><div>Last 7 days</div></div>
+          <div><strong style={{ fontSize: 27 }}>{Number(stats?.arrivals_30 || 0).toLocaleString()}</strong><div>Last 30 days</div></div>
+        </div>
+        <details><summary style={{ cursor: 'pointer', fontWeight: 700 }}>Visits by day</summary>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(105px, 1fr))', gap: 8, marginTop: 12, fontSize: 13 }}>
+            {(stats?.daily_arrivals || []).map((day) => <div key={day.date} style={{ borderBottom: '1px solid var(--line)', padding: '5px 0' }}>
+              {new Date(`${day.date}T12:00:00`).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}: <strong>{Number(day.arrivals).toLocaleString()}</strong>
+            </div>)}
+          </div>
+        </details>
+      </section>
+
       <section style={panelStyle}>
         <h2 style={{ color: 'var(--brass)', fontSize: 20, margin: '0 0 8px' }}>Daily totals</h2>
         <div style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 12 }}>Page views over the last 7 days</div>
@@ -297,7 +314,9 @@ export default function AdminWebStats() {
       </section>
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(170px, 1fr))', gap: 12, margin: '16px 0 34px' }}>
+        <TotalCard title="Last 7 days" value={stats?.page_views_7} onClick={() => selectHistory({ title: 'Last 7 days', days: 7 })} />
         <TotalCard title="Last 30 days" value={stats?.last_30} onClick={() => selectHistory({ title: 'Last 30 days', days: 30 })} />
+        <section style={totalCardStyle}><div style={{ color: 'var(--brass)', fontWeight: 800, fontSize: 14 }}>Daily average · 30 days</div><div style={{ fontSize: 38, lineHeight: 1.15, fontWeight: 900, marginTop: 8 }}>{Math.round(Number(stats?.last_30 || 0) / 30).toLocaleString()}</div><div style={{ color: 'var(--muted)', fontSize: 14 }}>Page views per day</div></section>
         <TotalCard title="Last 60 days" value={stats?.last_60} onClick={() => selectHistory({ title: 'Last 60 days', days: 60 })} />
         <TotalCard title="Last year" value={stats?.last_year} onClick={() => selectHistory({ title: 'Last year', days: 365 })} />
         <TotalCard title="All time" value={stats?.all_time} onClick={() => selectHistory({ title: 'Tracked visit history', days: 365 })} />
