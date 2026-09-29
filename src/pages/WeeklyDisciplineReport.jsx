@@ -104,21 +104,24 @@ function drawTable(ctx, { x, y, width, columns, rows, rowHeight = 48 }) {
     let cellX = x + 16
     columns.forEach((column) => {
       const value = row[column.key] ?? ''
+      ctx.font = '600 16px Arial'
+      ctx.fillStyle = '#17212b'
       if (column.key === 'cards' && value) {
-        const cards = [...String(value).matchAll(/(\d+)([YR])/g)]
-        cards.forEach((card, cardIndex) => {
-          const centerX = cellX + 18 + cardIndex * 37
+        const cards = [...String(value).matchAll(/(\d+)([YR])/g)].flatMap((card) =>
+          Array(Math.max(0, Number(card[1]))).fill(card[2])
+        )
+        cards.slice(0, 3).forEach((colour, cardIndex) => {
+          const centerX = cellX + 14 + cardIndex * 27
           const centerY = top + rowHeight / 2
           ctx.beginPath()
-          ctx.arc(centerX, centerY, 15, 0, Math.PI * 2)
-          ctx.fillStyle = card[2] === 'Y' ? '#e7b82c' : '#ba3030'
+          ctx.arc(centerX, centerY, 12, 0, Math.PI * 2)
+          ctx.fillStyle = colour === 'Y' ? '#e7b82c' : '#ba3030'
           ctx.fill()
-          ctx.fillStyle = card[2] === 'Y' ? '#17212b' : '#ffffff'
-          ctx.font = '800 16px Arial'
-          ctx.textAlign = 'center'
-          ctx.fillText(card[1], centerX, centerY + 6)
-          ctx.textAlign = 'left'
         })
+        if (cards.length > 3) {
+          ctx.fillStyle = '#17212b'
+          ctx.fillText(`+${cards.length - 3}`, cellX + 85, top + rowHeight / 2 + 6)
+        }
         cellX += width * column.ratio
         return
       }
