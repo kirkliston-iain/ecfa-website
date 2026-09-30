@@ -47,10 +47,9 @@ export default function HistoricalSeason() {
   const [seasonSummaries, setSeasonSummaries] = useState([])
   const [season, setSeason] = useState(params.get('season') || '')
   const [teams, setTeams] = useState([])
-  const [teamId, setTeamId] = useState('')
+  const [teamName, setTeamName] = useState('')
   const [loading, setLoading] = useState(false)
-  const [fixtures, setFixtures] = useState([])
-  const [seasonFixtures, setSeasonFixtures] = useState([]) // unfiltered by team, for table/honours
+  const [seasonFixtures, setSeasonFixtures] = useState([])
   const [storedLeagueTable, setStoredLeagueTable] = useState([])
   const [seasonScorers, setSeasonScorers] = useState([])
 
@@ -126,48 +125,46 @@ export default function HistoricalSeason() {
   }, [])
   useEffect(() => {
     if (!season) {
-      setFixtures([])
       setSeasonFixtures([])
       setStoredLeagueTable([])
       setSeasonScorers([])
+      setLoading(false)
       return
     }
+    let cancelled = false
     setLoading(true)
+    setSeasonFixtures([])
+    setStoredLeagueTable([])
+    setSeasonScorers([])
 
-    supabase
-      .from('historic_fixtures')
-      .select('id, competition_name, fixture_date, home_team_name, home_team_id, home_goals, away_team_name, away_team_id, away_goals, comment, penalty_winner_name')
-      .eq('season', season)
-      .then(({ data }) => setSeasonFixtures(data || []))
-
-    supabase
-      .from('historic_league_tables')
-      .select('position, team_name, played, won, drawn, lost, goal_difference, points')
-      .eq('season', season)
-      .order('position')
-      .then(({ data }) => setStoredLeagueTable(data || []))
-
-    supabase
-      .from('historic_scorers')
-      .select('player_name, team_name, goals')
-      .eq('season', season)
-      .range(0, 9999)
-      .then(({ data }) => setSeasonScorers(data || []))
-
-    let query = supabase
-      .from('historic_fixtures')
-      .select('id, competition_name, fixture_date, home_team_name, home_team_id, home_goals, away_team_name, away_team_id, away_goals, comment, penalty_winner_name')
-      .eq('season', season)
-
-    if (teamId) {
-      query = query.or(`home_team_id.eq.${teamId},away_team_id.eq.${teamId}`)
-    }
-
-    query.order('fixture_date').then(({ data }) => {
-      setFixtures(data || [])
+    async function loadSeason() {
+      const [fixtureResult, tableResult, scorerResult] = await Promise.all([
+        supabase.from('historic_fixtures')
+          .select('id, competition_name, fixture_date, home_team_name, home_team_id, home_goals, away_team_name, away_team_id, away_goals, comment, penalty_winner_name')
+          .eq('season', season).order('fixture_date').range(0, 9999),
+        supabase.from('historic_league_tables')
+          .select('position, team_name, played, won, drawn, lost, goal_difference, points')
+          .eq('season', season).order('position'),
+        supabase.from('historic_scorers')
+          .select('player_name, team_name, goals').eq('season', season).range(0, 9999),
+      ])
+      if (cancelled) return
+      setSeasonFixtures(fixtureResult.data || [])
+      setStoredLeagueTable(tableResult.data || [])
+      setSeasonScorers(scorerResult.data || [])
       setLoading(false)
-    })
-  }, [season, teamId])
+    }
+    loadSeason()
+    return () => { cancelled = true }
+  }, [season])
+
+  const seasonTeams = [...new Set(seasonFixtures.flatMap((fixture) =>
+    [fixture.home_team_name, fixture.away_team_name].map((name) => String(name || '').trim()).filter(Boolean)
+  ))].sort((left, right) => left.localeCompare(right))
+  const fixtures = teamName
+    ? seasonFixtures.filter((fixture) => [fixture.home_team_name, fixture.away_team_name]
+      .some((name) => String(name || '').trim() === teamName))
+    : seasonFixtures
 
   const grouped = {}
   for (const f of fixtures) {
@@ -314,7 +311,7 @@ export default function HistoricalSeason() {
                 type="button"
                 onClick={() => {
                   setSeason(entry.season)
-                  setTeamId('')
+                  setTeamName('')
                   setParams({ season: entry.season })
                   window.scrollTo({ top: 0, left: 0, behavior: 'auto' })
                 }}
@@ -340,7 +337,7 @@ export default function HistoricalSeason() {
           type="button"
           onClick={() => {
             setSeason('')
-            setTeamId('')
+            setTeamName('')
             setParams({})
             window.scrollTo({ top: 0, left: 0, behavior: 'auto' })
           }}
@@ -357,7 +354,7 @@ export default function HistoricalSeason() {
         onChange={(e) => {
           const nextSeason = e.target.value
           setSeason(nextSeason)
-          setTeamId('')
+          setTeamName('')
           setParams(nextSeason ? { season: nextSeason } : {})
           window.scrollTo({ top: 0, left: 0, behavior: 'auto' })
         }}
@@ -402,8 +399,8 @@ export default function HistoricalSeason() {
 
       {season && (
         <select
-          value={teamId}
-          onChange={(e) => setTeamId(e.target.value)}
+          value={teamName}
+          onChange={(e) => setTeamName(e.target.value)}
           style={{
             width: '100%',
             boxSizing: 'border-box',
@@ -417,9 +414,9 @@ export default function HistoricalSeason() {
           }}
         >
           <option value="">All teams</option>
-          {teams.map((t) => (
-            <option key={t.id} value={t.id}>
-              {t.name}
+          {seasonTeams.map((name) => (
+            <option key={name} value={name}>
+              {name}
             </option>
           ))}
         </select>

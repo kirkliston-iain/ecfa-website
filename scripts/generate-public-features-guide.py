@@ -117,7 +117,7 @@ story.append(card_grid([
     ('Teams and Referees', 'Dedicated statistical views for clubs, players and match officials.'),
     ('Downloads and Search', 'Export public data or search names, teams, competitions and pages.'),
 ]))
-story += [Spacer(1, 8), p('<b>Tip:</b> On a phone, swipe the top navigation left or right to reveal additional sections. Use the Share button beside the ECFA name to send a link to the page you are viewing. If sharing is unavailable, it copies the link.', 'Bodyx')]
+story += [Spacer(1, 8), p('<b>Tip:</b> On a phone, swipe the top navigation left or right to reveal additional sections.', 'Bodyx')]
 story += [Spacer(1, 7)] + section_title('2. Match Hub', 'The Match Hub brings the main matchday information together in one place.')
 story.append(card_grid([
     ('Browse by date', 'Move between available matchdays to see a particular weekend. The website remembers the date being viewed when navigating away and returning.'),
@@ -160,7 +160,7 @@ story += section_title('6. Honours and historical records')
 story.append(card_grid([
     ('Major honours', 'A season-by-season grid records winners of the League, League Cup, Knockout Cup and Brian Latto Cup.'),
     ('All-time honours table', 'Compare clubs by competition wins and total major honours.'),
-    ('Historical seasons', 'Browse archived league tables, fixtures and results from previous campaigns where records are available.'),
+    ('Historical seasons', 'Browse archived league tables, fixtures and results from previous campaigns. Filter each season’s fixtures by the teams recorded in that season, including clubs no longer active.'),
     ('Linked team records', 'Team names in honours and historical areas link back to current team pages when a match is available.'),
 ]))
 story += [Spacer(1, 10)] + section_title('7. Referee information', 'The referee section builds a public statistical picture from recorded appointments and discipline data.')
