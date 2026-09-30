@@ -124,7 +124,8 @@ function visitTimeline(visit, labels) {
     const text = row.action === 'search_result' ? `Opened “${row.item}” from search`
       : row.action === 'team_selection' ? `Selected ${row.item} in Teams`
         : row.action === 'download' ? `Downloaded ${row.item}`
-          : row.action === 'view' ? `Viewed ${row.item}` : `${row.action}: ${row.item}`
+          : row.action === 'view' ? `Viewed ${row.item}`
+            : row.action === 'sponsor_click' ? `Clicked sponsor link: ${row.item}` : `${row.action}: ${row.item}`
     return [{ at: row.at, text }]
   })
 }
@@ -352,12 +353,14 @@ export default function AdminWebStats() {
       <h2 style={{ fontSize: 24, marginBottom: 4 }}>Visits and activity</h2>
       <p style={{ color: 'var(--muted)', marginTop: 0, fontSize: 13 }}>New tracking, covering the last 30 days from when this feature was added. Time is an estimate while the tab is active; old page views cannot be used to calculate visit length.</p>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(170px, 1fr))', gap: 12, margin: '16px 0 20px' }}>
+        <button type="button" onClick={() => selectHistory({ title: 'Appin Sports sponsor link clicks', days: 30, action: 'sponsor_click' })} style={metricButtonStyle}><strong>Appin Sports link clicks</strong><span>{Number(engagement?.sponsor_clicks_30 || 0).toLocaleString()}</span><small>Last 30 days · {Number(engagement?.sponsor_clicks_all_time || 0).toLocaleString()} since tracking began</small></button>
         <button type="button" onClick={() => selectHistory({ title: 'Visits by active time', days: 30 })} style={metricButtonStyle}><strong>Average time per visit</strong><span>{formatDuration(engagement?.average_seconds_30)}</span><small>{Number(engagement?.visits_30 || 0).toLocaleString()} tracked visits</small></button>
         <button type="button" onClick={() => selectHistory({ title: 'Visits with downloads', days: 30, action: 'download' })} style={metricButtonStyle}><strong>Downloads</strong><span>{Number(engagement?.downloads_30 || 0).toLocaleString()}</span><small>Last 30 days</small></button>
         <button type="button" onClick={() => selectHistory({ title: 'Visits with views', days: 30, action: 'view' })} style={metricButtonStyle}><strong>Document/report views</strong><span>{Number(engagement?.views_30 || 0).toLocaleString()}</span><small>Last 30 days</small></button>
         <button type="button" onClick={() => selectHistory({ title: 'Visits from Search', days: 30, action: 'search_result' })} style={metricButtonStyle}><strong>Search result opens</strong><span>{Number(engagement?.search_clicks_30 || 0).toLocaleString()}</span><small>Last 30 days</small></button>
       </div>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: 14, marginBottom: 34 }}>
+        <InteractionTable title="Sponsor links clicked" rows={interactions.filter((row) => row.action === 'sponsor_click')} empty="No sponsor link clicks yet." onSelect={(row) => selectHistory({ title: row.item, days: 30, action: row.action, item: row.item })} />
         <InteractionTable title="What was downloaded" rows={interactions.filter((row) => row.action === 'download')} empty="No tracked downloads yet." onSelect={(row) => selectHistory({ title: row.item, days: 30, action: row.action, item: row.item })} />
         <InteractionTable title="What was viewed" rows={interactions.filter((row) => row.action === 'view')} empty="No tracked document or report views yet." onSelect={(row) => selectHistory({ title: row.item, days: 30, action: row.action, item: row.item })} />
         <InteractionTable title="Pages opened from Search" rows={interactions.filter((row) => row.action === 'search_result')} empty="No search result opens yet." onSelect={(row) => selectHistory({ title: row.item, days: 30, action: row.action, item: row.item })} />

@@ -6,6 +6,7 @@ import MatchdayCarousel from '../components/MatchdayCarousel'
 import StandingsTable from '../components/StandingsTable'
 import KnockoutBracket from '../components/KnockoutBracket'
 import { cleanVenueName, isVenueLinkable, venueHistoryUrl } from '../utils/venueGrouping'
+import { trackInteraction } from '../utils/webAnalytics'
 
 const APPIN_LOGO = '/sponsors/appin-sports.png'
 const MATCH_HUB_DATE_KEY = 'ecfa-match-hub-selected-date'
@@ -946,6 +947,12 @@ export default function Home() {
       <p style={{ color: 'var(--muted)', marginBottom: 20 }}>
         Results and fixtures across every ECFA competition.
       </p>
+
+      <a href="https://appinsports.com/" target="_blank" rel="noopener noreferrer" onClick={() => trackInteraction('sponsor_click', 'Appin Sports — Match Hub')} style={{ display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap', padding: '16px 18px', marginBottom: 24, border: '1px solid var(--line)', borderLeft: '5px solid var(--brass)', borderRadius: 8, color: 'var(--ink)', textDecoration: 'none', background: '#fff' }} aria-label="Visit Appin Sports, ECFA league sponsor (opens in a new tab)">
+        <img src={APPIN_LOGO} alt="Appin Sports" style={{ width: 120, height: 54, objectFit: 'contain' }} />
+        <span style={{ flex: '1 1 180px' }}><strong style={{ display: 'block', fontSize: 17 }}>Appin Sports</strong><span style={{ color: 'var(--muted)', fontSize: 13 }}>Proud sponsor of the ECFA league</span></span>
+        <span style={{ color: 'var(--brass)', fontWeight: 800, fontSize: 14 }}>Visit sponsor ↗</span>
+      </a>
 
       <section style={{ marginBottom: 24, padding: 18, border: '1px solid var(--line)', borderRadius: 8, background: '#f7f8f9', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' }}>
         <div style={{ flex: '1 1 260px' }}>
