@@ -948,21 +948,11 @@ export default function Home() {
         Results and fixtures across every ECFA competition.
       </p>
 
-      <a href="https://appinsports.com/" target="_blank" rel="noopener noreferrer" onClick={() => trackInteraction('sponsor_click', 'Appin Sports — Match Hub')} style={{ display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap', padding: '16px 18px', marginBottom: 24, border: '1px solid var(--line)', borderLeft: '5px solid var(--brass)', borderRadius: 8, color: 'var(--ink)', textDecoration: 'none', background: '#fff' }} aria-label="Visit Appin Sports, ECFA league sponsor (opens in a new tab)">
-        <img src={APPIN_LOGO} alt="Appin Sports" style={{ width: 120, height: 54, objectFit: 'contain' }} />
-        <span style={{ flex: '1 1 180px' }}><strong style={{ display: 'block', fontSize: 17 }}>Appin Sports</strong><span style={{ color: 'var(--muted)', fontSize: 13 }}>Proud sponsor of the ECFA league</span></span>
-        <span style={{ color: 'var(--brass)', fontWeight: 800, fontSize: 14 }}>Visit sponsor ↗</span>
+      <a href="https://appinsports.com/" target="_blank" rel="noopener noreferrer" onClick={() => trackInteraction('sponsor_click', 'Appin Sports — Match Hub')} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 14px', marginBottom: 24, border: '1px solid var(--line)', borderLeft: '5px solid var(--brass)', borderRadius: 8, color: 'var(--ink)', textDecoration: 'none', background: '#fff' }} aria-label="Visit Appin Sports, ECFA league sponsor (opens in a new tab)">
+        <img src={APPIN_LOGO} alt="Appin Sports" style={{ width: 76, height: 36, objectFit: 'contain', flexShrink: 0 }} />
+        <span style={{ flex: 1, minWidth: 0 }}><strong style={{ display: 'block', fontSize: 15 }}>Appin Sports</strong><span style={{ color: 'var(--muted)', fontSize: 12 }}>ECFA league sponsor</span></span>
+        <span style={{ color: 'var(--brass)', fontWeight: 800, fontSize: 13, whiteSpace: 'nowrap' }}>Visit ↗</span>
       </a>
-
-      <section style={{ marginBottom: 24, padding: 18, border: '1px solid var(--line)', borderRadius: 8, background: '#f7f8f9', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' }}>
-        <div style={{ flex: '1 1 260px' }}>
-          <div style={{ fontWeight: 800, marginBottom: 4 }}>Spotted a website problem?</div>
-          <div style={{ color: 'var(--muted)', fontSize: 13 }}>Report an error, broken page or suggest a new feature. Contact details are optional.</div>
-        </div>
-        <Link to="/contact?type=Website%20Error" style={{ padding: '11px 15px', borderRadius: 6, background: 'var(--ink)', color: '#fff', fontWeight: 700, textDecoration: 'none', whiteSpace: 'nowrap' }}>
-          Report error or request feature
-        </Link>
-      </section>
 
       <MatchdayCarousel days={allDays} selected={selectedDate} onSelect={setSelectedDate} />
 

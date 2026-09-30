@@ -110,7 +110,7 @@ story.append(PageBreak())
 # Getting started + match hub
 story += section_title('1. Getting around the website', 'The website is designed for phones, tablets and computers. The main navigation bar scrolls horizontally on smaller screens, so every section remains available without crowding the display.')
 story.append(card_grid([
-    ('Match Hub', 'The front page for fixtures and results, organised by match date. An Appin Sports sponsor card links to the sponsor website.'),
+    ('Match Hub', 'The front page for fixtures and results, organised by match date. A compact Appin Sports sponsor link opens the sponsor website.'),
     ('Competitions', 'League tables, cup structures, fixtures, results and competition detail.'),
     ('Scorers', 'Current-season and all-time goalscorer tables with player links.'),
     ('Honours and History', 'Past winners, team honours and previous-season records.'),
