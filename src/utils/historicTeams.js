@@ -4,6 +4,7 @@ export const HISTORIC_TEAM_ALIASES = {
   'Broxburn Baptist Church FC': 'Broxburn Baptist Church',
   'Barclay Viewforth FC': 'Barclay Viewforth Church',
   'Bingham FC': 'Hope Church',
+  'Bristo Memorial': 'South East Saints',
   'Bristo Memorial FC': 'South East Saints',
   Carrubbers: 'Carrubbers Church',
   'Carrubbers FC': 'Carrubbers Church',
