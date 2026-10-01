@@ -93,6 +93,7 @@ export default function HonoursPage() {
   const [seasons, setSeasons] = useState([])
   const [finalSeason, setFinalSeason] = useState('')
   const [finalCompetitionFilter, setFinalCompetitionFilter] = useState('')
+  const [finalTeam, setFinalTeam] = useState('')
 
   useEffect(() => {
     let cancelled = false
@@ -188,9 +189,12 @@ export default function HonoursPage() {
 
   if (loading) return <div className="container" style={{ padding: 48 }}>Loading…</div>
 
+  const finalTeams = [...new Set(cupFinals.flatMap((final) => [final.home, final.away]).filter(Boolean))]
+    .sort((left, right) => left.localeCompare(right))
   const shownFinals = cupFinals.filter((final) =>
     (!finalSeason || final.season === finalSeason)
     && (!finalCompetitionFilter || final.competition === finalCompetitionFilter)
+    && (!finalTeam || final.home === finalTeam || final.away === finalTeam)
   )
 
   return (
@@ -291,7 +295,14 @@ export default function HonoursPage() {
               {COMPETITIONS.filter((competition) => competition !== 'League').map((competition) => <option key={competition} value={competition}>{competition}</option>)}
             </select>
           </label>
-          <button type="button" onClick={() => { setFinalSeason(''); setFinalCompetitionFilter('') }} style={{ ...finalSelectStyle, fontWeight: 700, cursor: 'pointer' }}>View all</button>
+          <label style={{ display: 'grid', gap: 5, flex: '1 1 170px', fontSize: 12, fontWeight: 700 }}>
+            Team
+            <select value={finalTeam} onChange={(e) => setFinalTeam(e.target.value)} style={finalSelectStyle}>
+              <option value="">All teams</option>
+              {finalTeams.map((team) => <option key={team} value={team}>{team}</option>)}
+            </select>
+          </label>
+          <button type="button" onClick={() => { setFinalSeason(''); setFinalCompetitionFilter(''); setFinalTeam('') }} style={{ ...finalSelectStyle, fontWeight: 700, cursor: 'pointer' }}>View all</button>
         </div>
         <p style={{ color: 'var(--muted)', fontSize: 12 }}>{shownFinals.length} final{shownFinals.length === 1 ? '' : 's'} shown</p>
         {shownFinals.length === 0 && <p>No finals match those filters.</p>}
