@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { supabase } from '../supabaseClient'
+import { trackInteraction } from '../utils/webAnalytics'
 
 const METRICS = [
   { value: 'goalsFor', label: 'Most Goals Scored', suffix: 'goals' },
@@ -195,7 +196,7 @@ export default function StatsPage() {
       {statsSponsors.length > 0 && (
         <div aria-label="Stats sponsors" style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 8, maxWidth: 500, margin: '12px 0 18px' }}>
           {statsSponsors.map((sponsor) => (
-            <a key={sponsor.id} href={sponsor.website_url} target="_blank" rel="noopener noreferrer" style={statsSponsorStyle}>
+            <a key={sponsor.id} href={sponsor.website_url} target="_blank" rel="noopener noreferrer" onClick={() => trackInteraction('sponsor_click', `${sponsor.name} — Stats`)} style={statsSponsorStyle}>
               {sponsor.logo_url && <img src={sponsor.logo_url} alt="" style={{ width: 46, height: 46, objectFit: 'contain', flexShrink: 0 }} />}
               <span>{sponsor.name}</span>
             </a>
