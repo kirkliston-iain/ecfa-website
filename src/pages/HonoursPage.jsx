@@ -274,12 +274,9 @@ export default function HonoursPage() {
         </table>
       </div>
 
-      <section style={{ marginTop: 28 }}>
-        <h2 style={{ fontSize: 18, margin: '0 0 4px' }}>Cup Final Results</h2>
-        <p style={{ color: 'var(--muted)', fontSize: 14, margin: '0 0 12px' }}>
-          Recorded scores and winners, including penalty shootouts and extra time.
-        </p>
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'end', marginBottom: 10 }}>
+      <section style={{ marginTop: 24 }}>
+        <h2 style={{ fontSize: 14, textTransform: 'uppercase', letterSpacing: 0.5, margin: '0 0 8px' }}>Cup Final Results</h2>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, alignItems: 'end', marginBottom: 8 }}>
           <label style={{ display: 'grid', gap: 5, flex: '1 1 150px', fontSize: 12, fontWeight: 700 }}>
             Season
             <select value={finalSeason} onChange={(e) => setFinalSeason(e.target.value)} style={finalSelectStyle}>
@@ -302,10 +299,10 @@ export default function HonoursPage() {
           const rows = shownFinals.filter((final) => final.competition === competition)
           if (!rows.length) return null
           return (
-            <div key={competition} style={{ marginTop: 14 }}>
-              <h3 style={{ fontSize: 15, margin: '0 0 5px', color: 'var(--ink)' }}>{competition}</h3>
-              <table style={{ width: '100%', tableLayout: 'fixed', borderCollapse: 'collapse', borderTop: '3px solid var(--brass)' }}>
-                <colgroup><col style={{ width: 74 }} /><col /><col style={{ width: 72 }} /></colgroup>
+            <div key={competition} style={{ marginTop: 10 }}>
+              <h3 style={{ fontSize: 13, margin: '0 0 4px', color: 'var(--ink)' }}>{competition}</h3>
+              <table style={{ width: '100%', tableLayout: 'fixed', borderCollapse: 'collapse', borderTop: '2px solid var(--brass)' }}>
+                <colgroup><col style={{ width: 65 }} /><col /><col style={{ width: 45 }} /></colgroup>
                 <thead><tr>
                   <th style={finalHeaderStyle}>Season</th>
                   <th style={finalHeaderStyle}>Teams</th>
@@ -320,7 +317,7 @@ export default function HonoursPage() {
                           <strong>{final.home}</strong> <span style={{ color: 'var(--muted)' }}>v</span> <strong>{final.away}</strong>
                         </Link>
                       ) : <><strong>{final.home}</strong> <span style={{ color: 'var(--muted)' }}>v</span> <strong>{final.away}</strong></>}
-                      {final.detail && <div style={{ color: 'var(--muted)', fontSize: 12, marginTop: 3 }}>{final.detail}</div>}
+                      {final.detail && <div style={{ color: 'var(--muted)', fontSize: 11, marginTop: 1 }}>{final.detail}</div>}
                     </td>
                     <td style={{ ...finalCellStyle, textAlign: 'right', fontWeight: 800, whiteSpace: 'nowrap', verticalAlign: 'top' }}>{final.score}</td>
                   </tr>
@@ -335,9 +332,9 @@ export default function HonoursPage() {
 }
 
 const tdStyle = { padding: '10px 8px', textAlign: 'center' }
-const finalSelectStyle = { padding: '6px 9px', borderRadius: 6, border: '1px solid var(--line)', background: '#fff', color: 'var(--ink)', font: 'inherit' }
-const finalHeaderStyle = { padding: '5px 6px', textAlign: 'left', fontSize: 11, textTransform: 'uppercase', color: 'var(--muted)' }
-const finalCellStyle = { padding: '6px 6px', fontSize: 13, lineHeight: 1.45, overflowWrap: 'anywhere' }
+const finalSelectStyle = { padding: '5px 7px', borderRadius: 6, border: '1px solid var(--line)', background: '#fff', color: 'var(--ink)', font: 'inherit' }
+const finalHeaderStyle = { padding: '4px 4px', textAlign: 'left', fontSize: 10, textTransform: 'uppercase', color: 'var(--muted)' }
+const finalCellStyle = { padding: '5px 4px', fontSize: 12, lineHeight: 1.25, overflowWrap: 'anywhere' }
 
 function thStyle(align = 'center') {
   return {
