@@ -132,13 +132,14 @@ export default function StatsPage() {
   const [season, setSeason] = useState('')
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  const [statsSponsors, setStatsSponsors] = useState([])
 
   useEffect(() => {
     window.scrollTo({ top: 0, left: 0, behavior: 'auto' })
     let cancelled = false
 
     async function load() {
-      const [{ data: fixtureRows, error: fixtureError }, { data: teamRows, error: teamError }] = await Promise.all([
+      const [{ data: fixtureRows, error: fixtureError }, { data: teamRows, error: teamError }, { data: sponsorRows }] = await Promise.all([
         supabase
           .from('fixtures')
           .select('id, fixture_date, home_score, away_score, went_to_extra_time, home_extra_time_score, away_extra_time_score, decided_by_penalties, home_penalty_score, away_penalty_score, home_team:home_team_id(id), away_team:away_team_id(id), stage:stage_id(competition:competition_id(name, slug, season))')
@@ -146,9 +147,15 @@ export default function StatsPage() {
           .eq('hidden_from_public', false)
           .order('fixture_date'),
         supabase.from('teams').select('id, name, logo_url').order('name'),
+        supabase.from('sponsors').select('id, name, website_url, logo_url')
+          .eq('is_published', true)
+          .in('name', ['Game of Throwing Edinburgh', 'Escape Edinburgh']),
       ])
 
       if (cancelled) return
+      setStatsSponsors((sponsorRows || []).sort((left, right) =>
+        ['Game of Throwing Edinburgh', 'Escape Edinburgh'].indexOf(left.name)
+        - ['Game of Throwing Edinburgh', 'Escape Edinburgh'].indexOf(right.name)))
       if (fixtureError || teamError) {
         setError('Football statistics could not be loaded.')
       } else {
@@ -185,6 +192,16 @@ export default function StatsPage() {
   return (
     <div className="container" style={{ padding: '32px 20px 48px', maxWidth: 900 }}>
       <h1 style={{ fontSize: 30, marginBottom: 4 }}>Stats</h1>
+      {statsSponsors.length > 0 && (
+        <div aria-label="Stats sponsors" style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 8, maxWidth: 500, margin: '12px 0 18px' }}>
+          {statsSponsors.map((sponsor) => (
+            <a key={sponsor.id} href={sponsor.website_url} target="_blank" rel="noopener noreferrer" style={statsSponsorStyle}>
+              {sponsor.logo_url && <img src={sponsor.logo_url} alt="" style={{ width: 46, height: 46, objectFit: 'contain', flexShrink: 0 }} />}
+              <span>{sponsor.name}</span>
+            </a>
+          ))}
+        </div>
+      )}
       <p style={{ color: 'var(--muted)', marginBottom: 24 }}>
         Current-season ECFA team records{season ? ` — ${String(season).replace('-', '/')}` : ''}. Team statistics can include every competition or league matches only.
       </p>
@@ -275,3 +292,5 @@ const summaryLabelStyle = { display: 'block', color: 'var(--muted)', fontSize: 1
 const rankingRowStyle = { display: 'flex', alignItems: 'center', gap: 11, padding: '13px 8px', borderBottom: '1px solid var(--line)', color: 'inherit', textDecoration: 'none' }
 const linkCardStyle = { display: 'grid', gap: 6, padding: 16, border: '1px solid var(--line)', borderRadius: 8, color: 'var(--ink)', textDecoration: 'none', background: '#f5f8fa' }
 const linkDescriptionStyle = { color: 'var(--muted)', fontSize: 13, lineHeight: 1.45 }
+
+const statsSponsorStyle = { display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, minWidth: 0, minHeight: 72, padding: '8px 6px', border: '1px solid var(--line)', borderRadius: 8, background: '#fff', color: 'var(--ink)', fontSize: 12, fontWeight: 700, lineHeight: 1.2, overflowWrap: 'anywhere', textDecoration: 'none' }
