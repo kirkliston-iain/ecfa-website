@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { supabase } from '../supabaseClient'
 import { historicPenaltyWinnerName } from '../utils/historicFixtureOutcome'
+import { historicTeamName } from '../utils/historicTeams'
 
 const FIRST_SEASON = 2013
 function seasonsThrough(rows) {
@@ -189,12 +190,12 @@ export default function HonoursPage() {
 
   if (loading) return <div className="container" style={{ padding: 48 }}>Loading…</div>
 
-  const finalTeams = [...new Set(cupFinals.flatMap((final) => [final.home, final.away]).filter(Boolean))]
+  const finalTeams = [...new Set(cupFinals.flatMap((final) => [final.home, final.away]).filter(Boolean).map(historicTeamName))]
     .sort((left, right) => left.localeCompare(right))
   const shownFinals = cupFinals.filter((final) =>
     (!finalSeason || final.season === finalSeason)
     && (!finalCompetitionFilter || final.competition === finalCompetitionFilter)
-    && (!finalTeam || final.home === finalTeam || final.away === finalTeam)
+    && (!finalTeam || historicTeamName(final.home) === finalTeam || historicTeamName(final.away) === finalTeam)
   )
 
   return (
