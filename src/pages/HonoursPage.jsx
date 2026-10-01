@@ -249,16 +249,34 @@ export default function HonoursPage() {
         </div>
         <p style={{ color: 'var(--muted)', fontSize: 12 }}>{shownFinals.length} final{shownFinals.length === 1 ? '' : 's'} shown</p>
         {shownFinals.length === 0 && <p>No finals match those filters.</p>}
-        <div style={{ display: 'grid', gap: 10 }}>
-          {shownFinals.map((final) => (
-            <div key={`${final.season}|${final.competition}`} style={{ border: '1px solid var(--line)', borderLeft: '4px solid var(--brass)', borderRadius: 8, padding: '12px 14px' }}>
-              <div style={{ color: 'var(--brass)', fontSize: 12, fontWeight: 800, marginBottom: 5 }}>{final.season} · {final.competition}</div>
-              <div style={{ fontSize: 15, fontWeight: 700 }}>{final.home} {final.score} {final.away}</div>
-              {final.detail && <div style={{ color: 'var(--muted)', fontSize: 13, marginTop: 4 }}>{final.detail}</div>}
-              {final.archivedAsConsolation && <div style={{ color: 'var(--muted)', fontSize: 11, marginTop: 4 }}>Recorded in the fixture archive as Consolation Cup</div>}
+        {['League Cup', 'Knockout Cup', 'Brian Latto Cup'].map((competition) => {
+          const rows = shownFinals.filter((final) => final.competition === competition)
+          if (!rows.length) return null
+          return (
+            <div key={competition} style={{ marginTop: 24 }}>
+              <h3 style={{ fontSize: 16, margin: '0 0 8px', color: 'var(--ink)' }}>{competition}</h3>
+              <table style={{ width: '100%', tableLayout: 'fixed', borderCollapse: 'collapse', borderTop: '3px solid var(--brass)' }}>
+                <colgroup><col style={{ width: 74 }} /><col /><col style={{ width: 72 }} /></colgroup>
+                <thead><tr>
+                  <th style={finalHeaderStyle}>Season</th>
+                  <th style={finalHeaderStyle}>Teams</th>
+                  <th style={{ ...finalHeaderStyle, textAlign: 'right' }}>Result</th>
+                </tr></thead>
+                <tbody>{rows.map((final) => (
+                  <tr key={final.season} style={{ borderBottom: '1px solid var(--line)' }}>
+                    <td style={{ ...finalCellStyle, fontWeight: 800, verticalAlign: 'top' }}>{final.season}</td>
+                    <td style={finalCellStyle}>
+                      <strong>{final.home}</strong> <span style={{ color: 'var(--muted)' }}>v</span> <strong>{final.away}</strong>
+                      {final.detail && <div style={{ color: 'var(--muted)', fontSize: 12, marginTop: 3 }}>{final.detail}</div>}
+                      {final.archivedAsConsolation && <div style={{ color: 'var(--muted)', fontSize: 11, marginTop: 3 }}>Archived as Consolation Cup</div>}
+                    </td>
+                    <td style={{ ...finalCellStyle, textAlign: 'right', fontWeight: 800, whiteSpace: 'nowrap', verticalAlign: 'top' }}>{final.score}</td>
+                  </tr>
+                ))}</tbody>
+              </table>
             </div>
-          ))}
-        </div>
+          )
+        })}
       </section>
     </div>
   )
@@ -266,6 +284,8 @@ export default function HonoursPage() {
 
 const tdStyle = { padding: '10px 8px', textAlign: 'center' }
 const finalSelectStyle = { padding: '9px 11px', borderRadius: 6, border: '1px solid var(--line)', background: '#fff', color: 'var(--ink)', font: 'inherit' }
+const finalHeaderStyle = { padding: '8px 6px', textAlign: 'left', fontSize: 11, textTransform: 'uppercase', color: 'var(--muted)' }
+const finalCellStyle = { padding: '10px 6px', fontSize: 13, lineHeight: 1.45, overflowWrap: 'anywhere' }
 
 function thStyle(align = 'center') {
   return {
