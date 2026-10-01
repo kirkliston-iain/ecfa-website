@@ -158,7 +158,7 @@ story.append(card_grid([
 # Records/referees
 story += section_title('6. Honours and historical records')
 story.append(card_grid([
-    ('Major honours', 'A season-by-season grid records winners of the League, League Cup, Knockout Cup and Brian Latto Cup.'),
+    ('Major honours', 'A season-by-season grid records winners of the League, League Cup, Knockout Cup and Brian Latto Cup. A cup final results list below the honours tables can be filtered by season and competition.'),
     ('All-time honours table', 'Compare clubs by competition wins and total major honours.'),
     ('Historical seasons', 'Browse archived league tables, fixtures and results from previous campaigns. Filter each season’s fixtures by the teams recorded in that season, including clubs no longer active.'),
     ('Linked team records', 'Team names in honours and historical areas link back to current team pages when a match is available.'),
