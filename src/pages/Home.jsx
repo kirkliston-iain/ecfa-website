@@ -943,7 +943,10 @@ export default function Home() {
 
   return (
     <div className="container" style={{ padding: '32px 20px 48px' }}>
-      <h1 style={{ fontSize: 30, marginBottom: 4 }}>Match Hub</h1>
+      <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 12, marginBottom: 4 }}>
+        <h1 style={{ fontSize: 30 }}>Match Hub</h1>
+        <Link to="/news" style={{ display: 'inline-block', padding: '5px 9px', border: '1px solid var(--brass)', borderRadius: 5, color: 'var(--ink)', fontSize: 12, fontWeight: 700, whiteSpace: 'nowrap' }}>Latest News</Link>
+      </div>
       <p style={{ color: 'var(--muted)', marginBottom: 20 }}>
         Results and fixtures across every ECFA competition.
       </p>

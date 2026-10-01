@@ -88,7 +88,7 @@ story = []
 
 # Cover
 cover = Table([[p('ECFA WEBSITE', 'CoverSub')], [p('Public Features Guide', 'CoverTitle')],
-               [p('A practical guide to fixtures, results, competitions, teams, players, referees, records, downloads and ways to contact the league.', 'CoverSub')]],
+               [p('A practical guide to fixtures, results, news, competitions, teams, players, referees, records, downloads and ways to contact the league.', 'CoverSub')]],
               colWidths=[174*mm], rowHeights=[16*mm, 34*mm, 37*mm], style=TableStyle([
                   ('BACKGROUND', (0,0), (-1,-1), INK),
                   ('LINEABOVE', (0,0), (-1,0), 6, BRASS),
@@ -98,7 +98,7 @@ cover = Table([[p('ECFA WEBSITE', 'CoverSub')], [p('Public Features Guide', 'Cov
               ]))
 story += [Spacer(1, 35*mm), cover, Spacer(1, 18*mm)]
 story.append(Table([[p('WEBSITE', 'Smallx'), p('https://ecfa-website.vercel.app', 'CardTitle')],
-                    [p('GUIDE UPDATED', 'Smallx'), p('29 September 2026', 'CardTitle')]],
+                    [p('GUIDE UPDATED', 'Smallx'), p('1 October 2026', 'CardTitle')]],
                    colWidths=[35*mm, 125*mm], style=TableStyle([
                        ('BOX', (0,0), (-1,-1), 0.7, LINE), ('INNERGRID', (0,0), (-1,-1), 0.5, LINE),
                        ('BACKGROUND', (0,0), (0,-1), PALE), ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
@@ -110,7 +110,8 @@ story.append(PageBreak())
 # Getting started + match hub
 story += section_title('1. Getting around the website', 'The website is designed for phones, tablets and computers. The main navigation bar scrolls horizontally on smaller screens, so every section remains available without crowding the display.')
 story.append(card_grid([
-    ('Match Hub', 'The front page for fixtures and results, organised by match date. A compact Appin Sports sponsor link opens the sponsor website.'),
+    ('Match Hub', 'The front page for fixtures and results, organised by match date. The Latest News shortcut beside the heading opens the news section.'),
+    ('News', 'Read published ECFA stories with dates, pictures and links to related articles. The most recently published story appears first.'),
     ('Competitions', 'League tables, cup structures, fixtures, results and competition detail.'),
     ('Scorers', 'Current-season and all-time goalscorer tables with player links.'),
     ('Honours and History', 'Past winners, team honours and previous-season records.'),
@@ -158,7 +159,7 @@ story.append(card_grid([
 # Records/referees
 story += section_title('6. Honours and historical records')
 story.append(card_grid([
-    ('Major honours', 'A season-by-season grid records winners of the League, League Cup, Knockout Cup and Brian Latto Cup. A cup final results list below the honours tables can be filtered by season and competition.'),
+    ('Major honours', 'A season-by-season grid records winners of the League, League Cup, Knockout Cup and Brian Latto Cup. Cup final results below the honours tables can be filtered by season, competition and team.'),
     ('All-time honours table', 'Compare clubs by competition wins and total major honours.'),
     ('Historical seasons', 'Browse archived league tables, fixtures and results from previous campaigns. Filter each season’s fixtures by the teams recorded in that season, including clubs no longer active.'),
     ('Linked team records', 'Team names in honours and historical areas link back to current team pages when a match is available.'),

@@ -6,6 +6,7 @@ import { trackInteraction } from '../utils/webAnalytics'
 
 const SITE_PAGES = [
   { label: 'Match Hub', description: 'Fixtures and results by date', to: '/' },
+  { label: 'News', description: 'Latest ECFA stories and event updates', to: '/news' },
   { label: 'Competitions', description: 'Tables, fixtures, results and next-round possibilities', to: '/standings' },
   { label: 'Scorers', description: 'Current and historical goalscorers', to: '/scorers' },
   { label: 'Honours', description: 'ECFA competition winners', to: '/honours' },

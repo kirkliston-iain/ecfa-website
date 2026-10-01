@@ -4,6 +4,7 @@ import { supabase } from '../supabaseClient'
 
 const TABS = [
   { to: '/', label: 'Match Hub', end: true },
+  { to: '/news', label: 'News' },
   { to: '/standings', label: 'Competitions' },
   { to: '/teams', label: 'Teams' },
   { to: '/stats', label: 'Stats' },

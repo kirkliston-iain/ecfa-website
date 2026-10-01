@@ -4,6 +4,8 @@ import Footer from './components/Footer'
 import ManagerGate from './components/ManagerGate'
 import ProtectedRoute from './components/ProtectedRoute'
 import Home from './pages/Home'
+import News from './pages/News'
+import NewsAdmin from './pages/NewsAdmin'
 import CompetitionsIndex from './pages/CompetitionsIndex'
 import StandingsPage from './pages/StandingsPage'
 import Competition from './pages/Competition'
@@ -55,6 +57,7 @@ export default function App() {
       <main className={isAdminArea ? 'site-main site-main--admin' : 'site-main site-main--public'} style={{ flex: 1 }}>
         <Routes>
           <Route path="/" element={<Home />} />
+          <Route path="/news" element={<News />} />
           <Route path="/competitions" element={<CompetitionsIndex />} />
           <Route path="/standings" element={<StandingsPage />} />
           <Route path="/competitions/:slug" element={<Competition />} />
@@ -160,6 +163,7 @@ export default function App() {
               </ProtectedRoute>
             }
           />
+          <Route path="/admin/news" element={<ProtectedRoute requireAdmin><NewsAdmin /></ProtectedRoute>} />
           <Route
             path="/admin/dashboard"
             element={
