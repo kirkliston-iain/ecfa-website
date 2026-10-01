@@ -3,10 +3,14 @@ import { Link } from 'react-router-dom'
 import { supabase } from '../supabaseClient'
 import { historicPenaltyWinnerName } from '../utils/historicFixtureOutcome'
 
-const SEASONS = [
-  '2013/14', '2014/15', '2015/16', '2016/17', '2017/18', '2018/19',
-  '2019/20', '2020/21', '2021/22', '2022/23', '2023/24', '2024/25', '2025/26',
-]
+const FIRST_SEASON = 2013
+function seasonsThrough(rows) {
+  const latest = Math.max(FIRST_SEASON, ...rows.map((row) => Number.parseInt(row.season, 10)).filter(Number.isFinite))
+  return Array.from({ length: latest - FIRST_SEASON + 1 }, (_, index) => {
+    const year = FIRST_SEASON + index
+    return `${year}/${String((year + 1) % 100).padStart(2, '0')}`
+  })
+}
 const COMPETITIONS = ['League', 'League Cup', 'Knockout Cup', 'Brian Latto Cup']
 const SHORT_COMPETITIONS = {
   League: 'Lge',
@@ -44,7 +48,28 @@ function archivedFinal(fixture) {
     away: fixture.away_team_name,
     score: `${fixture.home_goals}–${fixture.away_goals}`,
     detail: winner ? `${winner} won${penaltyScore ? ` ${penaltyScore[1]}–${penaltyScore[2]}` : ''} on penalties` : '',
-    archivedAsConsolation: fixture.competition_name.toLowerCase().includes('consolation cup'),
+    fixtureId: fixture.id,
+  }
+}
+
+function liveFinal(fixture) {
+  const home = fixture.home_team?.name
+  const away = fixture.away_team?.name
+  if (!home || !away || fixture.home_score == null || fixture.away_score == null) return null
+  const homeGoals = fixture.went_to_extra_time && fixture.home_extra_time_score != null ? fixture.home_extra_time_score : fixture.home_score
+  const awayGoals = fixture.went_to_extra_time && fixture.away_extra_time_score != null ? fixture.away_extra_time_score : fixture.away_score
+  const penalties = fixture.decided_by_penalties && fixture.home_penalty_score != null && fixture.away_penalty_score != null
+  const winnerIsHome = penalties ? fixture.home_penalty_score > fixture.away_penalty_score : homeGoals > awayGoals
+  if (penalties ? fixture.home_penalty_score === fixture.away_penalty_score : homeGoals === awayGoals) return null
+  const winnerTeam = winnerIsHome ? fixture.home_team : fixture.away_team
+  return {
+    season: fixture.stage.competition.season,
+    competition: finalCompetition(fixture.stage.competition.name),
+    home, away, score: `${homeGoals}–${awayGoals}`,
+    detail: penalties ? `${winnerTeam.name} won ${fixture.home_penalty_score}–${fixture.away_penalty_score} on penalties` : fixture.went_to_extra_time ? 'After extra time' : '',
+    fixtureId: fixture.id,
+    winnerName: winnerTeam.name,
+    teamId: winnerTeam.id,
   }
 }
 
@@ -65,6 +90,7 @@ export default function HonoursPage() {
   const [grid, setGrid] = useState({})
   const [totals, setTotals] = useState([])
   const [cupFinals, setCupFinals] = useState([])
+  const [seasons, setSeasons] = useState([])
   const [finalSeason, setFinalSeason] = useState('')
   const [finalCompetitionFilter, setFinalCompetitionFilter] = useState('')
 
@@ -72,17 +98,37 @@ export default function HonoursPage() {
     let cancelled = false
 
     async function load() {
-      const [{ data }, { data: historicFinals }] = await Promise.all([
+      const [{ data }, { data: historicFinals }, { data: liveFixtures }, { data: competitions }] = await Promise.all([
         supabase.from('honours').select('season, competition, status, winner_name, team_id'),
         supabase.from('historic_fixtures')
-          .select('season, competition_name, home_team_name, home_goals, away_team_name, away_goals, comment, penalty_winner_name')
+          .select('id, season, competition_name, home_team_name, home_goals, away_team_name, away_goals, comment, penalty_winner_name')
           .ilike('competition_name', '%final%').range(0, 9999),
+        supabase.from('fixtures')
+          .select('id, round_name, status, hidden_from_public, home_score, away_score, went_to_extra_time, home_extra_time_score, away_extra_time_score, decided_by_penalties, home_penalty_score, away_penalty_score, home_team:home_team_id(id, name), away_team:away_team_id(id, name), stage:stage_id(competition:competition_id(name, season))')
+          .eq('status', 'played').eq('hidden_from_public', false).range(0, 9999),
+        supabase.from('competitions').select('season'),
       ])
 
       if (cancelled) return
 
       const g = {}
       const totalsMap = {}
+
+      const recorded = (historicFinals || [])
+        .filter((fixture) => {
+          const name = fixture.competition_name?.toLowerCase() || ''
+          return name.endsWith('final') && !name.includes('semi') && !name.includes('quarter')
+            && fixture.home_goals != null && fixture.away_goals != null && finalCompetition(name)
+        })
+        .map(archivedFinal)
+      const live = (liveFixtures || [])
+        .filter((fixture) => /(?:^|[\s-])final$/i.test(String(fixture.round_name || '').trim()) && !/semi|quarter/i.test(String(fixture.round_name || ''))
+          && fixture.stage?.competition?.season && finalCompetition(fixture.stage.competition.name))
+        .map(liveFinal).filter(Boolean)
+      const recordedKeys = new Set([...recorded, ...live].map((row) => `${row.season}|${row.competition}`))
+      const finals = [...live, ...recorded.filter((row) => !live.some((item) => item.season === row.season && item.competition === row.competition)),
+        ...EARLY_CUP_FINALS.filter((row) => !recordedKeys.has(`${row.season}|${row.competition}`))]
+      setSeasons(seasonsThrough([...(data || []), ...finals, ...(competitions || [])]))
 
       for (const row of data || []) {
         g[`${row.season}|${row.competition}`] = row
@@ -105,6 +151,18 @@ export default function HonoursPage() {
         totalsMap[key].total += 1
       }
 
+      // A played, decisive final is sufficient to show its winner while the honours record is being updated.
+      for (const final of live) {
+        const key = `${final.season}|${final.competition}`
+        if (g[key]?.status === 'winner') continue
+        const row = { season: final.season, competition: final.competition, status: 'winner', winner_name: final.winnerName, team_id: final.teamId }
+        g[key] = row
+        const teamKey = row.team_id || `name:${row.winner_name}`
+        if (!totalsMap[teamKey]) totalsMap[teamKey] = { key: teamKey, name: row.winner_name, teamId: row.team_id, League: 0, 'League Cup': 0, 'Knockout Cup': 0, 'Brian Latto Cup': 0, total: 0 }
+        totalsMap[teamKey][row.competition] += 1
+        totalsMap[teamKey].total += 1
+      }
+
       const totalsList = Object.values(totalsMap).sort(
         (a, b) =>
           b.total - a.total ||
@@ -117,17 +175,8 @@ export default function HonoursPage() {
 
       setGrid(g)
       setTotals(totalsList)
-      const recorded = (historicFinals || [])
-        .filter((fixture) => {
-          const name = fixture.competition_name?.toLowerCase() || ''
-          return name.endsWith('final') && !name.includes('semi') && !name.includes('quarter')
-            && fixture.home_goals != null && fixture.away_goals != null && finalCompetition(name)
-        })
-        .map(archivedFinal)
-      const recordedKeys = new Set(recorded.map((row) => `${row.season}|${row.competition}`))
-      setCupFinals([...recorded, ...EARLY_CUP_FINALS.filter((row) => !recordedKeys.has(`${row.season}|${row.competition}`))]
-        .sort((left, right) => right.season.localeCompare(left.season, undefined, { numeric: true })
-          || COMPETITIONS.indexOf(left.competition) - COMPETITIONS.indexOf(right.competition)))
+      setCupFinals(finals.sort((left, right) => right.season.localeCompare(left.season, undefined, { numeric: true })
+        || COMPETITIONS.indexOf(left.competition) - COMPETITIONS.indexOf(right.competition)))
       setLoading(false)
     }
 
@@ -168,7 +217,7 @@ export default function HonoursPage() {
             </tr>
           </thead>
           <tbody>
-            {SEASONS.map((season) => (
+            {seasons.map((season) => (
               <tr key={season} style={{ borderBottom: '1px solid var(--line)' }}>
                 <td style={{ padding: '8px', fontWeight: 700, whiteSpace: 'nowrap' }}>{season}</td>
                 {COMPETITIONS.map((c) => (
@@ -225,17 +274,17 @@ export default function HonoursPage() {
         </table>
       </div>
 
-      <section style={{ marginTop: 44 }}>
-        <h2 style={{ fontSize: 22, margin: '0 0 6px' }}>Cup Final Results</h2>
-        <p style={{ color: 'var(--muted)', fontSize: 14, margin: '0 0 18px' }}>
+      <section style={{ marginTop: 28 }}>
+        <h2 style={{ fontSize: 18, margin: '0 0 4px' }}>Cup Final Results</h2>
+        <p style={{ color: 'var(--muted)', fontSize: 14, margin: '0 0 12px' }}>
           Recorded scores and winners, including penalty shootouts and extra time.
         </p>
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, alignItems: 'end', marginBottom: 18 }}>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'end', marginBottom: 10 }}>
           <label style={{ display: 'grid', gap: 5, flex: '1 1 150px', fontSize: 12, fontWeight: 700 }}>
             Season
             <select value={finalSeason} onChange={(e) => setFinalSeason(e.target.value)} style={finalSelectStyle}>
               <option value="">All seasons</option>
-              {SEASONS.filter((season) => cupFinals.some((final) => final.season === season)).map((season) => <option key={season} value={season}>{season}</option>)}
+              {seasons.filter((season) => cupFinals.some((final) => final.season === season)).map((season) => <option key={season} value={season}>{season}</option>)}
             </select>
           </label>
           <label style={{ display: 'grid', gap: 5, flex: '1 1 170px', fontSize: 12, fontWeight: 700 }}>
@@ -253,8 +302,8 @@ export default function HonoursPage() {
           const rows = shownFinals.filter((final) => final.competition === competition)
           if (!rows.length) return null
           return (
-            <div key={competition} style={{ marginTop: 24 }}>
-              <h3 style={{ fontSize: 16, margin: '0 0 8px', color: 'var(--ink)' }}>{competition}</h3>
+            <div key={competition} style={{ marginTop: 14 }}>
+              <h3 style={{ fontSize: 15, margin: '0 0 5px', color: 'var(--ink)' }}>{competition}</h3>
               <table style={{ width: '100%', tableLayout: 'fixed', borderCollapse: 'collapse', borderTop: '3px solid var(--brass)' }}>
                 <colgroup><col style={{ width: 74 }} /><col /><col style={{ width: 72 }} /></colgroup>
                 <thead><tr>
@@ -266,9 +315,12 @@ export default function HonoursPage() {
                   <tr key={final.season} style={{ borderBottom: '1px solid var(--line)' }}>
                     <td style={{ ...finalCellStyle, fontWeight: 800, verticalAlign: 'top' }}>{final.season}</td>
                     <td style={finalCellStyle}>
-                      <strong>{final.home}</strong> <span style={{ color: 'var(--muted)' }}>v</span> <strong>{final.away}</strong>
+                      {final.fixtureId ? (
+                        <Link to={`/fixtures/${final.fixtureId}`} style={{ color: 'var(--ink)', textDecoration: 'underline', textDecorationColor: 'var(--brass)', textUnderlineOffset: 2 }} aria-label={`View ${final.competition} final: ${final.home} versus ${final.away}, ${final.season}`}>
+                          <strong>{final.home}</strong> <span style={{ color: 'var(--muted)' }}>v</span> <strong>{final.away}</strong>
+                        </Link>
+                      ) : <><strong>{final.home}</strong> <span style={{ color: 'var(--muted)' }}>v</span> <strong>{final.away}</strong></>}
                       {final.detail && <div style={{ color: 'var(--muted)', fontSize: 12, marginTop: 3 }}>{final.detail}</div>}
-                      {final.archivedAsConsolation && <div style={{ color: 'var(--muted)', fontSize: 11, marginTop: 3 }}>Archived as Consolation Cup</div>}
                     </td>
                     <td style={{ ...finalCellStyle, textAlign: 'right', fontWeight: 800, whiteSpace: 'nowrap', verticalAlign: 'top' }}>{final.score}</td>
                   </tr>
@@ -283,9 +335,9 @@ export default function HonoursPage() {
 }
 
 const tdStyle = { padding: '10px 8px', textAlign: 'center' }
-const finalSelectStyle = { padding: '9px 11px', borderRadius: 6, border: '1px solid var(--line)', background: '#fff', color: 'var(--ink)', font: 'inherit' }
-const finalHeaderStyle = { padding: '8px 6px', textAlign: 'left', fontSize: 11, textTransform: 'uppercase', color: 'var(--muted)' }
-const finalCellStyle = { padding: '10px 6px', fontSize: 13, lineHeight: 1.45, overflowWrap: 'anywhere' }
+const finalSelectStyle = { padding: '6px 9px', borderRadius: 6, border: '1px solid var(--line)', background: '#fff', color: 'var(--ink)', font: 'inherit' }
+const finalHeaderStyle = { padding: '5px 6px', textAlign: 'left', fontSize: 11, textTransform: 'uppercase', color: 'var(--muted)' }
+const finalCellStyle = { padding: '6px 6px', fontSize: 13, lineHeight: 1.45, overflowWrap: 'anywhere' }
 
 function thStyle(align = 'center') {
   return {
