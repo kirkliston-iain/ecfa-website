@@ -78,6 +78,7 @@ export default function TeamsHub() {
   const [loading, setLoading] = useState(false)
   const [fixtureMonth, setFixtureMonth] = useState('')
   const [fixtureDate, setFixtureDate] = useState('')
+  const [fixtureCompetition, setFixtureCompetition] = useState('appin-league')
   const [sharingFixtures, setSharingFixtures] = useState(false)
 
   const [currentFixtures, setCurrentFixtures] = useState([])
@@ -158,6 +159,7 @@ export default function TeamsHub() {
     setHeadToHeadSeason(CURRENT_SEASON)
     setFixtureMonth('')
     setFixtureDate('')
+    setFixtureCompetition('appin-league')
 
     async function load() {
       setTeam(teams.find((t) => t.id === teamId) || null)
@@ -165,7 +167,7 @@ export default function TeamsHub() {
       const { data: cf } = await supabase
         .from('fixtures')
         .select(
-          'id, fixture_date, venue, home_score, away_score, went_to_extra_time, home_extra_time_score, away_extra_time_score, decided_by_penalties, home_penalty_score, away_penalty_score, status, home_team:home_team_id(id, name, logo_url), away_team:away_team_id(id, name, logo_url), stage:stage_id(name, competition:competition_id(name))'
+          'id, fixture_date, venue, home_score, away_score, went_to_extra_time, home_extra_time_score, away_extra_time_score, decided_by_penalties, home_penalty_score, away_penalty_score, status, home_team:home_team_id(id, name, logo_url), away_team:away_team_id(id, name, logo_url), stage:stage_id(name, competition:competition_id(name, slug))'
         )
         .or(`home_team_id.eq.${teamId},away_team_id.eq.${teamId}`)
         .eq('hidden_from_public', false)
@@ -174,7 +176,7 @@ export default function TeamsHub() {
       const competitionNames = new Set((cf || []).filter((fixture) => fixture.status === 'scheduled').map((fixture) => fixture.stage?.competition?.name).filter(Boolean))
       const { data: placeholders } = await supabase
         .from('fixtures')
-        .select('id, fixture_date, round_name, stage:stage_id(name, competition:competition_id(name))')
+        .select('id, fixture_date, round_name, stage:stage_id(name, competition:competition_id(name, slug))')
         .eq('status', 'scheduled')
         .eq('hidden_from_public', false)
         .gte('fixture_date', new Date().toISOString())
@@ -233,13 +235,22 @@ export default function TeamsHub() {
     fixture,
   ])).values()]
   const upcomingEvents = calendarEvents.filter((event) => event.event_date >= new Date().toLocaleDateString('sv-SE', { timeZone: 'Europe/London' }))
-  const fixtureMonths = [...new Set([...scheduledFixtures, ...possibleDates].map((f) => fixtureDay(f).slice(0, 7)).concat(upcomingEvents.map((event) => event.event_date.slice(0, 7))).filter(Boolean))].sort()
+  const fixtureCompetitions = [...new Map([...scheduledFixtures, ...possibleDates]
+    .map((fixture) => fixture.stage?.competition)
+    .filter((competition) => competition?.slug)
+    .map((competition) => [competition.slug, competition])).values()]
+    .sort((a, b) => a.slug === 'appin-league' ? -1 : b.slug === 'appin-league' ? 1 : a.name.localeCompare(b.name))
+  const matchesCompetition = (fixture) => fixtureCompetition === 'all' || fixture.stage?.competition?.slug === fixtureCompetition
+  const selectedFixtures = scheduledFixtures.filter(matchesCompetition)
+  const selectedPossibleDates = possibleDates.filter(matchesCompetition)
+  const selectedEvents = fixtureCompetition === 'all' || fixtureCompetition === 'appin-league' ? upcomingEvents : []
+  const fixtureMonths = [...new Set([...selectedFixtures, ...selectedPossibleDates].map((f) => fixtureDay(f).slice(0, 7)).concat(selectedEvents.map((event) => event.event_date.slice(0, 7))).filter(Boolean))].sort()
   const filterDate = (fixture) => (!fixtureMonth || fixtureDay(fixture).startsWith(fixtureMonth)) && (!fixtureDate || fixtureDay(fixture) === fixtureDate)
-  const visibleFixtures = scheduledFixtures.filter((f) =>
+  const visibleFixtures = selectedFixtures.filter((f) =>
     filterDate(f)
   )
-  const visiblePossibleDates = possibleDates.filter(filterDate)
-  const visibleEvents = upcomingEvents.filter((event) => (!fixtureMonth || event.event_date.startsWith(fixtureMonth)) && (!fixtureDate || event.event_date === fixtureDate))
+  const visiblePossibleDates = selectedPossibleDates.filter(filterDate)
+  const visibleEvents = selectedEvents.filter((event) => (!fixtureMonth || event.event_date.startsWith(fixtureMonth)) && (!fixtureDate || event.event_date === fixtureDate))
   const visibleSchedule = [
     ...visibleFixtures.map((fixture) => ({ kind: 'fixture', date: fixtureDay(fixture), fixture })),
     ...visiblePossibleDates.map((fixture) => ({ kind: 'possible', date: fixtureDay(fixture), fixture })),
@@ -268,11 +279,12 @@ export default function TeamsHub() {
       ctx.fillText(team.name, 48, 72)
       ctx.font = '25px Arial, sans-serif'
       ctx.fillStyle = '#6b6b6b'
-      const label = fixtureDate ? new Date(`${fixtureDate}T12:00:00`).toLocaleDateString('en-GB', { dateStyle: 'long' }) : fixtureMonth ? new Date(`${fixtureMonth}-01T12:00:00`).toLocaleDateString('en-GB', { month: 'long', year: 'numeric' }) : 'All upcoming fixtures'
+      const period = fixtureDate ? new Date(`${fixtureDate}T12:00:00`).toLocaleDateString('en-GB', { dateStyle: 'long' }) : fixtureMonth ? new Date(`${fixtureMonth}-01T12:00:00`).toLocaleDateString('en-GB', { month: 'long', year: 'numeric' }) : 'All upcoming fixtures'
+      const label = `${fixtureCompetition === 'all' ? 'All competitions' : fixtureCompetitions.find((competition) => competition.slug === fixtureCompetition)?.name || 'Appin Sports League'} · ${period}`
       ctx.fillText(label, 48, 117)
       ctx.fillStyle = '#6b6b6b'
       ctx.font = '20px Arial, sans-serif'
-      ctx.fillText('Fixtures · possible cup dates · league calendar', 48, 154)
+      ctx.fillText(fixtureCompetition === 'all' ? 'Fixtures · possible cup dates · league calendar' : fixtureCompetition === 'appin-league' ? 'League fixtures · league calendar' : 'Fixtures · possible cup dates', 48, 154)
       visibleSchedule.forEach((item, index) => {
         const column = Math.floor(index / rowsPerColumn)
         const x = 48 + column * (columnWidth + 32)
@@ -597,8 +609,13 @@ export default function TeamsHub() {
 
           <section id="all-fixtures" style={{ marginBottom: 36 }}>
             <h2 style={sectionHeaderStyle}>All upcoming fixtures</h2>
-            <p style={{ color: 'var(--muted)', fontSize: 12, margin: '0 0 12px' }}>Cup dates are conditional until qualification is confirmed. League calendar dates include breaks and events from Match Hub.</p>
+            <p style={{ color: 'var(--muted)', fontSize: 12, margin: '0 0 12px' }}>Choose a competition, month or date. Cup dates are conditional until qualification is confirmed; league dates include Match Hub events.</p>
             <div className="team-fixture-filters">
+              <label>Competition<select value={fixtureCompetition} onChange={(event) => { setFixtureCompetition(event.target.value); setFixtureMonth(''); setFixtureDate('') }}>
+                <option value="appin-league">Appin Sports League</option>
+                {fixtureCompetitions.filter((competition) => competition.slug !== 'appin-league').map((competition) => <option key={competition.slug} value={competition.slug}>{competition.name}</option>)}
+                <option value="all">All competitions</option>
+              </select></label>
               <label>Month<select value={fixtureMonth} onChange={(event) => { setFixtureMonth(event.target.value); setFixtureDate('') }}>
                 <option value="">All months</option>
                 {fixtureMonths.map((month) => <option key={month} value={month}>{new Date(`${month}-01T12:00:00`).toLocaleDateString('en-GB', { month: 'long', year: 'numeric' })}</option>)}
