@@ -369,9 +369,6 @@ button {
 .team-fixture-filters button { background: var(--ink); color: #fff; cursor: pointer; }
 .team-fixture-filters button:disabled { opacity: .5; cursor: default; }
 .team-fixture-row { border-bottom: 1px solid var(--line); }
-.team-fixture-group { margin-top: 22px; }
-.team-fixture-group-title { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 0; padding: 10px 12px; border-left: 4px solid var(--brass); background: #f5f5f5; color: var(--ink); font-size: 15px; font-weight: 800; }
-.team-fixture-group-title span { color: var(--muted); font-size: 13px; font-weight: 700; }
 .team-fixture-row a { display: grid; grid-template-columns: 135px minmax(0, 1fr) minmax(0, 220px); gap: 12px; padding: 12px 4px; align-items: center; font-size: 14px; }
 .team-fixture-possible { display: grid; grid-template-columns: 135px minmax(0, 1fr) minmax(0, 220px); gap: 12px; padding: 12px 4px; align-items: center; font-size: 14px; }
 .team-fixture-date { color: var(--brass); font-weight: 700; }

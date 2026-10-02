@@ -102,6 +102,7 @@ export default function TeamDetail() {
   const [error, setError] = useState(null)
   const [fixtureMonth, setFixtureMonth] = useState('')
   const [fixtureDate, setFixtureDate] = useState('')
+  const [fixtureCompetition, setFixtureCompetition] = useState('appin-league')
   const [sharing, setSharing] = useState(false)
 
   useEffect(() => {
@@ -128,7 +129,7 @@ export default function TeamDetail() {
       const { data: fixtures } = await supabase
         .from('fixtures')
         .select(
-          'id, round_name, fixture_date, venue, home_score, away_score, went_to_extra_time, home_extra_time_score, away_extra_time_score, decided_by_penalties, home_penalty_score, away_penalty_score, status, stage:stage_id(competition:competition_id(id, name)), home_team:home_team_id(id, name, logo_url), away_team:away_team_id(id, name, logo_url)'
+          'id, round_name, fixture_date, venue, home_score, away_score, went_to_extra_time, home_extra_time_score, away_extra_time_score, decided_by_penalties, home_penalty_score, away_penalty_score, status, stage:stage_id(competition:competition_id(id, slug, name)), home_team:home_team_id(id, name, logo_url), away_team:away_team_id(id, name, logo_url)'
         )
         .or(`home_team_id.eq.${id},away_team_id.eq.${id}`)
         .eq('hidden_from_public', false)
@@ -172,6 +173,9 @@ export default function TeamDetail() {
         .order('season', { ascending: true })
 
       if (!cancelled) {
+        setFixtureCompetition('appin-league')
+        setFixtureMonth('')
+        setFixtureDate('')
         setTeam(t)
         setPlayedFixtures(played)
         setUpcomingFixtures(upcoming)
@@ -193,18 +197,14 @@ export default function TeamDetail() {
 
   const form = playedFixtures.slice(0, 5)
   const nextFive = upcomingFixtures.slice(0, 5)
-  const months = [...new Set(upcomingFixtures.map((f) => fixtureDay(f).slice(0, 7)).filter(Boolean))]
-  const filteredFixtures = upcomingFixtures.filter((f) =>
+  const competitions = [...new Map(upcomingFixtures.map((fixture) => fixture.stage?.competition).filter((competition) => competition?.slug).map((competition) => [competition.slug, competition])).values()]
+    .sort((a, b) => a.slug === 'appin-league' ? -1 : b.slug === 'appin-league' ? 1 : a.name.localeCompare(b.name))
+  const competitionFixtures = upcomingFixtures.filter((fixture) => fixtureCompetition === 'all' || fixture.stage?.competition?.slug === fixtureCompetition)
+  const months = [...new Set(competitionFixtures.map((fixture) => fixtureDay(fixture).slice(0, 7)).filter(Boolean))]
+  const filteredFixtures = competitionFixtures.filter((f) =>
     (!fixtureMonth || fixtureDay(f).startsWith(fixtureMonth)) &&
     (!fixtureDate || fixtureDay(f) === fixtureDate)
   )
-  const fixtureGroups = [...filteredFixtures.reduce((groups, fixture) => {
-    const competition = fixture.stage?.competition
-    const key = competition?.id || 'unassigned'
-    if (!groups.has(key)) groups.set(key, { key, name: competition?.name || 'Competition to be confirmed', fixtures: [] })
-    groups.get(key).fixtures.push(fixture)
-    return groups
-  }, new Map()).values()]
   const topScorers = scorers.slice(0, 5)
 
   async function shareFixtures() {
@@ -215,8 +215,7 @@ export default function TeamDetail() {
       const width = 1080
       const rowHeight = 116
       canvas.width = width
-      const groupHeight = 58
-      canvas.height = 240 + fixtureGroups.length * groupHeight + filteredFixtures.length * rowHeight + 100
+      canvas.height = 240 + filteredFixtures.length * rowHeight + 100
       const ctx = canvas.getContext('2d')
       if (!ctx) throw new Error('Canvas unavailable')
       ctx.fillStyle = '#fff'
@@ -230,18 +229,12 @@ export default function TeamDetail() {
       const title = wrapCanvasText(ctx, team.name, width - 100).slice(0, 2)
       title.forEach((line, index) => ctx.fillText(line, 50, 72 + index * 47))
       ctx.font = '28px Arial, sans-serif'
-      const label = fixtureDate ? new Date(`${fixtureDate}T12:00:00`).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' }) : fixtureMonth ? new Date(`${fixtureMonth}-01T12:00:00`).toLocaleDateString('en-GB', { month: 'long', year: 'numeric' }) : 'All upcoming fixtures'
+      const period = fixtureDate ? new Date(`${fixtureDate}T12:00:00`).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' }) : fixtureMonth ? new Date(`${fixtureMonth}-01T12:00:00`).toLocaleDateString('en-GB', { month: 'long', year: 'numeric' }) : 'All upcoming fixtures'
+      const label = `${fixtureCompetition === 'all' ? 'All competitions' : competitions.find((competition) => competition.slug === fixtureCompetition)?.name || 'Appin Sports League'} · ${period}`
       ctx.fillStyle = '#6b6b6b'
       ctx.fillText(label, 50, 190)
-      let y = 240
-      fixtureGroups.forEach((group) => {
-        ctx.fillStyle = '#b8912b'
-        ctx.fillRect(50, y, 5, 35)
-        ctx.fillStyle = '#141414'
-        ctx.font = 'bold 25px Arial, sans-serif'
-        ctx.fillText(group.name, 68, y + 26)
-        y += groupHeight
-        group.fixtures.forEach((f) => {
+      filteredFixtures.forEach((f, index) => {
+        const y = 240 + index * rowHeight
         ctx.strokeStyle = '#e2e2e2'
         ctx.beginPath()
         ctx.moveTo(50, y - 15)
@@ -258,9 +251,7 @@ export default function TeamDetail() {
         ctx.fillStyle = '#6b6b6b'
         ctx.font = '22px Arial, sans-serif'
         const time = f.fixture_date?.includes('T') ? new Date(f.fixture_date).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }) : ''
-        ctx.fillText([time, f.venue].filter(Boolean).join(' · ').slice(0, 75), 320, y + 87)
-        y += rowHeight
-        })
+        ctx.fillText([fixtureCompetition === 'all' ? f.stage?.competition?.name : null, time, f.venue].filter(Boolean).join(' · ').slice(0, 75), 320, y + 87)
       })
       ctx.fillStyle = '#6b6b6b'
       ctx.font = '22px Arial, sans-serif'
@@ -443,8 +434,15 @@ export default function TeamDetail() {
         <h2 style={{ fontSize: 13, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 8, paddingBottom: 8, borderBottom: '1px solid var(--line)' }}>
           All upcoming fixtures
         </h2>
-        <p style={{ color: 'var(--muted)', fontSize: 13, margin: '0 0 14px' }}>Fixtures are grouped by competition. Choose a month or a particular date, then share the displayed fixtures as a picture.</p>
+        <p style={{ color: 'var(--muted)', fontSize: 13, margin: '0 0 14px' }}>Choose a competition, month or date. Share the displayed fixtures as a picture.</p>
         <div className="team-fixture-filters">
+          <label>Competition
+            <select value={fixtureCompetition} onChange={(event) => { setFixtureCompetition(event.target.value); setFixtureMonth(''); setFixtureDate('') }}>
+              <option value="appin-league">Appin Sports League</option>
+              {competitions.filter((competition) => competition.slug !== 'appin-league').map((competition) => <option key={competition.slug} value={competition.slug}>{competition.name}</option>)}
+              <option value="all">All competitions</option>
+            </select>
+          </label>
           <label>Month
             <select value={fixtureMonth} onChange={(event) => { setFixtureMonth(event.target.value); setFixtureDate('') }}>
               <option value="">All months</option>
@@ -457,24 +455,19 @@ export default function TeamDetail() {
           <button type="button" disabled={!filteredFixtures.length || sharing} onClick={shareFixtures}>{sharing ? 'Preparing…' : 'Share picture'}</button>
         </div>
         {filteredFixtures.length === 0 ? <p style={{ color: 'var(--muted)', fontSize: 14 }}>No upcoming fixtures for this selection.</p> : (
-          <div>
-            {fixtureGroups.map((group) => <section key={group.key} className="team-fixture-group" aria-label={group.name}>
-              <h3 className="team-fixture-group-title">{group.name} <span>{group.fixtures.length}</span></h3>
-              <ul style={{ listStyle: 'none', margin: 0, padding: 0 }}>
-              {group.fixtures.map((f) => {
+          <ul style={{ listStyle: 'none', margin: 0, padding: 0 }}>
+            {filteredFixtures.map((f) => {
               const isHome = f.home_team?.id === team.id
               const opponent = isHome ? f.away_team : f.home_team
               return <li key={f.id} className="team-fixture-row">
                 <Link to={`/fixtures/${f.id}`}>
                   <span className="team-fixture-date">{fixtureDay(f) ? new Date(`${fixtureDay(f)}T12:00:00`).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' }) : 'TBC'}</span>
                   <span className="team-fixture-opponent">{isHome ? 'vs' : 'at'} {opponent?.name || 'TBC'}</span>
-                  <span className="team-fixture-location">{[f.fixture_date?.includes('T') ? new Date(f.fixture_date).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }) : null, f.venue].filter(Boolean).join(' · ')}</span>
+                  <span className="team-fixture-location">{[fixtureCompetition === 'all' ? f.stage?.competition?.name : null, f.fixture_date?.includes('T') ? new Date(f.fixture_date).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }) : null, f.venue].filter(Boolean).join(' · ')}</span>
                 </Link>
               </li>
-              })}
-              </ul>
-            </section>)}
-          </div>
+            })}
+          </ul>
         )}
       </section>
 
