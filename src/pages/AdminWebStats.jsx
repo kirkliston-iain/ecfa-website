@@ -188,6 +188,8 @@ export default function AdminWebStats() {
   const [error, setError] = useState('')
   const [stats, setStats] = useState(null)
   const [engagement, setEngagement] = useState(null)
+  const [signIns, setSignIns] = useState(null)
+  const [signInError, setSignInError] = useState('')
   const [labels, setLabels] = useState({})
   const [selection, setSelection] = useState(null)
   const [history, setHistory] = useState(null)
@@ -201,9 +203,10 @@ export default function AdminWebStats() {
     let cancelled = false
     async function load() {
       try {
-        const [{ data, error: statsError }, { data: engagementData }, { data: fixtures }, { data: teams }, { data: competitions }, { data: players }] = await Promise.all([
+        const [{ data, error: statsError }, { data: engagementData }, { data: signInData, error: signInLoadError }, { data: fixtures }, { data: teams }, { data: competitions }, { data: players }] = await Promise.all([
           supabase.rpc('get_admin_web_stats'),
           supabase.rpc('get_admin_web_engagement_stats'),
+          supabase.rpc('get_admin_sign_in_stats'),
           supabase.from('fixtures').select('id, fixture_date, home_score, away_score, home_team:home_team_id(name), away_team:away_team_id(name)'),
           supabase.from('teams').select('id, name'),
           supabase.from('competitions').select('slug, name'),
@@ -244,6 +247,8 @@ export default function AdminWebStats() {
         if (!cancelled) {
           setStats(data)
           setEngagement(engagementData)
+          setSignIns(signInData)
+          if (signInLoadError) setSignInError('Sign-in activity could not be loaded.')
           setLabels(pageLabels)
         }
       } catch (err) {
@@ -349,6 +354,19 @@ export default function AdminWebStats() {
         <TotalCard title="Last year" value={stats?.last_year} onClick={() => selectHistory({ title: 'Last year', days: 365 })} />
         <TotalCard title="All time" value={stats?.all_time} onClick={() => selectHistory({ title: 'Tracked visit history', days: 365 })} />
       </div>
+
+      <section style={{ ...panelStyle, marginBottom: 30 }}>
+        <h2 style={{ color: 'var(--brass)', fontSize: 20, margin: '0 0 8px' }}>Admin and manager sign-ins</h2>
+        <p style={{ color: 'var(--muted)', fontSize: 13, margin: '0 0 14px' }}>Counts begin when sign-in auditing was added. Managers use one shared code, so their sign-ins cannot be attributed to a person.</p>
+        {signInError ? <p role="alert">{signInError}</p> : <>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(175px, 1fr))', gap: 16 }}>
+            <div><strong style={{ fontSize: 28 }}>{Number(signIns?.admin_30 || 0).toLocaleString()}</strong><div>Admin sign-ins · last 30 days</div><small>{Number(signIns?.admin_all_time || 0).toLocaleString()} recorded in total</small></div>
+            <div><strong style={{ fontSize: 28 }}>{Number(signIns?.manager_30 || 0).toLocaleString()}</strong><div>Manager code sign-ins · last 30 days</div><small>{Number(signIns?.manager_all_time || 0).toLocaleString()} recorded in total</small></div>
+          </div>
+          <p style={{ margin: '14px 0 0', fontSize: 14 }}>Manager account last signed in: <strong>{signIns?.manager_last_at ? new Date(signIns.manager_last_at).toLocaleString('en-GB') : 'Never'}</strong></p>
+          <Link to="/admin/audit" style={{ display: 'inline-block', marginTop: 12, color: 'var(--brass)', fontWeight: 700 }}>View named admin sign-ins in the audit trail</Link>
+        </>}
+      </section>
 
       <h2 style={{ fontSize: 24, marginBottom: 4 }}>Visits and activity</h2>
       <p style={{ color: 'var(--muted)', marginTop: 0, fontSize: 13 }}>New tracking, covering the last 30 days from when this feature was added. Time is an estimate while the tab is active; old page views cannot be used to calculate visit length.</p>
