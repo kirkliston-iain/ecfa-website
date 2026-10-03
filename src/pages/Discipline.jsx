@@ -35,6 +35,7 @@ export default function Discipline() {
   const [teamRows, setTeamRows] = useState([])
   const [teamCardRows, setTeamCardRows] = useState([])
   const [seriousRows, setSeriousRows] = useState([])
+  const [regularRedRows, setRegularRedRows] = useState([])
   const [playedFixtures, setPlayedFixtures] = useState([])
 
   const [suspensions, setSuspensions] = useState([])
@@ -194,11 +195,12 @@ export default function Discipline() {
       red: Number(row.red_count || 0),
     })))
 
-    // Serious-offence bans use the card-level records, but a failure here must
+    // Automatic card bans use the card-level records, but a failure here must
     // never hide the independently calculated points totals above.
     if (cardsResult.error) {
-      console.error('Could not load serious-offence records', cardsResult.error)
+      console.error('Could not load card records for bans', cardsResult.error)
       setSeriousRows([])
+      setRegularRedRows([])
       return
     }
 
@@ -251,6 +253,11 @@ export default function Discipline() {
       if (r.card_type === 'red') entry.red += r.card_count
       else entry.yellow += r.card_count
     }
+
+    const seriousFixtures = new Set(rows.filter((row) => row.serious_offence).map((row) => `${row.player_id}::${row.fixture_id}`))
+    setRegularRedRows(Array.from(byPlayerFixture.entries())
+      .filter(([key, row]) => row.red > 0 && row.fixtureDate && !seriousFixtures.has(key))
+      .map(([key, row]) => ({ ...row, key, startDate: row.fixtureDate })))
 
     const seriousCounts = new Map()
     for (const r of rows) {
@@ -498,6 +505,19 @@ export default function Discipline() {
       isAutomatic: true,
     }))
 
+  const automaticRedSuspensions = regularRedRows
+    .filter((row) => !manuallyCoveredPlayers.has(row.player.id) && gamesPlayedSince(row.team?.id, row.startDate) < 1)
+    .map((row) => ({
+      id: `red-${row.key}`,
+      player: row.player,
+      team: row.team,
+      reason: 'Red card',
+      games_banned: 1,
+      is_lifetime: false,
+      automaticGamesServed: gamesPlayedSince(row.team?.id, row.startDate),
+      isAutomatic: true,
+    }))
+
   const automaticThresholdSuspensions = playerRows
     .filter((row) => {
       if (!row.ban || !row.thresholdStartDate || manuallyCoveredPlayers.has(row.player?.id)) return false
@@ -515,7 +535,7 @@ export default function Discipline() {
       isAutomatic: true,
     }))
 
-  const activeSuspensions = [...manualSuspensions, ...automaticSeriousSuspensions, ...automaticThresholdSuspensions]
+  const activeSuspensions = [...manualSuspensions, ...automaticSeriousSuspensions, ...automaticRedSuspensions, ...automaticThresholdSuspensions]
     .filter((s) => {
       if (s.status && s.status !== 'active') return false
       if (s.is_lifetime) return true
@@ -666,7 +686,7 @@ export default function Discipline() {
         Current Bans
       </h2>
       <p style={{ fontSize: 13, color: 'var(--muted)', marginBottom: 14 }}>
-        Includes serious-offence and manually added bans. Games served are counted automatically
+        Includes red-card, serious-offence and manually added bans. Games served are counted automatically
         from the team's played fixtures after the ban began.
       </p>
 

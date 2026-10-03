@@ -509,6 +509,21 @@ export default function WeeklyDisciplineReport() {
         }
       })
 
+    const seriousFixturePlayers = new Set(records.filter((record) => record.serious_offence)
+      .map((record) => `${record.player?.id}::${record.fixture?.id}`))
+    const regularRedRecords = new Map()
+    for (const record of records.filter((row) => dateKey(row.fixture?.fixture_date) === reportDate && row.card_type === 'red' && Number(row.card_count || 0) > 0)) {
+      const key = `${record.player?.id}::${record.fixture?.id}`
+      if (!seriousFixturePlayers.has(key)) regularRedRecords.set(key, record)
+    }
+    const regularRedBansThisMatchday = Array.from(regularRedRecords.values()).map((record) => ({
+      player: fullName(record.player),
+      team: record.team?.name || 'No team',
+      ban: 'Red card',
+      reason: 'Red card',
+      duration: '1 match',
+    }))
+
     const manualBansThisMatchday = suspensions
       .filter((suspension) => dateKey(suspension.start_date || suspension.created_at) === reportDate)
       .map((suspension) => ({
@@ -523,8 +538,8 @@ export default function WeeklyDisciplineReport() {
       }))
 
     const newBanMap = new Map()
-    for (const ban of [...thresholdBans, ...seriousBansThisMatchday, ...manualBansThisMatchday]) {
-      const key = `${normalName(ban.player)}::${normalName(ban.ban)}`
+    for (const ban of [...thresholdBans, ...regularRedBansThisMatchday, ...seriousBansThisMatchday, ...manualBansThisMatchday]) {
+      const key = `${normalName(ban.player)}::${normalName(ban.team)}`
       if (ban.player && (!newBanMap.has(key) || ban.manual)) newBanMap.set(key, ban)
     }
     const newBans = Array.from(newBanMap.values())
@@ -547,6 +562,15 @@ export default function WeeklyDisciplineReport() {
     })
 
     const coveredPlayers = new Set(activeManual.map((row) => row.player?.id))
+    const regularRedBans = new Map()
+    for (const row of records.filter((record) => record.card_type === 'red' && Number(record.card_count || 0) > 0 && dateKey(record.fixture?.fixture_date) <= reportDate)) {
+      const key = `${row.player?.id}::${row.fixture?.id}`
+      if (seriousFixturePlayers.has(key) || coveredPlayers.has(row.player?.id) || gamesPlayedSince(fixtures, row.team?.id, row.fixture?.fixture_date) >= 1) continue
+      regularRedBans.set(key, {
+        player: fullName(row.player), team: row.team?.name || 'No team',
+        ban: 'Red card - 1-match ban', progress: '0 served · 1 remaining', indefinite: false,
+      })
+    }
     const seriousGroups = new Map()
     for (const row of records.filter((record) => record.serious_offence)) {
       const key = `${row.player?.id}::${row.serious_offence}`
@@ -607,7 +631,7 @@ export default function WeeklyDisciplineReport() {
       indefinite: row.indefinite,
     }))
 
-    const bans = [...automaticBans, ...manualBans].sort((a, b) => {
+    const bans = [...automaticBans, ...regularRedBans.values(), ...manualBans].sort((a, b) => {
       const aHasTeam = a.team && a.team !== 'No team'
       const bHasTeam = b.team && b.team !== 'No team'
       if (aHasTeam !== bHasTeam) return aHasTeam ? -1 : 1
