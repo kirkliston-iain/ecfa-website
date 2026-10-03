@@ -20,50 +20,6 @@ const SEASON_OPTIONS = [
   { value: '2015/16', label: '2015/16' },
 ]
 
-function Badge({ logoUrl, name, size = 20 }) {
-  if (logoUrl) {
-    return (
-      <img
-        src={logoUrl}
-        alt=""
-        style={{
-          width: size,
-          height: size,
-          borderRadius: '50%',
-          objectFit: 'cover',
-          background: '#fff',
-          flexShrink: 0,
-        }}
-      />
-    )
-  }
-  const initials = (name || '?')
-    .split(' ')
-    .map((w) => w[0])
-    .slice(0, 2)
-    .join('')
-    .toUpperCase()
-  return (
-    <span
-      style={{
-        width: size,
-        height: size,
-        borderRadius: '50%',
-        background: 'var(--ink)',
-        color: '#fff',
-        display: 'inline-flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        fontSize: size * 0.4,
-        fontWeight: 700,
-        flexShrink: 0,
-      }}
-    >
-      {initials}
-    </span>
-  )
-}
-
 function normalisePlayerName(name) {
   return String(name || '').trim().replace(/\s+/g, ' ').toLocaleLowerCase('en-GB')
 }
@@ -126,7 +82,6 @@ export default function ScorersPage() {
   const [loading, setLoading] = useState(true)
   const [historic, setHistoric] = useState([])
   const [current, setCurrent] = useState([])
-  const [teamLogos, setTeamLogos] = useState({})
   const [playerDirectory, setPlayerDirectory] = useState([])
   const [sponsors, setSponsors] = useState([])
 
@@ -142,11 +97,10 @@ export default function ScorersPage() {
 
       const hist = await fetchAllHistoricScorers()
 
-      const [{ data: scorers }, { data: teams }, { data: directoryPlayers }, { data: sponsorRows }] = await Promise.all([
+      const [{ data: scorers }, { data: directoryPlayers }, { data: sponsorRows }] = await Promise.all([
         supabase
           .from('fixture_scorers')
           .select('goals, player:player_id(id, first_name, last_name), team:team_id(name), fixture:fixture_id(stage:stage_id(competition:competition_id(name, slug)))'),
-        supabase.from('teams').select('name, logo_url'),
         supabase.from('players').select('id, first_name, last_name, team_id').order('last_name').order('first_name'),
         supabase.from('sponsors').select('id, name, website_url, logo_url').eq('is_published', true).in('name', SPONSOR_NAMES),
       ])
@@ -163,9 +117,6 @@ export default function ScorersPage() {
           }))
         )
         setSponsors((sponsorRows || []).sort((a, b) => SPONSOR_NAMES.indexOf(a.name) - SPONSOR_NAMES.indexOf(b.name)))
-        const logoMap = {}
-        for (const t of teams || []) logoMap[t.name] = t.logo_url
-        setTeamLogos(logoMap)
         setPlayerDirectory(directoryPlayers || [])
         setLoading(false)
       }
@@ -198,31 +149,35 @@ export default function ScorersPage() {
       : season === '2026/27'
         ? current
         : historic.filter((row) => row.season === season)
-    const sourceRows = competition === 'all' ? seasonRows : seasonRows.filter((row) => row.competition === competition)
-
     const totals = {}
     const displayNames = {}
     const teamOf = {}
     const byCompetition = {}
-    for (const row of sourceRows) {
+    for (const row of seasonRows) {
       const key = playerKey(row.player_name)
       if (!key) continue
       totals[key] = (totals[key] || 0) + Number(row.goals || 0)
       if (!byCompetition[key]) byCompetition[key] = {}
       byCompetition[key][row.competition] = (byCompetition[key][row.competition] || 0) + Number(row.goals || 0)
       displayNames[key] = key === 'darran taylor' ? 'Darran Taylor' : rosterNames[key] || displayNames[key] || canonicalPlayerName(row.player_name)
-      if (row.team_name) teamOf[key] = row.team_name
+      if (row.team_name) {
+        const rowSeason = row.season || CURRENT_SEASON
+        if (!teamOf[key] || rowSeason > teamOf[key].season) teamOf[key] = { season: rowSeason, names: [row.team_name] }
+        else if (rowSeason === teamOf[key].season && !teamOf[key].names.includes(row.team_name)) teamOf[key].names.push(row.team_name)
+      }
     }
 
     return Object.entries(totals)
       .map(([key, goals]) => ({
         player_name: displayNames[key],
         player_id: rosterIds[key] || null,
-        team_name: teamOf[key] || '',
+        team_name: teamOf[key]?.names.join(' / ') || '',
         goals,
         byCompetition: byCompetition[key],
       }))
-      .sort((a, b) => b.goals - a.goals)
+      .filter((row) => competition === 'all' || row.byCompetition[competition] > 0)
+      .sort((a, b) => (competition === 'all' ? b.goals - a.goals : (b.byCompetition[competition] || 0) - (a.byCompetition[competition] || 0))
+        || b.goals - a.goals || a.player_name.localeCompare(b.player_name, 'en-GB'))
   }, [season, competition, historic, current, playerDirectory])
 
   const visibleRows = playerSearch
@@ -275,7 +230,7 @@ export default function ScorersPage() {
           <span>{sponsor.name}</span>
         </a>)}
       </div>}
-      <p style={{ color: 'var(--muted)', marginBottom: 20 }}>{seasonLabel} Earlier seasons are recorded as league goals.</p>
+      <p style={{ color: 'var(--muted)', marginBottom: 20 }}>{seasonLabel} Earlier seasons are recorded as league goals.{season === 'overall' ? ' Team shows the most recent recorded club.' : ''}</p>
 
       <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginBottom: 24 }}>
         <label style={filterLabelStyle}>Competition
@@ -305,22 +260,23 @@ export default function ScorersPage() {
           <p style={{ color: 'var(--muted)', fontSize: 13 }}>
             {playerHistoryTotal} goal{playerHistoryTotal === 1 ? '' : 's'} across recorded ECFA seasons.
           </p>
-          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+          <table style={{ width: '100%', tableLayout: 'fixed', borderCollapse: 'collapse', fontSize: 11 }}>
+            <colgroup><col style={{ width: '20%' }} /><col style={{ width: '38%' }} /><col style={{ width: '27%' }} /><col style={{ width: '15%' }} /></colgroup>
             <thead>
               <tr>
-                <th style={thStyle('left')}>Season</th>
-                <th style={thStyle('left')}>Team</th>
-                <th style={thStyle('left')}>Competition</th>
-                <th style={thStyle()}>Goals</th>
+                <th style={goalHeaderStyle}>Season</th>
+                <th style={goalHeaderStyle}>Team</th>
+                <th style={goalHeaderStyle}>Competition</th>
+                <th style={{ ...goalHeaderStyle, textAlign: 'center' }}>Goals</th>
               </tr>
             </thead>
             <tbody>
               {playerSeasonRows.map((row) => (
                 <tr key={`${row.season}-${row.team_name}-${row.competition}`} style={{ borderBottom: '1px solid var(--line)' }}>
-                  <td style={{ padding: '10px 8px' }}>{row.season}</td>
-                  <td style={{ padding: '10px 8px' }}>{row.team_name}</td>
-                  <td style={{ padding: '10px 8px' }}>{row.competition}</td>
-                  <td style={{ padding: '10px 8px', textAlign: 'center', fontWeight: 800 }}>{row.goals}</td>
+                  <td style={goalCellStyle}>{row.season}</td>
+                  <td style={goalCellStyle}>{row.team_name}</td>
+                  <td style={goalCellStyle}>{row.competition}</td>
+                  <td style={{ ...goalCellStyle, textAlign: 'center', fontWeight: 800 }}>{row.goals}</td>
                 </tr>
               ))}
             </tbody>
@@ -328,47 +284,40 @@ export default function ScorersPage() {
         </section>
       )}
 
-      <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 14 }}>
+      <table style={{ width: '100%', tableLayout: 'fixed', borderCollapse: 'collapse', fontSize: 12 }}>
+        <colgroup><col style={{ width: '30%' }} /><col style={{ width: '27%' }} /><col style={{ width: '14%' }} /><col style={{ width: '12%' }} /><col style={{ width: '17%' }} /></colgroup>
         <thead>
           <tr style={{ borderBottom: '3px solid var(--brass)' }}>
-            <th style={thStyle('left')}>#</th>
-            <th style={thStyle('left')}>Player</th>
-            {season !== 'overall' && <th style={thStyle('left')}>Team</th>}
-            <th style={thStyle()}>Goals</th>
+            <th style={goalHeaderStyle}>Name</th>
+            <th style={goalHeaderStyle}>Team</th>
+            <th style={{ ...goalHeaderStyle, textAlign: 'center' }}>League</th>
+            <th style={{ ...goalHeaderStyle, textAlign: 'center' }}>Cup</th>
+            <th style={{ ...goalHeaderStyle, textAlign: 'center' }}>Overall</th>
           </tr>
         </thead>
         <tbody>
-          {visibleRows.slice(0, 100).map((row, i) => (
+          {visibleRows.map((row) => (
             <tr key={row.player_name} style={{ borderBottom: '1px solid var(--line)' }}>
-              <td style={{ padding: '10px 8px' }}>{i + 1}</td>
-              <td style={{ padding: '10px 8px', fontWeight: 600 }}>
+              <td style={{ ...goalCellStyle, fontWeight: 700 }}>
                 <Link
                   to={`/goalscorers?player=${encodeURIComponent(row.player_name)}`}
-                  style={{ color: 'var(--ink)', textDecoration: 'underline', textDecorationColor: 'var(--brass)', textUnderlineOffset: 3 }}
+                  style={{ color: 'var(--ink)', textDecoration: 'underline', textDecorationColor: 'var(--brass)', textUnderlineOffset: 3, overflowWrap: 'anywhere' }}
                   aria-label={`View ${row.player_name} season-by-season scoring history`}
                 >
                   {row.player_name}
                 </Link>
-                {competition === 'all' && <span style={{ display: 'block', marginTop: 3, color: 'var(--muted)', fontSize: 11, fontWeight: 400 }}>
-                  {['League', 'Cup', 'Competition not recorded'].filter((group) => row.byCompetition[group]).map((group) => `${group}: ${row.byCompetition[group]}`).join(' · ')}
-                </span>}
               </td>
-              {season !== 'overall' && (
-                <td style={{ padding: '10px 8px', color: 'var(--muted)' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                    <Badge logoUrl={teamLogos[row.team_name]} name={row.team_name} />
-                    <span>{row.team_name}</span>
-                  </div>
-                </td>
-              )}
-              <td style={{ padding: '10px 8px', textAlign: 'center', fontWeight: 800, color: 'var(--ink)' }}>
+              <td style={{ ...goalCellStyle, color: 'var(--muted)' }} title={season === 'overall' ? 'Most recently recorded team' : undefined}>{row.team_name || '—'}</td>
+              <td style={{ ...goalCellStyle, textAlign: 'center' }}>{row.byCompetition.League || '—'}</td>
+              <td style={{ ...goalCellStyle, textAlign: 'center' }}>{row.byCompetition.Cup || '—'}</td>
+              <td style={{ ...goalCellStyle, textAlign: 'center', fontWeight: 800, color: 'var(--ink)' }}>
                 {row.goals}
               </td>
             </tr>
           ))}
           {visibleRows.length === 0 && (
             <tr>
-              <td colSpan={season === 'overall' ? 3 : 4} style={{ padding: '24px 8px', textAlign: 'center', color: 'var(--muted)' }}>
+              <td colSpan={5} style={{ padding: '24px 8px', textAlign: 'center', color: 'var(--muted)' }}>
                 No scorers recorded for this selection.
               </td>
             </tr>
@@ -379,18 +328,8 @@ export default function ScorersPage() {
   )
 }
 
-function thStyle(align = 'center') {
-  return {
-    textAlign: align,
-    padding: '8px',
-    fontWeight: 700,
-    color: 'var(--ink)',
-    textTransform: 'uppercase',
-    fontSize: 12,
-    letterSpacing: 0.4,
-  }
-}
-
 const sponsorLinkStyle = { display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, minWidth: 0, minHeight: 72, padding: '8px 6px', border: '1px solid var(--line)', borderRadius: 8, background: '#fff', color: 'var(--ink)', fontSize: 12, fontWeight: 700, lineHeight: 1.2, overflowWrap: 'anywhere', textDecoration: 'none' }
-const filterLabelStyle = { display: 'grid', gap: 5, minWidth: 160, color: 'var(--muted)', fontSize: 12, fontWeight: 700 }
-const filterSelectStyle = { padding: '9px 12px', fontSize: 14, borderRadius: 6, border: '1px solid var(--line)', background: '#fff', color: 'var(--ink)' }
+const filterLabelStyle = { display: 'grid', gap: 5, minWidth: 140, flex: '1 1 140px', color: 'var(--muted)', fontSize: 12, fontWeight: 700 }
+const filterSelectStyle = { width: '100%', minWidth: 0, boxSizing: 'border-box', padding: '9px 10px', fontSize: 14, borderRadius: 6, border: '1px solid var(--line)', background: '#fff', color: 'var(--ink)' }
+const goalHeaderStyle = { textAlign: 'left', padding: '8px 2px', fontWeight: 800, color: 'var(--ink)', textTransform: 'uppercase', fontSize: 10, letterSpacing: 0.1, overflowWrap: 'anywhere' }
+const goalCellStyle = { padding: '11px 2px', verticalAlign: 'middle', lineHeight: 1.35, overflowWrap: 'anywhere' }
