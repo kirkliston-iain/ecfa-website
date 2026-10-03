@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { supabase } from '../supabaseClient'
-import { trackInteraction } from '../utils/webAnalytics'
 
 const METRICS = [
   { value: 'goalsFor', label: 'Most Goals Scored', suffix: 'goals' },
@@ -11,8 +10,10 @@ const METRICS = [
   { value: 'goalDifference', label: 'Best Goal Difference', suffix: 'goal difference', signed: true },
   { value: 'longestUnbeaten', label: 'Longest Unbeaten Streak', suffix: 'games' },
   { value: 'longestWinning', label: 'Longest Winning Streak', suffix: 'games' },
+  { value: 'longestWinless', label: 'Longest Run Without a Win', suffix: 'games' },
   { value: 'currentUnbeaten', label: 'Current Games Since a Defeat', suffix: 'games' },
   { value: 'currentWinning', label: 'Current Winning Streak', suffix: 'games' },
+  { value: 'currentWinless', label: 'Current Games Without a Win', suffix: 'games' },
 ]
 
 function Badge({ logoUrl, name }) {
@@ -52,16 +53,21 @@ function streaks(results) {
   let longestWinning = 0
   let unbeatenRun = 0
   let winningRun = 0
+  let winlessRun = 0
+  let longestWinless = 0
 
   for (const result of results) {
     unbeatenRun = result === 'L' ? 0 : unbeatenRun + 1
     winningRun = result === 'W' ? winningRun + 1 : 0
+    winlessRun = result === 'W' ? 0 : winlessRun + 1
     longestUnbeaten = Math.max(longestUnbeaten, unbeatenRun)
     longestWinning = Math.max(longestWinning, winningRun)
+    longestWinless = Math.max(longestWinless, winlessRun)
   }
 
   let currentUnbeaten = 0
   let currentWinning = 0
+  let currentWinless = 0
   for (let index = results.length - 1; index >= 0; index -= 1) {
     if (results[index] === 'L') break
     currentUnbeaten += 1
@@ -71,7 +77,12 @@ function streaks(results) {
     currentWinning += 1
   }
 
-  return { longestUnbeaten, longestWinning, currentUnbeaten, currentWinning }
+  for (let index = results.length - 1; index >= 0; index -= 1) {
+    if (results[index] === 'W') break
+    currentWinless += 1
+  }
+
+  return { longestUnbeaten, longestWinning, longestWinless, currentUnbeaten, currentWinning, currentWinless }
 }
 
 function buildTeamStats(teams, fixtures) {
@@ -133,14 +144,13 @@ export default function StatsPage() {
   const [season, setSeason] = useState('')
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
-  const [statsSponsors, setStatsSponsors] = useState([])
 
   useEffect(() => {
     window.scrollTo({ top: 0, left: 0, behavior: 'auto' })
     let cancelled = false
 
     async function load() {
-      const [{ data: fixtureRows, error: fixtureError }, { data: teamRows, error: teamError }, { data: sponsorRows }] = await Promise.all([
+      const [{ data: fixtureRows, error: fixtureError }, { data: teamRows, error: teamError }] = await Promise.all([
         supabase
           .from('fixtures')
           .select('id, fixture_date, home_score, away_score, went_to_extra_time, home_extra_time_score, away_extra_time_score, decided_by_penalties, home_penalty_score, away_penalty_score, home_team:home_team_id(id), away_team:away_team_id(id), stage:stage_id(competition:competition_id(name, slug, season))')
@@ -148,15 +158,9 @@ export default function StatsPage() {
           .eq('hidden_from_public', false)
           .order('fixture_date'),
         supabase.from('teams').select('id, name, logo_url').order('name'),
-        supabase.from('sponsors').select('id, name, website_url, logo_url')
-          .eq('is_published', true)
-          .in('name', ['Game of Throwing Edinburgh', 'Escape Edinburgh']),
       ])
 
       if (cancelled) return
-      setStatsSponsors((sponsorRows || []).sort((left, right) =>
-        ['Game of Throwing Edinburgh', 'Escape Edinburgh'].indexOf(left.name)
-        - ['Game of Throwing Edinburgh', 'Escape Edinburgh'].indexOf(right.name)))
       if (fixtureError || teamError) {
         setError('Football statistics could not be loaded.')
       } else {
@@ -174,7 +178,7 @@ export default function StatsPage() {
   }, [])
 
   const scopedFixtures = useMemo(
-    () => fixtures.filter((fixture) => scope === 'all' || fixture.stage?.competition?.slug === 'appin-league'),
+    () => fixtures.filter((fixture) => scope === 'all' || (scope === 'league' ? fixture.stage?.competition?.slug === 'appin-league' : Boolean(fixture.stage?.competition?.slug && fixture.stage.competition.slug !== 'appin-league'))),
     [fixtures, scope]
   )
   const stats = useMemo(() => buildTeamStats(teams, scopedFixtures), [teams, scopedFixtures])
@@ -193,18 +197,8 @@ export default function StatsPage() {
   return (
     <div className="container" style={{ padding: '32px 20px 48px', maxWidth: 900 }}>
       <h1 style={{ fontSize: 30, marginBottom: 4 }}>Stats</h1>
-      {statsSponsors.length > 0 && (
-        <div aria-label="Stats sponsors" style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 8, maxWidth: 500, margin: '12px 0 18px' }}>
-          {statsSponsors.map((sponsor) => (
-            <a key={sponsor.id} href={sponsor.website_url} target="_blank" rel="noopener noreferrer" onClick={() => trackInteraction('sponsor_click', `${sponsor.name} — Stats`)} style={statsSponsorStyle}>
-              {sponsor.logo_url && <img src={sponsor.logo_url} alt="" style={{ width: 46, height: 46, objectFit: 'contain', flexShrink: 0 }} />}
-              <span>{sponsor.name}</span>
-            </a>
-          ))}
-        </div>
-      )}
       <p style={{ color: 'var(--muted)', marginBottom: 24 }}>
-        Current-season ECFA team records{season ? ` — ${String(season).replace('-', '/')}` : ''}. Team statistics can include every competition or league matches only.
+        Current-season ECFA team records{season ? ` — ${String(season).replace('-', '/')}` : ''}. Compare all competitions, league matches or cup matches.
       </p>
 
       {error ? <p style={{ color: '#B3261E' }}>{error}</p> : (
@@ -214,7 +208,8 @@ export default function StatsPage() {
               Competition scope
               <select value={scope} onChange={(event) => setScope(event.target.value)} style={selectStyle}>
                 <option value="all">All competitions</option>
-                <option value="appin-league">League only</option>
+                <option value="league">League</option>
+                <option value="cup">Cup</option>
               </select>
             </label>
             <label style={controlLabelStyle}>
@@ -235,7 +230,7 @@ export default function StatsPage() {
             <div style={{ borderBottom: '3px solid var(--brass)', paddingBottom: 9, marginBottom: 4 }}>
               <h2 style={{ fontSize: 21, margin: 0 }}>{metric.label}</h2>
               <div style={{ color: 'var(--muted)', fontSize: 13, marginTop: 4 }}>
-                {scope === 'all' ? 'All current-season competitions' : 'Appin Sports League only'}
+                {scope === 'all' ? 'All current-season competitions' : scope === 'league' ? 'Appin Sports League' : 'Cup competitions'}
               </div>
             </div>
 
@@ -263,9 +258,9 @@ export default function StatsPage() {
       <section style={{ marginTop: 38 }}>
         <h2 style={{ fontSize: 20, color: 'var(--brass)', borderBottom: '2px solid var(--line)', paddingBottom: 8 }}>More ECFA statistics</h2>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(210px, 1fr))', gap: 12 }}>
-          <Link to="/scorers" style={linkCardStyle}>
-            <strong>Player scoring — league only</strong>
-            <span style={linkDescriptionStyle}>Season and all-time league goals. Cup scorer identities are not recorded, so no competition split is shown.</span>
+          <Link to="/goalscorers" style={linkCardStyle}>
+            <strong>Goalscorers</strong>
+            <span style={linkDescriptionStyle}>All recorded goals, with League and Cup views and season-by-season history.</span>
           </Link>
           <Link to="/referees" style={linkCardStyle}>
             <strong>Referee statistics</strong>
@@ -293,5 +288,3 @@ const summaryLabelStyle = { display: 'block', color: 'var(--muted)', fontSize: 1
 const rankingRowStyle = { display: 'flex', alignItems: 'center', gap: 11, padding: '13px 8px', borderBottom: '1px solid var(--line)', color: 'inherit', textDecoration: 'none' }
 const linkCardStyle = { display: 'grid', gap: 6, padding: 16, border: '1px solid var(--line)', borderRadius: 8, color: 'var(--ink)', textDecoration: 'none', background: '#f5f8fa' }
 const linkDescriptionStyle = { color: 'var(--muted)', fontSize: 13, lineHeight: 1.45 }
-
-const statsSponsorStyle = { display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, minWidth: 0, minHeight: 72, padding: '8px 6px', border: '1px solid var(--line)', borderRadius: 8, background: '#fff', color: 'var(--ink)', fontSize: 12, fontWeight: 700, lineHeight: 1.2, overflowWrap: 'anywhere', textDecoration: 'none' }

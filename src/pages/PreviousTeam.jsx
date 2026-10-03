@@ -107,7 +107,7 @@ export default function PreviousTeam() {
             {scorerSeasons.map((value) => <option key={value} value={value}>{value}</option>)}
           </select>
           {displayedScorers.length === 0 ? <Empty>No scorers recorded for this selection.</Empty> : displayedScorers.map(([name, goals], index) => (
-            <Link key={name} to={`/scorers?player=${encodeURIComponent(name)}`} style={rowLinkStyle}>
+            <Link key={name} to={`/goalscorers?player=${encodeURIComponent(name)}`} style={rowLinkStyle}>
               <span>{scorersSeason === 'Overall' ? `${index + 1}. ${name}` : name}</span><strong>{goals}</strong>
             </Link>
           ))}

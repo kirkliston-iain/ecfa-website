@@ -113,7 +113,8 @@ story.append(card_grid([
     ('Match Hub', 'The front page for fixtures and results, organised by match date. The Latest News shortcut beside the heading opens the news section.'),
     ('News', 'Read published ECFA stories with dates, pictures and links to related articles. The most recently published story appears first.'),
     ('Competitions', 'League tables, cup structures, fixtures, results and competition detail.'),
-    ('Scorers', 'Current-season and all-time goalscorer tables with player links.'),
+    ('Goalscorers', 'All goals, League and Cup views with season history and player links.'),
+    ('Stats', 'Current-season team goals, clean sheets, wins and streak records across all competitions, League or Cup.'),
     ('Honours and History', 'Past winners, team honours and previous-season records.'),
     ('Teams and Referees', 'Dedicated statistical views for clubs, players and match officials.'),
     ('Downloads and Search', 'Export public data or search names, teams, competitions and pages.'),
@@ -138,12 +139,13 @@ story.append(card_grid([
     ('Cup progress', 'Follow group tables and knockout fixtures. Gold labels in Match Hub previews link to the relevant group, cup draw or league table.'),
     ('Competition switching', 'Move between the Appin Sports League, ECFA Knockout Cup, ECFA League Cup and Brian Latto Cup.'),
 ]))
-story += [Spacer(1, 10)] + section_title('4. Scorers and player information')
+story += [Spacer(1, 10)] + section_title('4. Goalscorers and player information')
 story.append(card_grid([
-    ('Season scorer tables', 'Select the current season or a previous recorded season to rank goalscorers.'),
-    ('All-time scorers', 'Combine every recorded ECFA season into an overall career goals table.'),
+    ('Season scorer tables', 'Choose All goals, League or Cup and select a season. Earlier seasons are recorded under League.'),
+    ('All-time scorers', 'Combine every recorded ECFA season into an overall career goals table with competition totals.'),
+    ('Goalscorers sponsors', 'Game of Throwing Edinburgh and Escape Edinburgh appear together below the Goalscorers heading.'),
     ('Player profiles', 'View a player’s current team, current and historical goals, and recorded yellow and red cards.'),
-    ('Scoring history', 'Historical goals are totalled by season and team, avoiding duplicate single-goal lines.'),
+    ('Scoring history', 'Historical goals are totalled by season, team and competition, avoiding duplicate single-goal lines.'),
     ('Match-linked goals', 'Current-season and 2025/26 match records show their recorded scorers on fixture and previous-meeting details.'),
     ('Name search', 'Find current players and historical scorers using full or partial names.'),
 ]))

@@ -8,7 +8,7 @@ const SITE_PAGES = [
   { label: 'Match Hub', description: 'Fixtures and results by date', to: '/' },
   { label: 'News', description: 'Latest ECFA stories and event updates', to: '/news' },
   { label: 'Competitions', description: 'Tables, fixtures, results and next-round possibilities', to: '/standings' },
-  { label: 'Scorers', description: 'Current and historical goalscorers', to: '/scorers' },
+  { label: 'Goalscorers', description: 'Current and historical goalscorers', to: '/goalscorers' },
   { label: 'Honours', description: 'ECFA competition winners', to: '/honours' },
   { label: 'Archive', description: 'Past seasons, results, tables, honours and historical scorers', to: '/archive' },
   { label: 'Teams', description: 'Team pages, squads, managers and fixtures', to: '/teams' },
@@ -109,7 +109,7 @@ export default function Search() {
           key: `historic-${key}`,
           label: player.player_name,
           description: player.team_name ? `Historical scorer · ${player.team_name}` : 'Historical scorer',
-          to: `/scorers?player=${encodeURIComponent(player.player_name)}`,
+          to: `/goalscorers?player=${encodeURIComponent(player.player_name)}`,
         })
       }
 

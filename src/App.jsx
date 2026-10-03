@@ -1,4 +1,4 @@
-import { Routes, Route, useLocation } from 'react-router-dom'
+import { Routes, Route, Navigate, useLocation } from 'react-router-dom'
 import Header from './components/Header'
 import Footer from './components/Footer'
 import ManagerGate from './components/ManagerGate'
@@ -64,7 +64,8 @@ export default function App() {
           <Route path="/fixtures/:id" element={<FixtureDetail />} />
           <Route path="/venues/:venueKey" element={<VenueFixtures />} />
           <Route path="/teams/:id" element={<TeamDetail />} />
-          <Route path="/scorers" element={<ScorersPage />} />
+          <Route path="/scorers" element={<Navigate to={`/goalscorers${location.search}`} replace />} />
+          <Route path="/goalscorers" element={<ScorersPage />} />
           <Route path="/stats" element={<StatsPage />} />
           <Route path="/honours" element={<HonoursPage />} />
           <Route path="/archive" element={<HistoricalSeason />} />

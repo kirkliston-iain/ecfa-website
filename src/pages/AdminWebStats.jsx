@@ -6,7 +6,7 @@ function pageCategory(path) {
   if (path.startsWith('/fixtures/')) return 'Matches'
   if (path === '/competitions' || path === '/standings' || path.startsWith('/competitions/')) return 'Competitions'
   if (path === '/teams' || path.startsWith('/teams/')) return 'Teams'
-  if (path === '/scorers' || path.startsWith('/players/')) return 'Players'
+  if (path === '/scorers' || path === '/goalscorers' || path.startsWith('/players/')) return 'Players'
   return 'Other pages'
 }
 
@@ -220,7 +220,8 @@ export default function AdminWebStats() {
           '/standings': 'Competitions and standings',
           '/competitions': 'Competitions',
           '/stats': 'Football statistics',
-          '/scorers': 'Scorers',
+          '/scorers': 'Scorers (old link)',
+          '/goalscorers': 'Goalscorers',
           '/honours': 'Honours',
           '/archive': 'Archive',
           '/history': 'Archive (legacy link)',

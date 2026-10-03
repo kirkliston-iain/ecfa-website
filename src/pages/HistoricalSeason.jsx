@@ -291,7 +291,7 @@ export default function HistoricalSeason() {
           <strong>Honours archive</strong>
           <span style={archiveLinkDescriptionStyle}>Season-by-season winners and all-time team totals.</span>
         </Link>
-        <Link to="/scorers" style={archiveLinkStyle}>
+        <Link to="/goalscorers" style={archiveLinkStyle}>
           <strong>Historical scorers</strong>
           <span style={archiveLinkDescriptionStyle}>Recorded season totals. Match-level links are only available where the underlying data supports them.</span>
         </Link>
@@ -477,7 +477,7 @@ export default function HistoricalSeason() {
                 </span>
                 <span style={{ flex: 1, minWidth: 0 }}>
                   <Link
-                    to={`/scorers?player=${encodeURIComponent(scorer.playerName)}`}
+                    to={`/goalscorers?player=${encodeURIComponent(scorer.playerName)}`}
                     style={{ color: 'var(--ink)', fontWeight: 750, textDecoration: 'underline', textDecorationColor: 'var(--brass)', textUnderlineOffset: 3 }}
                   >
                     {scorer.playerName}
