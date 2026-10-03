@@ -150,6 +150,21 @@ async function loadCompetition(meta) {
   return { ...meta, fixtures: taggedFixtures, groupTeams, groupNames }
 }
 
+async function loadHistoricResults() {
+  const pageSize = 1000
+  const fixtures = []
+  for (let from = 0; ; from += pageSize) {
+    const { data, error } = await supabase.from('historic_fixtures')
+      .select('id, fixture_date, home_team_id, away_team_id, home_goals, away_goals')
+      .order('fixture_date', { ascending: false })
+      .order('id')
+      .range(from, from + pageSize - 1)
+    if (error) return { data: [], error }
+    fixtures.push(...(data || []))
+    if ((data || []).length < pageSize) return { data: fixtures, error: null }
+  }
+}
+
 function pickDefaultDate(days, todayStr, mode) {
   if (days.length === 0) return null
   const past = days.filter((d) => d.date <= todayStr && d.played > 0)
@@ -378,13 +393,14 @@ function buildRecapHighlights(competitions, selectedDate, scorerRows, historicFi
   }
 
   const league = competitions.find((comp) => comp.slug === 'appin-league')
-  if (league) {
+  const leaguePlayedToday = league?.fixtures.filter((f) => dateKey(f.fixture_date) === selectedDate && f.status === 'played') || []
+  if (leaguePlayedToday.length) {
     const leagueTeams = [...new Map(league.fixtures.flatMap((f) => [f.home_team, f.away_team]).filter(Boolean).map((t) => [t.id, t])).values()]
-    const form = leagueTeams.map((team) => {
+    const teamsPlayingToday = new Set(leaguePlayedToday.flatMap((f) => [f.home_team?.id, f.away_team?.id]))
+    const form = leagueTeams.filter((team) => teamsPlayingToday.has(team.id)).map((team) => {
       const recent = league.fixtures
         .filter((f) => f.status === 'played' && dateKey(f.fixture_date) <= selectedDate && (f.home_team?.id === team.id || f.away_team?.id === team.id))
         .sort((a, b) => b.fixture_date.localeCompare(a.fixture_date))
-        .slice(0, 5)
       let winningRun = 0
       let unbeatenRun = 0
       for (const fixture of recent) {
@@ -396,7 +412,7 @@ function buildRecapHighlights(competitions, selectedDate, scorerRows, historicFi
       return { team, recent, winningRun, unbeatenRun }
     }).filter((row) => row.recent.length >= 3).sort((a, b) => b.winningRun - a.winningRun || b.unbeatenRun - a.unbeatenRun)
     if (form[0]?.winningRun >= 3) {
-      highlights.push(`${form[0].team.name} are the form team after extending their winning run to ${form[0].winningRun} league games.`)
+      highlights.push(`${form[0].team.name} extended their winning run to ${form[0].winningRun} league games.`)
     } else if (form[0]?.unbeatenRun >= 4) {
       highlights.push(`${form[0].team.name} now have the league’s strongest run at ${form[0].unbeatenRun} games unbeaten.`)
     }
@@ -417,8 +433,8 @@ function buildRecapHighlights(competitions, selectedDate, scorerRows, historicFi
     const opponent = fixture.home_score > fixture.away_score ? fixture.away_team : fixture.home_team
     const currentMeetings = allFixtures.filter((f) => f.id !== fixture.id && f.status === 'played' && dateKey(f.fixture_date) < selectedDate &&
       ((f.home_team?.id === winner.id && f.away_team?.id === opponent.id) || (f.home_team?.id === opponent.id && f.away_team?.id === winner.id)))
-    const oldMeetings = historicFixtures.filter((f) =>
-      (f.home_team_id === winner.id && f.away_team_id === opponent.id) || (f.home_team_id === opponent.id && f.away_team_id === winner.id))
+    const oldMeetings = historicFixtures.filter((f) => dateKey(f.fixture_date) < selectedDate &&
+      ((f.home_team_id === winner.id && f.away_team_id === opponent.id) || (f.home_team_id === opponent.id && f.away_team_id === winner.id)))
     const meetings = [fixture, ...currentMeetings, ...oldMeetings].sort((a, b) => String(b.fixture_date || '').localeCompare(String(a.fixture_date || '')))
     const wins = meetings.filter((meeting) => resultForTeam(meeting, winner.id) === 'W').length
     if (meetings.length >= 3 && wins >= 2) {
@@ -681,7 +697,7 @@ export default function Home() {
       const [results, scorerResult, historyResult, disciplineResult] = await Promise.all([
         Promise.all(COMPETITIONS.map((c) => loadCompetition(c))),
         supabase.from('fixture_scorers').select('fixture_id, player_id, team_id, goals, player:player_id(first_name, last_name)'),
-        supabase.from('historic_fixtures').select('id, fixture_date, home_team_id, away_team_id, home_goals, away_goals'),
+        loadHistoricResults(),
         supabase.from('discipline_records').select('fixture_id, card_type, card_count'),
       ])
       if (cancelled) return
