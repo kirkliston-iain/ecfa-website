@@ -150,6 +150,7 @@ story.append(card_grid([
 story += [Spacer(1, 10)] + section_title('5. Teams')
 story.append(card_grid([
     ('Team overview', 'Choose a club to see its badge, manager, squad and current information.'),
+    ('Team websites', 'Visit a club’s own website from the Team websites section or from its team page when a link is available.'),
     ('Form and fixtures', 'See the next five fixtures and Match Hub calendar dates. Upcoming lists default to the Appin Sports League. Choose another competition or all, filter by month or date, and share the list as a picture.'),
     ('Results by season', 'Switch between the current campaign and available historical seasons.'),
     ('Team scorers and honours', 'See season-by-season scorers and honours won by the club.'),

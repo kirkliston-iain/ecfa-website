@@ -5,6 +5,7 @@ import { displayedScore, outcomeNote } from '../utils/fixtureOutcome'
 import { historicDisplayedScore } from '../utils/historicFixtureOutcome'
 import { historicTeamName, previousTeamUrl } from '../utils/historicTeams'
 import { trackInteraction } from '../utils/webAnalytics'
+import { teamWebsites, websiteForTeam } from '../utils/teamWebsites'
 
 function Badge({ logoUrl, name, size = 24 }) {
   if (logoUrl) {
@@ -503,6 +504,19 @@ export default function TeamsHub() {
         ))}
       </select>
 
+      <section style={{ marginBottom: 28 }} aria-labelledby="team-websites-heading">
+        <h2 id="team-websites-heading" style={{ ...sectionHeaderStyle, marginTop: 0 }}>Team websites</h2>
+        <div style={{ display: 'grid', gap: 8 }}>
+          {teamWebsites.map((website) => (
+            <a key={website.url} href={website.url} target="_blank" rel="noopener noreferrer"
+              style={{ ...cardStyle, color: 'var(--ink)', textDecoration: 'none', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12 }}>
+              <strong>{website.name}</strong>
+              <span style={{ color: 'var(--brass)', fontWeight: 700, whiteSpace: 'nowrap' }}>Visit website ↗</span>
+            </a>
+          ))}
+        </div>
+      </section>
+
       {previousTeams.length > 0 && (
         <section style={{ marginBottom: 28 }}>
           <h2 style={{ ...sectionHeaderStyle, marginTop: 0 }}>Previous teams</h2>
@@ -527,6 +541,7 @@ export default function TeamsHub() {
             <Badge logoUrl={team.logo_url} name={team.name} size={56} />
             <div>
               <h2 style={{ fontSize: 22, margin: 0 }}>{team.name}</h2>
+              {websiteForTeam(team.name) && <a href={websiteForTeam(team.name).url} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--brass)', fontWeight: 700, fontSize: 14 }}>Visit team website ↗</a>}
               {team.manager_name && (
                 <div style={{ color: 'var(--muted)', fontSize: 13, marginTop: 4 }}>
                   Manager: <strong style={{ color: 'var(--ink)' }}>{team.manager_name}</strong>
