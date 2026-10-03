@@ -1223,7 +1223,9 @@ export default function AdminDashboard() {
                   <div style={{ marginTop: 14, paddingTop: 14, borderTop: '1px solid var(--line)' }}>
                     <div style={{ fontWeight: 600, fontSize: 13, marginBottom: 6 }}>Scorers</div>
                     <div style={{ marginBottom: 10 }}>
-                      {(scorersByFixture[f.id] || []).map((s) => (
+                      {[...(scorersByFixture[f.id] || [])]
+                        .sort((a, b) => `${a.player?.first_name || ''} ${a.player?.last_name || ''}`.localeCompare(`${b.player?.first_name || ''} ${b.player?.last_name || ''}`, 'en', { sensitivity: 'base' }))
+                        .map((s) => (
                         <div
                           key={s.id}
                           style={{
@@ -1297,11 +1299,14 @@ export default function AdminDashboard() {
                         style={fullSelectStyle}
                       >
                         <option value="">Select player…</option>
-                        {(sideSquad || []).map((p) => (
-                          <option key={p.id} value={p.id}>
-                            {p.first_name} {p.last_name}
-                          </option>
-                        ))}
+                        {[...(sideSquad || [])]
+                          .sort((a, b) => a.first_name.localeCompare(b.first_name, 'en', { sensitivity: 'base' })
+                            || a.last_name.localeCompare(b.last_name, 'en', { sensitivity: 'base' }))
+                          .map((p) => (
+                            <option key={p.id} value={p.id}>
+                              {p.first_name} {p.last_name}
+                            </option>
+                          ))}
                       </select>
                       <div style={{ display: 'flex', gap: 8 }}>
                         <input
