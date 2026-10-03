@@ -141,7 +141,7 @@ story.append(card_grid([
 ]))
 story += [Spacer(1, 10)] + section_title('4. Goalscorers and player information')
 story.append(card_grid([
-    ('Season scorer tables', 'Choose All goals, League or Cup and select a season. The mobile-friendly table shows name, team, league goals, cup goals and overall goals. Earlier seasons are recorded under League.'),
+    ('Season scorer tables', 'Choose All goals, League or Cup and select a season. The mobile-friendly table shows name, team, league goals, cup goals and overall goals. Tap any heading to sort; tap again to reverse the order. Earlier seasons are recorded under League.'),
     ('All-time scorers', 'Combine every recorded ECFA season into an overall career goals table with competition totals.'),
     ('Goalscorers sponsors', 'Game of Throwing Edinburgh and Escape Edinburgh appear together below the Goalscorers heading.'),
     ('Player profiles', 'View a player’s current team, current and historical goals, and recorded yellow and red cards.'),

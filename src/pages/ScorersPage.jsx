@@ -79,6 +79,8 @@ export default function ScorersPage() {
   const playerSearch = (searchParams.get('player') || '').trim()
   const [season, setSeason] = useState('overall')
   const [competition, setCompetition] = useState('all')
+  const [sortKey, setSortKey] = useState('overall')
+  const [sortDirection, setSortDirection] = useState('desc')
   const [loading, setLoading] = useState(true)
   const [historic, setHistoric] = useState([])
   const [current, setCurrent] = useState([])
@@ -176,9 +178,31 @@ export default function ScorersPage() {
         byCompetition: byCompetition[key],
       }))
       .filter((row) => competition === 'all' || row.byCompetition[competition] > 0)
-      .sort((a, b) => (competition === 'all' ? b.goals - a.goals : (b.byCompetition[competition] || 0) - (a.byCompetition[competition] || 0))
-        || b.goals - a.goals || a.player_name.localeCompare(b.player_name, 'en-GB'))
-  }, [season, competition, historic, current, playerDirectory])
+      .sort((a, b) => {
+        const value = (row) => sortKey === 'league' ? row.byCompetition.League || 0
+          : sortKey === 'cup' ? row.byCompetition.Cup || 0 : row.goals
+        const order = sortKey === 'name' || sortKey === 'team'
+          ? (sortKey === 'name' ? a.player_name : a.team_name).localeCompare(sortKey === 'name' ? b.player_name : b.team_name, 'en-GB', { sensitivity: 'base' })
+          : value(a) - value(b)
+        return (sortDirection === 'asc' ? order : -order)
+          || b.goals - a.goals || a.player_name.localeCompare(b.player_name, 'en-GB')
+      })
+  }, [season, competition, sortKey, sortDirection, historic, current, playerDirectory])
+
+  const sortBy = (key) => {
+    setSortDirection(key === sortKey ? (sortDirection === 'desc' ? 'asc' : 'desc') : (key === 'name' || key === 'team' ? 'asc' : 'desc'))
+    setSortKey(key)
+  }
+
+  const sortHeader = (key, label) => {
+    const active = sortKey === key
+    const nextDirection = active ? (sortDirection === 'desc' ? 'asc' : 'desc') : (key === 'name' || key === 'team' ? 'asc' : 'desc')
+    return <th scope="col" aria-sort={active ? (sortDirection === 'desc' ? 'descending' : 'ascending') : 'none'} style={{ ...goalHeaderStyle, textAlign: key === 'name' || key === 'team' ? 'left' : 'center' }}>
+      <button type="button" onClick={() => sortBy(key)} aria-label={`Sort by ${label}, ${key === 'name' || key === 'team' ? (nextDirection === 'asc' ? 'A to Z' : 'Z to A') : (nextDirection === 'desc' ? 'largest first' : 'smallest first')}`} style={{ ...sortButtonStyle, textAlign: key === 'name' || key === 'team' ? 'left' : 'center' }}>
+        {label}{active && <span aria-hidden="true">{sortDirection === 'desc' ? ' ↓' : ' ↑'}</span>}
+      </button>
+    </th>
+  }
 
   const visibleRows = playerSearch
     ? rows.filter((row) => playerKey(row.player_name) === playerKey(playerSearch))
@@ -234,7 +258,12 @@ export default function ScorersPage() {
 
       <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginBottom: 24 }}>
         <label style={filterLabelStyle}>Competition
-          <select value={competition} onChange={(event) => setCompetition(event.target.value)} style={filterSelectStyle}>
+          <select value={competition} onChange={(event) => {
+            const selected = event.target.value
+            setCompetition(selected)
+            setSortKey(selected === 'all' ? 'overall' : selected.toLowerCase())
+            setSortDirection('desc')
+          }} style={filterSelectStyle}>
             {COMPETITION_SCOPES.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
           </select>
         </label>
@@ -288,11 +317,11 @@ export default function ScorersPage() {
         <colgroup><col style={{ width: '30%' }} /><col style={{ width: '27%' }} /><col style={{ width: '14%' }} /><col style={{ width: '12%' }} /><col style={{ width: '17%' }} /></colgroup>
         <thead>
           <tr style={{ borderBottom: '3px solid var(--brass)' }}>
-            <th style={goalHeaderStyle}>Name</th>
-            <th style={goalHeaderStyle}>Team</th>
-            <th style={{ ...goalHeaderStyle, textAlign: 'center' }}>League</th>
-            <th style={{ ...goalHeaderStyle, textAlign: 'center' }}>Cup</th>
-            <th style={{ ...goalHeaderStyle, textAlign: 'center' }}>Overall</th>
+            {sortHeader('name', 'Name')}
+            {sortHeader('team', 'Team')}
+            {sortHeader('league', 'League')}
+            {sortHeader('cup', 'Cup')}
+            {sortHeader('overall', 'Overall')}
           </tr>
         </thead>
         <tbody>
@@ -332,4 +361,5 @@ const sponsorLinkStyle = { display: 'flex', alignItems: 'center', justifyContent
 const filterLabelStyle = { display: 'grid', gap: 5, minWidth: 140, flex: '1 1 140px', color: 'var(--muted)', fontSize: 12, fontWeight: 700 }
 const filterSelectStyle = { width: '100%', minWidth: 0, boxSizing: 'border-box', padding: '9px 10px', fontSize: 14, borderRadius: 6, border: '1px solid var(--line)', background: '#fff', color: 'var(--ink)' }
 const goalHeaderStyle = { textAlign: 'left', padding: '8px 2px', fontWeight: 800, color: 'var(--ink)', textTransform: 'uppercase', fontSize: 10, letterSpacing: 0.1, overflowWrap: 'anywhere' }
+const sortButtonStyle = { display: 'block', width: '100%', border: 0, padding: 0, background: 'none', color: 'inherit', font: 'inherit', fontWeight: 'inherit', textTransform: 'inherit', letterSpacing: 'inherit', cursor: 'pointer', overflowWrap: 'anywhere' }
 const goalCellStyle = { padding: '11px 2px', verticalAlign: 'middle', lineHeight: 1.35, overflowWrap: 'anywhere' }
