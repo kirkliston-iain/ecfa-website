@@ -152,7 +152,7 @@ story.append(card_grid([
     ('Team overview', 'Choose a club to see its badge, manager, squad and current information.'),
     ('Team websites', 'Visit a club’s own website from the Team websites section or from its team page when a link is available.'),
     ('Form and fixtures', 'See the next five fixtures and Match Hub calendar dates. Upcoming lists default to the Appin Sports League. Choose another competition or all, filter by month or date, and share the list as a picture.'),
-    ('Results by season', 'Switch between the current campaign and available historical seasons.'),
+    ('Results by season', 'Switch between the current campaign and available historical seasons. The team page’s recent results mark the club as home or away and show the recorded venue.'),
     ('Team scorers and honours', 'See season-by-season scorers and honours won by the club.'),
     ('Head-to-head comparisons', 'Filter the opponent table by season and sort any column in ascending or descending order.'),
 ]))

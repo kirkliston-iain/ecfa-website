@@ -516,8 +516,14 @@ export default function TeamDetail() {
                     {result}
                   </span>
                   <Badge logoUrl={opponent?.logo_url} name={opponent?.name} size={20} />
-                  <span style={{ flex: 1 }}>
-                    {isHome ? 'vs' : '@'} {opponent?.name}
+                  <span style={{ flex: 1, minWidth: 0 }}>
+                    <span style={{ display: 'flex', alignItems: 'baseline', gap: 6, flexWrap: 'wrap' }}>
+                      <strong title={isHome ? 'Home' : 'Away'} style={{ color: 'var(--brass)', fontSize: 12 }}>{isHome ? 'H' : 'A'}</strong>
+                      <span>{opponent?.name || 'Opponent TBC'}</span>
+                    </span>
+                    <span style={{ display: 'block', color: 'var(--muted)', fontSize: 12, marginTop: 3 }}>
+                      Venue: {f.venue && f.venue.trim().toUpperCase() !== 'N/A' ? f.venue : 'Not recorded'}
+                    </span>
                   </span>
                   <span style={{ fontWeight: 800, color: 'var(--ink)' }}>
                     {displayedScore(f)}
