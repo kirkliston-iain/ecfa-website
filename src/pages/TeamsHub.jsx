@@ -509,6 +509,7 @@ export default function TeamsHub() {
         <div style={{ display: 'grid', gap: 8 }}>
           {teamWebsites.map((website) => (
             <a key={website.url} href={website.url} target="_blank" rel="noopener noreferrer"
+              onClick={() => trackInteraction('team_website_click', `${website.name} — Teams`)}
               style={{ ...cardStyle, color: 'var(--ink)', textDecoration: 'none', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12 }}>
               <strong>{website.name}</strong>
               <span style={{ color: 'var(--brass)', fontWeight: 700, whiteSpace: 'nowrap' }}>Visit website ↗</span>
@@ -541,7 +542,7 @@ export default function TeamsHub() {
             <Badge logoUrl={team.logo_url} name={team.name} size={56} />
             <div>
               <h2 style={{ fontSize: 22, margin: 0 }}>{team.name}</h2>
-              {websiteForTeam(team.name) && <a href={websiteForTeam(team.name).url} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--brass)', fontWeight: 700, fontSize: 14 }}>Visit team website ↗</a>}
+              {websiteForTeam(team.name) && <a href={websiteForTeam(team.name).url} target="_blank" rel="noopener noreferrer" onClick={() => trackInteraction('team_website_click', `${websiteForTeam(team.name).name} — Teams profile`)} style={{ color: 'var(--brass)', fontWeight: 700, fontSize: 14 }}>Visit team website ↗</a>}
               {team.manager_name && (
                 <div style={{ color: 'var(--muted)', fontSize: 13, marginTop: 4 }}>
                   Manager: <strong style={{ color: 'var(--ink)' }}>{team.manager_name}</strong>

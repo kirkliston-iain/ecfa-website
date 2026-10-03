@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useParams, Link, useNavigate } from 'react-router-dom'
 import { supabase } from '../supabaseClient'
 import { websiteForTeam } from '../utils/teamWebsites'
+import { trackInteraction } from '../utils/webAnalytics'
 import { displayedScore, outcomeNote } from '../utils/fixtureOutcome'
 
 function Badge({ logoUrl, name, size = 64 }) {
@@ -306,7 +307,7 @@ export default function TeamDetail() {
         <Badge logoUrl={team.logo_url} name={team.name} size={64} />
         <div>
           <h1 style={{ fontSize: 26, margin: 0 }}>{team.name}</h1>
-          {websiteForTeam(team.name) && <a href={websiteForTeam(team.name).url} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--brass)', fontWeight: 700, fontSize: 14 }}>Visit team website ↗</a>}
+          {websiteForTeam(team.name) && <a href={websiteForTeam(team.name).url} target="_blank" rel="noopener noreferrer" onClick={() => trackInteraction('team_website_click', `${websiteForTeam(team.name).name} — Team page`)} style={{ color: 'var(--brass)', fontWeight: 700, fontSize: 14 }}>Visit team website ↗</a>}
         </div>
       </div>
 
