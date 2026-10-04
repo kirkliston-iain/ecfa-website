@@ -132,7 +132,7 @@ export default function FixtureDetail() {
       let d = []
       if (f.is_historic && f.has_direct_historic_scorers) {
         const teamIds = [f.home_team?.id, f.away_team?.id].filter(Boolean)
-        const [{ data: historicScorers }, { data: squadPlayers }] = await Promise.all([
+        const [{ data: historicScorers }, { data: squadPlayers }, { data: historicalLinks }] = await Promise.all([
           supabase
             .from('historic_match_scorers')
             .select('goals, player_name, team_name')
@@ -143,6 +143,10 @@ export default function FixtureDetail() {
                 .select('id, first_name, last_name, team_id')
                 .in('team_id', teamIds)
             : Promise.resolve({ data: [] }),
+          supabase
+            .from('historic_player_links')
+            .select('name_key, team_key, player:player_id(id, first_name, last_name)')
+            .in('team_key', [f.historic_home_team_name, f.historic_away_team_name].filter(Boolean).map((name) => name.trim().toLocaleLowerCase())),
         ])
 
         const playersByTeamAndName = new Map(
@@ -151,9 +155,12 @@ export default function FixtureDetail() {
             player,
           ])
         )
+        const linkedPlayers = new Map((historicalLinks || []).map((link) => [
+          `${link.team_key}::${link.name_key}`, link.player,
+        ]))
         s = (historicScorers || []).map((row) => {
           const teamId = row.team_name === f.home_team?.name ? f.home_team?.id : f.away_team?.id
-          const matchedPlayer = playersByTeamAndName.get(
+          const matchedPlayer = linkedPlayers.get(`${row.team_name?.trim().toLocaleLowerCase()}::${normalizedPlayerName(row.player_name)}`) || playersByTeamAndName.get(
             `${teamId}::${normalizedPlayerName(row.player_name)}`
           )
           return {

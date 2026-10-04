@@ -53,6 +53,7 @@ export default function RecordsAdmin() {
         const result = await supabase
           .from(table)
           .select('player_name, team_name')
+          .order('id')
           .range(from, from + pageSize - 1)
         if (result.error) return result
         rows.push(...(result.data || []))
@@ -64,13 +65,13 @@ export default function RecordsAdmin() {
     rows.forEach((row) => {
       const name = row.player_name?.trim()
       if (!name) return
-      const key = name.toLocaleLowerCase()
-      const existing = byName.get(key) || { name, teams: new Set() }
-      if (row.team_name?.trim()) existing.teams.add(row.team_name.trim())
+      const team = row.team_name?.trim() || 'Team not recorded'
+      const key = `${name.toLocaleLowerCase()}::${team.toLocaleLowerCase()}`
+      const existing = byName.get(key) || { name, team }
       byName.set(key, existing)
     })
     return {
-      data: [...byName.values()].map((row) => ({ ...row, teams: [...row.teams].sort() })),
+      data: [...byName.values()],
       error: null,
     }
   }
@@ -112,7 +113,6 @@ export default function RecordsAdmin() {
     if (type === 'official') return lists.officials.map((row) => ({ id: row.id, label: row.name, name: row.name }))
     if (type === 'manager') return lists.managers.map((row) => ({ id: row.id, label: row.name, name: row.name }))
     if (type === 'competition') return lists.competitions.map((row) => ({ id: row.id, label: row.name, name: row.name }))
-    const currentNames = new Set(lists.players.map((row) => `${row.first_name} ${row.last_name}`.trim().toLocaleLowerCase()))
     const current = lists.players.map((row) => ({
       id: `current:${row.id}`,
       playerId: row.id,
@@ -121,13 +121,13 @@ export default function RecordsAdmin() {
       label: `${row.first_name} ${row.last_name}${row.team?.name ? ` — ${row.team.name}` : ' — No current team'}`,
     }))
     const historical = lists.historicalPlayers
-      .filter((row) => !currentNames.has(row.name.toLocaleLowerCase()))
       .map((row) => ({
-        id: `historical:${encodeURIComponent(row.name.toLocaleLowerCase())}`,
+        id: `historical:${encodeURIComponent(row.name.toLocaleLowerCase())}:${encodeURIComponent(row.team.toLocaleLowerCase())}`,
         playerId: null,
         kind: 'historical',
         name: row.name,
-        label: `${row.name} — Historical${row.teams.length ? ` — ${row.teams.join(', ')}` : ''}`,
+        team: row.team,
+        label: `${row.name} — Historical — ${row.team}`,
       }))
     return [...current, ...historical].sort((a, b) => a.name.localeCompare(b.name))
   }, [lists, type])
@@ -231,21 +231,35 @@ export default function RecordsAdmin() {
     setSaving(true)
     setError('')
     setMessage('')
-    const { data, error: mergeError } = await supabase.rpc('merge_player_entries', {
-      p_first_player_id: selected.playerId,
-      p_first_name: selected.name,
-      p_second_player_id: mergePlayer.playerId,
-      p_second_name: mergePlayer.name,
-      p_keep_choice: keepPlayerId === entityId ? 1 : 2,
-      p_effective_date: effectiveDate,
-      p_reason: reason.trim(),
-    })
+    const historical = [selected, mergePlayer].find((option) => option.kind === 'historical')
+    const current = [selected, mergePlayer].find((option) => option.kind === 'current')
+    const request = historical && current
+      ? supabase.rpc('link_historical_player_to_current', {
+          p_current_player_id: current.playerId,
+          p_historical_name: historical.name,
+          p_historical_team_name: historical.team,
+          p_keep_historical_name: keepPlayerId === historical.id,
+          p_effective_date: effectiveDate,
+          p_reason: reason.trim(),
+        })
+      : supabase.rpc('merge_player_entries', {
+          p_first_player_id: selected.playerId,
+          p_first_name: selected.name,
+          p_second_player_id: mergePlayer.playerId,
+          p_second_name: mergePlayer.name,
+          p_keep_choice: keepPlayerId === entityId ? 1 : 2,
+          p_effective_date: effectiveDate,
+          p_reason: reason.trim(),
+        })
+    const { data, error: mergeError } = await request
     setSaving(false)
     if (mergeError) {
       setError(mergeError.message)
       return
     }
-    setMessage(`Combined ${data.merged_name} into ${data.kept_name}. Linked current and historical records were retained.`)
+    setMessage(historical && current
+      ? `Linked ${historical.name} (${historical.team}) to ${current.name}. The historical scorer now opens the retained player profile.`
+      : `Combined ${data.merged_name} into ${data.kept_name}. Linked current and historical records were retained.`)
     setEntityId('')
     setMergePlayerId('')
     setKeepPlayerId('')
@@ -260,7 +274,7 @@ export default function RecordsAdmin() {
       <Link to="/admin/dashboard" style={backStyle}>← Back to admin</Link>
       <h1 style={{ fontSize: 26, marginBottom: 6 }}>Records management</h1>
       <p style={{ color: 'var(--muted)', marginTop: 0, lineHeight: 1.5 }}>
-        Rename core records across the current site and historical archive. Historical-only players can also be searched, renamed or combined. Every change keeps the former name, reference date, reason and administrator below.
+        Rename core records across the current site and historical archive. Historical scorers are listed by their recorded team, even when they share a name with a current player. Every change keeps the former name, reference date, reason and administrator below.
       </p>
 
       <div style={cardStyle}>
