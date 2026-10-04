@@ -41,6 +41,16 @@ function displayFixtureDate(value) {
   })
 }
 
+function competitionFamily(name) {
+  const label = String(name || '').trim()
+  if (/brian latto cup/i.test(label)) return 'Brian Latto Cup'
+  if (/consolation cup/i.test(label)) return 'Consolation Cup'
+  if (/league cup/i.test(label)) return 'League Cup'
+  if (/knockout cup/i.test(label)) return 'Knockout Cup'
+  if (/\bleague\b/i.test(label)) return 'League'
+  return label // Keep other standalone tournaments, such as Charity Shield.
+}
+
 export default function HistoricalSeason() {
   const [params, setParams] = useSearchParams()
   const [seasons, setSeasons] = useState([])
@@ -97,7 +107,7 @@ export default function HistoricalSeason() {
         for (const fixture of fixtureResults[indexPosition].data || []) {
           entry.fixtures += 1
           if (fixture.home_goals != null && fixture.away_goals != null) entry.results += 1
-          if (fixture.competition_name) entry.competitions.add(fixture.competition_name)
+          if (fixture.competition_name) entry.competitions.add(competitionFamily(fixture.competition_name))
         }
       })
       for (const scorer of scorerResult.data || []) {
