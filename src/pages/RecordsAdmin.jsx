@@ -12,7 +12,7 @@ const TYPES = [
 ]
 
 export default function RecordsAdmin() {
-  const [lists, setLists] = useState({ teams: [], venues: [], players: [], historicalPlayers: [], managers: [], officials: [], competitions: [] })
+  const [lists, setLists] = useState({ teams: [], venues: [], players: [], historicalPlayers: [], historicalLinks: [], managers: [], officials: [], competitions: [] })
   const [history, setHistory] = useState([])
   const [type, setType] = useState('team')
   const [playerAction, setPlayerAction] = useState('rename')
@@ -77,16 +77,17 @@ export default function RecordsAdmin() {
   }
 
   async function load() {
-    const [teams, venues, players, historicalPlayers, officials, competitions, changes] = await Promise.all([
+    const [teams, venues, players, historicalPlayers, historicalLinks, officials, competitions, changes] = await Promise.all([
       supabase.from('teams').select('id, name, manager_name').order('name'),
       supabase.from('venues').select('id, name').order('name'),
       loadAllPlayers(),
       loadHistoricalPlayers(),
+      supabase.from('historic_player_links').select('name_key, team_key, player:player_id(id, first_name, last_name)'),
       supabase.from('referees').select('id, name').order('name'),
       supabase.from('competitions').select('name').order('name'),
       supabase.from('record_name_changes').select('id, entity_type, old_name, new_name, effective_date, reason, changed_by_name, affected_rows, created_at').order('created_at', { ascending: false }).limit(50),
     ])
-    const failed = [teams, venues, players, historicalPlayers, officials, competitions, changes].find((result) => result.error)
+    const failed = [teams, venues, players, historicalPlayers, historicalLinks, officials, competitions, changes].find((result) => result.error)
     if (failed) {
       setError(failed.error.message)
       return
@@ -98,6 +99,7 @@ export default function RecordsAdmin() {
       venues: venues.data || [],
       players: players.data || [],
       historicalPlayers: historicalPlayers.data || [],
+      historicalLinks: historicalLinks.data || [],
       managers: managerNames.map((name) => ({ id: name, name })),
       officials: officials.data || [],
       competitions: competitionNames.map((name) => ({ id: name, name })),
@@ -120,15 +122,18 @@ export default function RecordsAdmin() {
       name: `${row.first_name} ${row.last_name}`.trim(),
       label: `${row.first_name} ${row.last_name}${row.team?.name ? ` — ${row.team.name}` : ' — No current team'}`,
     }))
-    const historical = lists.historicalPlayers
-      .map((row) => ({
+    const linksByNameAndTeam = new Map(lists.historicalLinks.map((row) => [`${row.name_key}::${row.team_key}`, row.player]))
+    const historical = lists.historicalPlayers.map((row) => {
+      const linkedPlayer = linksByNameAndTeam.get(`${row.name.toLocaleLowerCase()}::${row.team.toLocaleLowerCase()}`)
+      return {
         id: `historical:${encodeURIComponent(row.name.toLocaleLowerCase())}:${encodeURIComponent(row.team.toLocaleLowerCase())}`,
         playerId: null,
         kind: 'historical',
         name: row.name,
         team: row.team,
-        label: `${row.name} — Historical — ${row.team}`,
-      }))
+        label: `${row.name} — Historical — ${row.team}${linkedPlayer ? ` — linked to ${linkedPlayer.first_name} ${linkedPlayer.last_name}` : ''}`,
+      }
+    })
     return [...current, ...historical].sort((a, b) => a.name.localeCompare(b.name))
   }, [lists, type])
 
