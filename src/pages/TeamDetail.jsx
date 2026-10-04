@@ -383,7 +383,8 @@ export default function TeamDetail() {
           {nextFive.length === 0 && <p style={{ color: 'var(--muted)', fontSize: 14 }}>No upcoming fixtures scheduled.</p>}
           <ul style={{ listStyle: 'none', margin: 0, padding: 0 }}>
             {nextFive.map((f) => {
-              const opponent = f.home_team?.id === team.id ? f.away_team : f.home_team
+              const isHome = f.home_team?.id === team.id
+              const opponent = isHome ? f.away_team : f.home_team
               return (
                 <li key={f.id} style={{ borderBottom: '1px solid var(--line)' }}>
                   <Link
@@ -397,8 +398,19 @@ export default function TeamDetail() {
                     }}
                   >
                     <Badge logoUrl={opponent?.logo_url} name={opponent?.name} size={22} />
-                    <span style={{ flex: 1 }}>{opponent?.name}</span>
-                    <span style={{ color: 'var(--muted)', fontSize: 12 }}>
+                    <span style={{ flex: 1, minWidth: 0 }}>
+                      <span style={{ display: 'flex', alignItems: 'baseline', gap: 6, flexWrap: 'wrap' }}>
+                        <strong title={isHome ? 'Home' : 'Away'} style={{ color: 'var(--brass)', fontSize: 12 }}>{isHome ? 'H' : 'A'}</strong>
+                        <span>{opponent?.name || 'Opponent TBC'}</span>
+                      </span>
+                      <span style={{ display: 'block', color: 'var(--muted)', fontSize: 12, marginTop: 3 }}>
+                        {f.stage?.competition?.name || 'Competition not recorded'}
+                      </span>
+                      <span style={{ display: 'block', color: 'var(--muted)', fontSize: 12, marginTop: 3 }}>
+                        Venue: {f.venue && f.venue.trim().toUpperCase() !== 'N/A' ? f.venue : 'Not recorded'}
+                      </span>
+                    </span>
+                    <span style={{ color: 'var(--muted)', fontSize: 12, flexShrink: 0, alignSelf: 'center' }}>
                       {f.fixture_date
                         ? new Date(f.fixture_date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })
                         : 'TBC'}
@@ -467,8 +479,8 @@ export default function TeamDetail() {
               return <li key={f.id} className="team-fixture-row">
                 <Link to={`/fixtures/${f.id}`}>
                   <span className="team-fixture-date">{fixtureDay(f) ? new Date(`${fixtureDay(f)}T12:00:00`).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' }) : 'TBC'}</span>
-                  <span className="team-fixture-opponent">{isHome ? 'vs' : 'at'} {opponent?.name || 'TBC'}</span>
-                  <span className="team-fixture-location">{[fixtureCompetition === 'all' ? f.stage?.competition?.name : null, f.fixture_date?.includes('T') ? new Date(f.fixture_date).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }) : null, f.venue].filter(Boolean).join(' · ')}</span>
+                  <span className="team-fixture-opponent"><strong title={isHome ? 'Home' : 'Away'} style={{ color: 'var(--brass)' }}>{isHome ? 'H' : 'A'}</strong> {opponent?.name || 'Opponent TBC'}</span>
+                  <span className="team-fixture-location">{f.stage?.competition?.name || 'Competition not recorded'} · {f.fixture_date?.includes('T') ? `${new Date(f.fixture_date).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })} · ` : ''}Venue: {f.venue && f.venue.trim().toUpperCase() !== 'N/A' ? f.venue : 'Not recorded'}</span>
                 </Link>
               </li>
             })}
