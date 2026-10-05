@@ -1,3 +1,4 @@
+import ManagedSponsorLogo from '../components/ManagedSponsorLogo'
 import { Link } from 'react-router-dom'
 import { useEffect, useMemo, useState } from 'react'
 import { supabase } from '../supabaseClient'
@@ -8,7 +9,6 @@ import KnockoutBracket from '../components/KnockoutBracket'
 import { cleanVenueName, isVenueLinkable, venueHistoryUrl } from '../utils/venueGrouping'
 import { trackInteraction } from '../utils/webAnalytics'
 
-const APPIN_LOGO = '/sponsors/appin-sports.png'
 const MATCH_HUB_DATE_KEY = 'ecfa-match-hub-selected-date'
 
 const COMPETITIONS = [
@@ -590,7 +590,7 @@ function MatchCard({ f, allFixtures }) {
       <Link to={`/fixtures/${f.id}`} style={{ display: 'block' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11, fontWeight: 700, color: 'var(--brass)', textTransform: 'uppercase', letterSpacing: 0.4, marginBottom: 6 }}>
           {f.compSlug === 'appin-league' && (
-            <img src={APPIN_LOGO} alt="" style={{ height: 14, width: 'auto', objectFit: 'contain' }} />
+            <ManagedSponsorLogo alt="" style={{ height: 14, width: 'auto', objectFit: 'contain' }} />
           )}
           {f.compName}
           {f.round_name ? ` — ${f.round_name}` : ''}
@@ -968,7 +968,7 @@ export default function Home() {
       </p>
 
       <a href="https://appinsports.com/" target="_blank" rel="noopener noreferrer" onClick={() => trackInteraction('sponsor_click', 'Appin Sports — Match Hub')} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 14px', marginBottom: 24, border: '1px solid var(--line)', borderLeft: '5px solid var(--brass)', borderRadius: 8, color: 'var(--ink)', textDecoration: 'none', background: '#fff' }} aria-label="Visit Appin Sports, ECFA league sponsor (opens in a new tab)">
-        <img src={APPIN_LOGO} alt="Appin Sports" style={{ width: 76, height: 36, objectFit: 'contain', flexShrink: 0 }} />
+        <ManagedSponsorLogo alt="Appin Sports" style={{ width: 76, height: 36, objectFit: 'contain', flexShrink: 0 }} />
         <span style={{ flex: 1, minWidth: 0 }}><strong style={{ display: 'block', fontSize: 15 }}>Appin Sports</strong><span style={{ color: 'var(--muted)', fontSize: 12 }}>ECFA league sponsor</span></span>
         <span style={{ color: 'var(--brass)', fontWeight: 800, fontSize: 13, whiteSpace: 'nowrap' }}>Visit ↗</span>
       </a>

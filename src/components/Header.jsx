@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link, NavLink, useLocation } from 'react-router-dom'
 import { supabase } from '../supabaseClient'
+import { useSiteLogos } from '../contexts/SiteLogos'
 
 const TABS = [
   { to: '/', label: 'Match Hub', end: true },
@@ -19,6 +20,8 @@ const TABS = [
 ]
 
 export default function Header() {
+  const { siteLogo } = useSiteLogos()
+  const leagueLogo = siteLogo('ecfa')
   const [signedIn, setSignedIn] = useState(false)
   const [shareStatus, setShareStatus] = useState('')
   const route = useLocation()
@@ -64,11 +67,11 @@ export default function Header() {
           style={{ padding: '14px 20px', display: 'flex', alignItems: 'center', gap: 14 }}
         >
           <Link to="/" style={{ display: 'flex', alignItems: 'center', gap: 14, minWidth: 0, flex: 1 }}>
-            <img
-              src="/badges/ecfa-logo.png"
+            {leagueLogo && <img
+              src={leagueLogo}
               alt="ECFA"
-              style={{ width: 44, height: 44, objectFit: 'contain', flexShrink: 0 }}
-            />
+              style={{ width: 44, height: 44, objectFit: 'contain', flexShrink: 0, borderRadius: '50%' }}
+            />}
             <span style={{ color: '#fff', fontWeight: 700, fontSize: 16, lineHeight: 1.25 }}>
               Edinburgh Churches Football Association
             </span>

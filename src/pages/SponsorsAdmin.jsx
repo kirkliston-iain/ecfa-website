@@ -70,6 +70,7 @@ export default function SponsorsAdmin() {
       website_url: form.websiteUrl.trim() || null,
       logo_url: publicLogo.publicUrl,
       logo_path: logoPath,
+      logo_bucket: 'sponsor-logos',
       competition_name: form.competitionName.trim() || null,
       competition_path: form.competitionName.trim() ? form.competitionPath.trim() || null : null,
       sort_order: Number(form.sortOrder) || 50,
@@ -100,7 +101,7 @@ export default function SponsorsAdmin() {
 
   async function deleteSponsor(item) {
     if (!window.confirm(`Delete “${item.name}”?`)) return
-    if (item.logo_path) await supabase.storage.from('sponsor-logos').remove([item.logo_path])
+    if (item.logo_path) await supabase.storage.from(item.logo_bucket || 'sponsor-logos').remove([item.logo_path])
     const { error: deleteError } = await supabase.from('sponsors').delete().eq('id', item.id)
     if (deleteError) setError(deleteError.message)
     else {
@@ -188,7 +189,7 @@ export default function SponsorsAdmin() {
         {sponsors.map((item) => (
           <article key={item.id} style={cardStyle}>
             <div style={{ display: 'grid', gridTemplateColumns: '56px 1fr', gap: 12, alignItems: 'center' }}>
-              <img src={item.logo_url} alt="" style={{ width: 56, height: 56, objectFit: 'contain' }} />
+              {item.logo_url ? <img src={item.logo_url} alt="" style={{ width: 56, height: 56, objectFit: 'contain' }} /> : <span style={helpStyle}>No logo</span>}
               <div><strong>{item.name}</strong><div style={helpStyle}>{item.competition_name || 'General league sponsor'} · order {item.sort_order}</div></div>
             </div>
             <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 14 }}>

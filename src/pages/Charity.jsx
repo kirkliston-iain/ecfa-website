@@ -1,10 +1,11 @@
+import { useSiteLogos } from '../contexts/SiteLogos'
 import { Link } from 'react-router-dom'
 
 const leagueSeasons = [
   {
     season: '2026/27',
     charity: 'Forget Me Notes Project',
-    logo: '/charities/forget-me-notes-v2.png',
+    logoKey: 'charity-forget-me-notes',
     charityUrl: 'https://www.forgetmenotes.org.uk/',
     summary: 'An Edinburgh-based charity that uses music to build inclusive communities, encourage self-expression and combat social isolation. Its work is rooted in dementia-friendly values and is open to everyone.',
     eventTitle: 'ECFA Charity Tournament',
@@ -14,7 +15,7 @@ const leagueSeasons = [
   {
     season: '2025/26',
     charity: "Don't Screen Us Out",
-    logo: '/charities/dont-screen-us-out-v2.svg',
+    logoKey: 'charity-dont-screen-us-out',
     charityUrl: 'https://dontscreenusout.org/',
     summary: "A campaign working towards a society in which people with Down's syndrome are equally valued, including reform of legislation, policy and practice affecting people with Down's syndrome and their families.",
     raised: '£4,204',
@@ -33,6 +34,7 @@ const teamEvents = [
 ]
 
 export default function Charity() {
+  const { siteLogo } = useSiteLogos()
   return (
     <div className="container" style={{ padding: '32px 20px 48px', maxWidth: 820 }}>
       <h1 style={{ fontSize: 30, marginBottom: 4 }}>Charity</h1>
@@ -47,9 +49,9 @@ export default function Charity() {
             <article key={item.season} style={cardStyle}>
               <div style={{ display: 'flex', justifyContent: 'space-between', gap: 14, alignItems: 'flex-start', flexWrap: 'wrap' }}>
                 <div style={charityIdentityStyle}>
-                  <div style={logoPanelStyle}>
-                    <img src={item.logo} alt={`${item.charity} logo`} style={logoStyle} />
-                  </div>
+                  {siteLogo(item.logoKey) && <div style={logoPanelStyle}>
+                    <img src={siteLogo(item.logoKey)} alt={`${item.charity} logo`} style={logoStyle} />
+                  </div>}
                   <div>
                     <div style={seasonStyle}>{item.season} SEASON</div>
                     <h3 style={{ fontSize: 20, margin: '4px 0 3px' }}>{item.charity}</h3>

@@ -47,6 +47,7 @@ import Charity from './pages/Charity'
 import RecordsAdmin from './pages/RecordsAdmin'
 import AdminDataExport from './pages/AdminDataExport'
 import TeamWebsitesAdmin from './pages/TeamWebsitesAdmin'
+import LogosAdmin from './pages/LogosAdmin'
 
 export default function App() {
   const location = useLocation()
@@ -166,6 +167,7 @@ export default function App() {
             }
           />
           <Route path="/admin/news" element={<ProtectedRoute requireAdmin><NewsAdmin /></ProtectedRoute>} />
+          <Route path="/admin/logos" element={<ProtectedRoute requireAdmin><LogosAdmin /></ProtectedRoute>} />
           <Route path="/admin/team-websites" element={<ProtectedRoute requireAdmin><TeamWebsitesAdmin /></ProtectedRoute>} />
           <Route
             path="/admin/dashboard"

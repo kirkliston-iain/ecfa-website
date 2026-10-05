@@ -1,13 +1,10 @@
 import { useNavigate } from 'react-router-dom'
 
-const APPIN_LOGO = '/sponsors/appin-sports.png'
-
 const COMPETITIONS = [
   {
     slug: 'appin-league',
     name: 'Appin Sports League',
     description: '12 teams, home and away — the main ECFA league table.',
-    logo: APPIN_LOGO,
   },
   {
     slug: 'knockout-cup',

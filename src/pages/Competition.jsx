@@ -1,3 +1,4 @@
+import ManagedSponsorLogo from '../components/ManagedSponsorLogo'
 import { useEffect, useMemo, useState } from 'react'
 import { useLocation, useParams } from 'react-router-dom'
 import { supabase } from '../supabaseClient'
@@ -132,8 +133,7 @@ export default function Competition() {
     <div className="container" style={{ padding: '32px 20px 48px' }}>
       <h1 style={{ fontSize: 30, marginBottom: 4, display: 'flex', alignItems: 'center', gap: 12 }}>
         {competition.slug === 'appin-league' && (
-          <img
-            src="/sponsors/appin-sports.png"
+          <ManagedSponsorLogo
             alt=""
             style={{ height: 30, width: 'auto', objectFit: 'contain' }}
           />

@@ -1,9 +1,9 @@
+import ManagedSponsorLogo from '../components/ManagedSponsorLogo'
 import { Link } from 'react-router-dom'
 import { useEffect, useState } from 'react'
 import { supabase } from '../supabaseClient'
 import StandingsTable from '../components/StandingsTable'
 
-const APPIN_LOGO = '/sponsors/appin-sports.png'
 
 const COMPETITIONS = [
   { slug: 'appin-league', name: 'Appin Sports League' },
@@ -147,7 +147,7 @@ export default function StandingsPage() {
           >
             <h2 style={{ fontSize: 19, display: 'flex', alignItems: 'center', gap: 8 }}>
               {comp.slug === 'appin-league' && (
-                <img src={APPIN_LOGO} alt="" style={{ height: 20, width: 'auto', objectFit: 'contain' }} />
+                <ManagedSponsorLogo alt="" style={{ height: 20, width: 'auto', objectFit: 'contain' }} />
               )}
               {comp.name}
             </h2>

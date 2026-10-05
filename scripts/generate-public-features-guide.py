@@ -177,7 +177,7 @@ story.append(card_grid([
     ('Referee reports', 'Create a referee report and download it in PDF or Word format.'),
 ]))
 story += [Spacer(1, 10)] + section_title('8. Sponsors')
-story.append(p('The sponsors page groups sponsors beneath the competitions they support. Each entry includes a logo badge, a short summary, a link to the sponsor’s website and a direct route to the sponsored competition.'))
+story.append(p('The sponsors page groups sponsors beneath the competitions they support. Each entry includes a short summary, an optional logo badge, a link to the sponsor’s website and a direct route to the sponsored competition.'))
 
 # downloads
 story += section_title('9. Public downloads and reports', 'The Downloads area makes ECFA information reusable without requiring administrator access. Published league files can be viewed online, downloaded, or offered with both choices. Availability depends on the records held for each season.')
