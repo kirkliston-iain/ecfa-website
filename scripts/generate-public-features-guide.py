@@ -98,7 +98,7 @@ cover = Table([[p('ECFA WEBSITE', 'CoverSub')], [p('Public Features Guide', 'Cov
               ]))
 story += [Spacer(1, 35*mm), cover, Spacer(1, 18*mm)]
 story.append(Table([[p('WEBSITE', 'Smallx'), p('https://ecfa-website.vercel.app', 'CardTitle')],
-                    [p('GUIDE UPDATED', 'Smallx'), p('1 October 2026', 'CardTitle')]],
+                    [p('GUIDE UPDATED', 'Smallx'), p('5 October 2026', 'CardTitle')]],
                    colWidths=[35*mm, 125*mm], style=TableStyle([
                        ('BOX', (0,0), (-1,-1), 0.7, LINE), ('INNERGRID', (0,0), (-1,-1), 0.5, LINE),
                        ('BACKGROUND', (0,0), (0,-1), PALE), ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
@@ -152,7 +152,7 @@ story.append(card_grid([
 story += [Spacer(1, 10)] + section_title('5. Teams')
 story.append(card_grid([
     ('Team overview', 'Choose a club to see its badge, manager, squad and current information.'),
-    ('Team websites', 'Visit a club’s own website from the Team websites section or from its team page when a link is available.'),
+    ('Team websites', 'Visit up to five links per club from the Team websites section or its team page. Links are labelled Facebook, Instagram, X, Own Website or Other when available.'),
     ('Form and fixtures', 'See the next five fixtures with home or away, competition and venue. Upcoming lists show these details too and default to the Appin Sports League. Choose another competition or all, filter by month or date, and share the list as a picture.'),
     ('Results by season', 'Switch between the current campaign and available historical seasons. The team page’s recent results mark the club as home or away and show the recorded venue.'),
     ('Team scorers and honours', 'See season-by-season scorers and honours won by the club.'),
