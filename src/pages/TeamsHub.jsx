@@ -5,7 +5,7 @@ import { displayedScore, outcomeNote } from '../utils/fixtureOutcome'
 import { historicDisplayedScore } from '../utils/historicFixtureOutcome'
 import { historicTeamName, previousTeamUrl } from '../utils/historicTeams'
 import { trackInteraction } from '../utils/webAnalytics'
-import { teamWebsites, websiteForTeam } from '../utils/teamWebsites'
+import { websiteForTeam } from '../utils/teamWebsites'
 
 function Badge({ logoUrl, name, size = 24 }) {
   if (logoUrl) {
@@ -120,7 +120,7 @@ export default function TeamsHub() {
   useEffect(() => {
     supabase
       .from('teams')
-      .select('id, name, logo_url, manager_name')
+      .select('id, name, logo_url, manager_name, team_website_url, team_website_label')
       .order('name')
       .then(({ data }) => setTeams(data || []))
   }, [])
@@ -226,6 +226,7 @@ export default function TeamsHub() {
   }, [teamId, teams])
 
   const played = currentFixtures.filter((f) => f.status === 'played').sort((a, b) => new Date(b.fixture_date) - new Date(a.fixture_date))
+  const teamWebsites = teams.map(websiteForTeam).filter(Boolean)
   const upcoming = currentFixtures
     .filter((f) => f.status === 'scheduled')
     .sort((a, b) => new Date(a.fixture_date) - new Date(b.fixture_date))[0]
@@ -542,7 +543,7 @@ export default function TeamsHub() {
             <Badge logoUrl={team.logo_url} name={team.name} size={56} />
             <div>
               <h2 style={{ fontSize: 22, margin: 0 }}>{team.name}</h2>
-              {websiteForTeam(team.name) && <a href={websiteForTeam(team.name).url} target="_blank" rel="noopener noreferrer" onClick={() => trackInteraction('team_website_click', `${websiteForTeam(team.name).name} — Teams profile`)} style={{ color: 'var(--brass)', fontWeight: 700, fontSize: 14 }}>Visit team website ↗</a>}
+              {websiteForTeam(team) && <a href={websiteForTeam(team).url} target="_blank" rel="noopener noreferrer" onClick={() => trackInteraction('team_website_click', `${websiteForTeam(team).name} — Teams profile`)} style={{ color: 'var(--brass)', fontWeight: 700, fontSize: 14 }}>Visit team website ↗</a>}
               {team.manager_name && (
                 <div style={{ color: 'var(--muted)', fontSize: 13, marginTop: 4 }}>
                   Manager: <strong style={{ color: 'var(--ink)' }}>{team.manager_name}</strong>

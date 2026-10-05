@@ -116,7 +116,7 @@ export default function TeamDetail() {
 
       const { data: t, error: tErr } = await supabase
         .from('teams')
-        .select('id, name, logo_url, manager_name')
+        .select('id, name, logo_url, manager_name, team_website_url, team_website_label')
         .eq('id', id)
         .single()
 
@@ -307,7 +307,7 @@ export default function TeamDetail() {
         <Badge logoUrl={team.logo_url} name={team.name} size={64} />
         <div>
           <h1 style={{ fontSize: 26, margin: 0 }}>{team.name}</h1>
-          {websiteForTeam(team.name) && <a href={websiteForTeam(team.name).url} target="_blank" rel="noopener noreferrer" onClick={() => trackInteraction('team_website_click', `${websiteForTeam(team.name).name} — Team page`)} style={{ color: 'var(--brass)', fontWeight: 700, fontSize: 14 }}>Visit team website ↗</a>}
+          {websiteForTeam(team) && <a href={websiteForTeam(team).url} target="_blank" rel="noopener noreferrer" onClick={() => trackInteraction('team_website_click', `${websiteForTeam(team).name} — Team page`)} style={{ color: 'var(--brass)', fontWeight: 700, fontSize: 14 }}>Visit team website ↗</a>}
         </div>
       </div>
 

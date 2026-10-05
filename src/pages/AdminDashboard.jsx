@@ -769,6 +769,10 @@ export default function AdminDashboard() {
         Manage sponsors &rarr;
       </Link>
 
+      <Link to="/admin/team-websites" style={{ ...linkButtonStyle, display: 'block', marginBottom: 8 }}>
+        Manage team websites &rarr;
+      </Link>
+
       <Link to="/admin/news" style={{ ...linkButtonStyle, display: 'block', marginBottom: 8 }}>
         Manage news &rarr;
       </Link>
