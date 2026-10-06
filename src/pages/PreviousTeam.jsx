@@ -3,6 +3,7 @@ import { Link, useParams } from 'react-router-dom'
 import { supabase } from '../supabaseClient'
 import { historicDisplayedScore } from '../utils/historicFixtureOutcome'
 import { historicTeamName } from '../utils/historicTeams'
+import { honourFixtureId } from '../utils/honourFixtures'
 
 const PAGE_SIZE = 1000
 
@@ -93,12 +94,17 @@ export default function PreviousTeam() {
       {!loading && !error && (
         <>
           <h2 style={sectionHeaderStyle}>Honours</h2>
-          {honours.length === 0 ? <Empty>No honours recorded.</Empty> : honours.map((row, index) => (
-            <Link key={`${row.season}-${row.competition}-${index}`} to={`/archive?season=${encodeURIComponent(row.season)}`} style={rowLinkStyle}>
-              <span>{row.competition} <span style={{ color: 'var(--muted)' }}>({row.season})</span></span>
-              <strong style={{ textTransform: 'capitalize' }}>{row.status}</strong>
-            </Link>
-          ))}
+          {honours.length === 0 ? <Empty>No honours recorded.</Empty> : honours.map((row, index) => {
+            const fixtureId = honourFixtureId(row, [], fixtures)
+            return (
+              <Link key={`${row.season}-${row.competition}-${index}`} to={fixtureId ? `/fixtures/${fixtureId}` : `/archive?season=${encodeURIComponent(row.season)}`} style={rowLinkStyle}>
+                <span>{row.competition} <span style={{ color: 'var(--muted)' }}>({row.season})</span>
+                  {fixtureId && <span style={{ display: 'block', marginTop: 4, color: 'var(--brass)', fontWeight: 600, textDecoration: 'underline' }}>View final</span>}
+                </span>
+                <strong style={{ textTransform: 'capitalize' }}>{row.status}</strong>
+              </Link>
+            )
+          })}
 
           <h2 style={sectionHeaderStyle}>Scorers</h2>
           <label htmlFor="previous-team-scorers-season" style={labelStyle}>Season</label>

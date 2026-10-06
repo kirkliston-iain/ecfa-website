@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { supabase } from '../supabaseClient'
 import { historicPenaltyWinnerName } from '../utils/historicFixtureOutcome'
 import { historicTeamName } from '../utils/historicTeams'
+import { finalCompetition } from '../utils/honourFixtures'
 
 const FIRST_SEASON = 2013
 function seasonsThrough(rows) {
@@ -26,14 +27,6 @@ const EARLY_CUP_FINALS = [
   { season: '2015/16', competition: 'League Cup', home: 'White Lightning', away: 'Niddrie', score: '4–1' },
   { season: '2016/17', competition: 'League Cup', home: 'Broxburn', away: 'Gorgie', score: '2–2', detail: 'Broxburn won 4–3 on penalties' },
 ]
-
-function finalCompetition(name) {
-  const label = String(name || '').toLowerCase()
-  if (label.includes('league cup')) return 'League Cup'
-  if (label.includes('knockout cup')) return 'Knockout Cup'
-  if (label.includes('brian latto') || label.includes('consolation cup')) return 'Brian Latto Cup'
-  return ''
-}
 
 function archivedFinal(fixture) {
   const comment = fixture.comment || ''

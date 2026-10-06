@@ -7,6 +7,7 @@ import { historicTeamName, previousTeamUrl } from '../utils/historicTeams'
 import { trackInteraction } from '../utils/webAnalytics'
 import TeamWebsiteLinks from '../components/TeamWebsiteLinks'
 import TeamPicker from '../components/TeamPicker'
+import { honourFixtureId } from '../utils/honourFixtures'
 
 function Badge({ logoUrl, name, size = 24 }) {
   if (logoUrl) {
@@ -170,7 +171,7 @@ export default function TeamsHub() {
       const { data: cf } = await supabase
         .from('fixtures')
         .select(
-          'id, fixture_date, venue, home_score, away_score, went_to_extra_time, home_extra_time_score, away_extra_time_score, decided_by_penalties, home_penalty_score, away_penalty_score, status, home_team:home_team_id(id, name, logo_url), away_team:away_team_id(id, name, logo_url), stage:stage_id(name, competition:competition_id(name, slug))'
+          'id, round_name, fixture_date, venue, home_score, away_score, went_to_extra_time, home_extra_time_score, away_extra_time_score, decided_by_penalties, home_penalty_score, away_penalty_score, status, home_team:home_team_id(id, name, logo_url), away_team:away_team_id(id, name, logo_url), stage:stage_id(name, competition:competition_id(name, slug, season))'
         )
         .or(`home_team_id.eq.${teamId},away_team_id.eq.${teamId}`)
         .eq('hidden_from_public', false)
@@ -667,7 +668,9 @@ export default function TeamsHub() {
             <p style={{ color: 'var(--muted)', fontSize: 14, marginBottom: 32 }}>No honours recorded.</p>
           ) : (
             <div style={{ marginBottom: 32 }}>
-              {honours.map((h, i) => (
+              {honours.map((h, i) => {
+                const fixtureId = honourFixtureId(h, currentFixtures, historicFixtures)
+                return (
                 <div
                   key={i}
                   style={{
@@ -680,10 +683,14 @@ export default function TeamsHub() {
                 >
                   <span>
                     {h.competition} <span style={{ color: 'var(--muted)' }}>({h.season})</span>
+                    {fixtureId && (
+                      <Link to={`/fixtures/${fixtureId}`} aria-label={`View ${h.competition} final, ${h.season}`} style={{ display: 'block', marginTop: 4, color: 'var(--brass)', fontWeight: 600, textDecoration: 'underline' }}>View final</Link>
+                    )}
                   </span>
                   <strong style={{ textTransform: 'capitalize' }}>{h.status}</strong>
                 </div>
-              ))}
+                )
+              })}
             </div>
           )}
 
