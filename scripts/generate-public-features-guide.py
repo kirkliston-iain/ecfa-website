@@ -151,7 +151,7 @@ story.append(card_grid([
 ]))
 story += [Spacer(1, 10)] + section_title('5. Teams')
 story.append(card_grid([
-    ('Team overview', 'Use Select a team to choose a current league club or a previous team. Former clubs are clearly marked as no longer in the league and open their historical records.'),
+    ('Team overview', 'Use Select a team to choose a current league club or a previous team. Contrasting headings separate current and previous teams. Former clubs are marked as no longer in the league and open their historical records.'),
     ('Team websites', 'Select a club to see up to five website or social links on its team profile. Links appear only for the selected club. Links are labelled Facebook, Instagram, X, Own Website or Other when available.'),
     ('Form and fixtures', 'See the next five fixtures with home or away, competition and venue. Upcoming lists show these details too and default to the Appin Sports League. Choose another competition or all, filter by month or date, and share the list as a picture.'),
     ('Results by season', 'Switch between the current campaign and available historical seasons. The team page’s recent results mark the club as home or away and show the recorded venue.'),

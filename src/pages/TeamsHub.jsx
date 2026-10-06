@@ -6,6 +6,7 @@ import { historicDisplayedScore } from '../utils/historicFixtureOutcome'
 import { historicTeamName, previousTeamUrl } from '../utils/historicTeams'
 import { trackInteraction } from '../utils/webAnalytics'
 import TeamWebsiteLinks from '../components/TeamWebsiteLinks'
+import TeamPicker from '../components/TeamPicker'
 
 function Badge({ logoUrl, name, size = 24 }) {
   if (logoUrl) {
@@ -488,36 +489,22 @@ export default function TeamsHub() {
         Everything about one club in one place — badge, honours, results, scorers, squad.
       </p>
 
-      <select
-        aria-label="Select a team"
+      <TeamPicker
+        teams={teams}
+        previousTeams={previousTeams}
         value={teamId}
-        onChange={(e) => {
-          if (e.target.value.startsWith('previous:')) {
-            const name = e.target.value.slice('previous:'.length)
+        onChange={(value) => {
+          if (value.startsWith('previous:')) {
+            const name = value.slice('previous:'.length)
             trackInteraction('team_selection', name)
             navigate(previousTeamUrl(name))
             return
           }
-          const selected = teams.find((entry) => entry.id === e.target.value)
-          setTeamId(e.target.value)
+          const selected = teams.find((entry) => entry.id === value)
+          setTeamId(value)
           if (selected) trackInteraction('team_selection', selected.name)
         }}
-        style={{ ...selectStyle, marginBottom: 24 }}
-      >
-        <option value="">Select a team…</option>
-        <optgroup label="Current league teams">
-          {teams.map((t) => (
-            <option key={t.id} value={t.id}>{t.name}</option>
-          ))}
-        </optgroup>
-        {previousTeams.length > 0 && (
-          <optgroup label="Previous teams — no longer in the league">
-            {previousTeams.map((name) => (
-              <option key={name} value={`previous:${name}`}>{name} — former team</option>
-            ))}
-          </optgroup>
-        )}
-      </select>
+      />
 
       {loading && <p style={{ color: 'var(--muted)' }}>Loading…</p>}
 
