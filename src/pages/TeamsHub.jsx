@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { supabase } from '../supabaseClient'
 import { displayedScore, outcomeNote } from '../utils/fixtureOutcome'
@@ -8,6 +8,7 @@ import { trackInteraction } from '../utils/webAnalytics'
 import TeamWebsiteLinks from '../components/TeamWebsiteLinks'
 import TeamPicker from '../components/TeamPicker'
 import { honourFixtureId } from '../utils/honourFixtures'
+import { useRememberedState, useRememberedScroll } from '../hooks/usePageMemory'
 
 function Badge({ logoUrl, name, size = 24 }) {
   if (logoUrl) {
@@ -75,29 +76,29 @@ function canvasLines(ctx, value, width, limit = 2) {
 
 export default function TeamsHub() {
   const navigate = useNavigate()
-  const [teams, setTeams] = useState([])
-  const [previousTeams, setPreviousTeams] = useState([])
-  const [teamId, setTeamId] = useState('')
-  const [team, setTeam] = useState(null)
-  const [loading, setLoading] = useState(false)
-  const [fixtureMonth, setFixtureMonth] = useState('')
-  const [fixtureDate, setFixtureDate] = useState('')
-  const [fixtureCompetition, setFixtureCompetition] = useState('appin-league')
-  const [sharingFixtures, setSharingFixtures] = useState(false)
+  const [teams, setTeams] = useRememberedState('teams', [])
+  const [previousTeams, setPreviousTeams] = useRememberedState('previousTeams', [])
+  const [teamId, setTeamId] = useRememberedState('teamId', '')
+  const [team, setTeam] = useRememberedState('team', null)
+  const [loading, setLoading] = useRememberedState('loading', false)
+  const [fixtureMonth, setFixtureMonth] = useRememberedState('fixtureMonth', '')
+  const [fixtureDate, setFixtureDate] = useRememberedState('fixtureDate', '')
+  const [fixtureCompetition, setFixtureCompetition] = useRememberedState('fixtureCompetition', 'appin-league')
+  const [sharingFixtures, setSharingFixtures] = useRememberedState('sharingFixtures', false)
 
-  const [currentFixtures, setCurrentFixtures] = useState([])
-  const [placeholderFixtures, setPlaceholderFixtures] = useState([])
-  const [calendarEvents, setCalendarEvents] = useState([])
-  const [historicFixtures, setHistoricFixtures] = useState([])
-  const [currentScorers, setCurrentScorers] = useState([])
-  const [historicScorers, setHistoricScorers] = useState([])
-  const [honours, setHonours] = useState([])
-  const [squad, setSquad] = useState([])
+  const [currentFixtures, setCurrentFixtures] = useRememberedState('currentFixtures', [])
+  const [placeholderFixtures, setPlaceholderFixtures] = useRememberedState('placeholderFixtures', [])
+  const [calendarEvents, setCalendarEvents] = useRememberedState('calendarEvents', [])
+  const [historicFixtures, setHistoricFixtures] = useRememberedState('historicFixtures', [])
+  const [currentScorers, setCurrentScorers] = useRememberedState('currentScorers', [])
+  const [historicScorers, setHistoricScorers] = useRememberedState('historicScorers', [])
+  const [honours, setHonours] = useRememberedState('honours', [])
+  const [squad, setSquad] = useRememberedState('squad', [])
 
-  const [resultsSeason, setResultsSeason] = useState(CURRENT_SEASON)
-  const [scorersSeason, setScorersSeason] = useState(CURRENT_SEASON)
-  const [headToHeadSeason, setHeadToHeadSeason] = useState(CURRENT_SEASON)
-  const [headToHeadSort, setHeadToHeadSort] = useState({ key: 'played', direction: 'desc' })
+  const [resultsSeason, setResultsSeason] = useRememberedState('resultsSeason', CURRENT_SEASON)
+  const [scorersSeason, setScorersSeason] = useRememberedState('scorersSeason', CURRENT_SEASON)
+  const [headToHeadSeason, setHeadToHeadSeason] = useRememberedState('headToHeadSeason', CURRENT_SEASON)
+  const [headToHeadSort, setHeadToHeadSort] = useRememberedState('headToHeadSort', { key: 'played', direction: 'desc' })
 
   useEffect(() => {
     supabase.from('calendar_events').select('event_date, title, description').order('event_date')
@@ -120,7 +121,10 @@ export default function TeamsHub() {
     return { data: allFixtures, error: null }
   }
 
+  useRememberedScroll(!loading && (!teamId || team?.id === teamId))
+
   useEffect(() => {
+    if (teams.length) return
     supabase
       .from('teams')
       .select('id, name, logo_url, manager_name, team_website_url, team_website_label, team_website_links')
@@ -129,7 +133,7 @@ export default function TeamsHub() {
   }, [])
 
   useEffect(() => {
-    if (teams.length === 0) return
+    if (teams.length === 0 || previousTeams.length) return
     let cancelled = false
     async function loadPreviousTeams() {
       const [{ data: fixtures }, { data: scorers }, { data: honoursRows }] = await Promise.all([
@@ -157,13 +161,10 @@ export default function TeamsHub() {
       setTeam(null)
       return
     }
+    if (team?.id === teamId && !loading) return
+    if (!teams.length) return
+    let cancelled = false
     setLoading(true)
-    setResultsSeason(CURRENT_SEASON)
-    setScorersSeason(CURRENT_SEASON)
-    setHeadToHeadSeason(CURRENT_SEASON)
-    setFixtureMonth('')
-    setFixtureDate('')
-    setFixtureCompetition('appin-league')
 
     async function load() {
       setTeam(teams.find((t) => t.id === teamId) || null)
@@ -176,6 +177,7 @@ export default function TeamsHub() {
         .or(`home_team_id.eq.${teamId},away_team_id.eq.${teamId}`)
         .eq('hidden_from_public', false)
         .order('fixture_date')
+      if (cancelled) return
       setCurrentFixtures(cf || [])
       const competitionNames = new Set((cf || []).filter((fixture) => fixture.status === 'scheduled').map((fixture) => fixture.stage?.competition?.name).filter(Boolean))
       const { data: placeholders } = await supabase
@@ -186,10 +188,12 @@ export default function TeamsHub() {
         .gte('fixture_date', new Date().toISOString())
         .or('home_team_id.is.null,away_team_id.is.null')
         .order('fixture_date')
+      if (cancelled) return
       setPlaceholderFixtures((placeholders || []).filter((fixture) => competitionNames.has(fixture.stage?.competition?.name)))
 
       const { data: hf } = await loadAllHistoricFixtures()
       const selectedTeamName = teams.find((entry) => entry.id === teamId)?.name
+      if (cancelled) return
       setHistoricFixtures((hf || []).filter((fixture) => {
         const homeName = canonicalTeamName(fixture.home_team_name, fixture.home_team_id, teams)
         const awayName = canonicalTeamName(fixture.away_team_name, fixture.away_team_id, teams)
@@ -200,12 +204,14 @@ export default function TeamsHub() {
         .from('fixture_scorers')
         .select('goals, player:player_id(id, first_name, last_name)')
         .eq('team_id', teamId)
+      if (cancelled) return
       setCurrentScorers(cs || [])
 
       const { data: hs } = await supabase
         .from('historic_scorers')
         .select('player_name, goals, season')
         .eq('team_id', teamId)
+      if (cancelled) return
       setHistoricScorers(hs || [])
 
       const { data: ho } = await supabase
@@ -213,6 +219,7 @@ export default function TeamsHub() {
         .select('season, competition, status, winner_name')
         .eq('team_id', teamId)
         .order('season', { ascending: false })
+      if (cancelled) return
       setHonours(ho || [])
 
       const { data: sq } = await supabase
@@ -221,11 +228,13 @@ export default function TeamsHub() {
         .eq('team_id', teamId)
         .order('first_name')
         .order('last_name')
+      if (cancelled) return
       setSquad(sq || [])
 
-      setLoading(false)
+      if (!cancelled) setLoading(false)
     }
     load()
+    return () => { cancelled = true }
   }, [teamId, teams])
 
   const played = currentFixtures.filter((f) => f.status === 'played').sort((a, b) => new Date(b.fixture_date) - new Date(a.fixture_date))
@@ -502,6 +511,14 @@ export default function TeamsHub() {
             return
           }
           const selected = teams.find((entry) => entry.id === value)
+          if (value !== teamId) {
+            setResultsSeason(CURRENT_SEASON)
+            setScorersSeason(CURRENT_SEASON)
+            setHeadToHeadSeason(CURRENT_SEASON)
+            setFixtureMonth('')
+            setFixtureDate('')
+            setFixtureCompetition('appin-league')
+          }
           setTeamId(value)
           if (selected) trackInteraction('team_selection', selected.name)
         }}

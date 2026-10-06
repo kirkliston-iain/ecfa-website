@@ -72,8 +72,8 @@ export default function App() {
           <Route path="/honours" element={<HonoursPage />} />
           <Route path="/archive" element={<HistoricalSeason />} />
           <Route path="/history" element={<HistoricalSeason />} />
-          <Route path="/teams" element={<TeamsHub />} />
-          <Route path="/teams/previous/:teamName" element={<PreviousTeam />} />
+          <Route path="/teams" element={<TeamsHub key={location.key} />} />
+          <Route path="/teams/previous/:teamName" element={<PreviousTeam key={location.key} />} />
           <Route path="/referees" element={<RefereesHub />} />
           <Route path="/downloads" element={<Downloads />} />
           <Route path="/downloads/player-report" element={<PlayerReportDownload />} />

@@ -1,9 +1,10 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { supabase } from '../supabaseClient'
 import { historicDisplayedScore } from '../utils/historicFixtureOutcome'
 import { historicTeamName } from '../utils/historicTeams'
 import { honourFixtureId } from '../utils/honourFixtures'
+import { useRememberedState, useRememberedScroll } from '../hooks/usePageMemory'
 
 const PAGE_SIZE = 1000
 
@@ -26,15 +27,18 @@ function belongsToTeam(value, teamName) {
 export default function PreviousTeam() {
   const { teamName: encodedName } = useParams()
   const teamName = historicTeamName(decodeURIComponent(encodedName || ''))
-  const [fixtures, setFixtures] = useState([])
-  const [scorers, setScorers] = useState([])
-  const [honours, setHonours] = useState([])
-  const [resultsSeason, setResultsSeason] = useState('Overall')
-  const [scorersSeason, setScorersSeason] = useState('Overall')
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState('')
+  const [fixtures, setFixtures] = useRememberedState('fixtures', [])
+  const [scorers, setScorers] = useRememberedState('scorers', [])
+  const [honours, setHonours] = useRememberedState('honours', [])
+  const [resultsSeason, setResultsSeason] = useRememberedState('resultsSeason', 'Overall')
+  const [scorersSeason, setScorersSeason] = useRememberedState('scorersSeason', 'Overall')
+  const [loading, setLoading] = useRememberedState('loading', true)
+  const [error, setError] = useRememberedState('error', '')
+
+  useRememberedScroll(!loading)
 
   useEffect(() => {
+    if (!loading && !error) return
     let cancelled = false
     async function load() {
       setLoading(true)

@@ -155,7 +155,7 @@ story.append(card_grid([
     ('Team websites', 'Select a club to see up to five website or social links on its team profile. Links appear only for the selected club. Links are labelled Facebook, Instagram, X, Own Website or Other when available.'),
     ('Form and fixtures', 'See the next five fixtures with home or away, competition and venue. Upcoming lists show these details too and default to the Appin Sports League. Choose another competition or all, filter by month or date, and share the list as a picture.'),
     ('Results by season', 'Switch between the current campaign and available historical seasons. The team page’s recent results mark the club as home or away and show the recorded venue.'),
-    ('Team scorers and honours', 'See season-by-season scorers and honours won by the club. Use View final on a cup honour to open its recorded final, including on former team profiles.'),
+    ('Team scorers and honours', 'See season-by-season scorers and honours won by the club. Use View final on a cup honour to open its recorded final, including on former team profiles. After viewing a match, Back restores the selected team, filters and place on the page.'),
     ('Head-to-head comparisons', 'Filter the opponent table by season and sort any column in ascending or descending order.'),
 ]))
 
