@@ -1,11 +1,10 @@
 import { useEffect, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { supabase } from '../supabaseClient'
 import { displayedScore, outcomeNote } from '../utils/fixtureOutcome'
 import { historicDisplayedScore } from '../utils/historicFixtureOutcome'
 import { historicTeamName, previousTeamUrl } from '../utils/historicTeams'
 import { trackInteraction } from '../utils/webAnalytics'
-import { websitesForTeam } from '../utils/teamWebsites'
 import TeamWebsiteLinks from '../components/TeamWebsiteLinks'
 
 function Badge({ logoUrl, name, size = 24 }) {
@@ -73,6 +72,7 @@ function canvasLines(ctx, value, width, limit = 2) {
 }
 
 export default function TeamsHub() {
+  const navigate = useNavigate()
   const [teams, setTeams] = useState([])
   const [previousTeams, setPreviousTeams] = useState([])
   const [teamId, setTeamId] = useState('')
@@ -227,7 +227,6 @@ export default function TeamsHub() {
   }, [teamId, teams])
 
   const played = currentFixtures.filter((f) => f.status === 'played').sort((a, b) => new Date(b.fixture_date) - new Date(a.fixture_date))
-  const teamWebsites = teams.filter((team) => websitesForTeam(team).length)
   const upcoming = currentFixtures
     .filter((f) => f.status === 'scheduled')
     .sort((a, b) => new Date(a.fixture_date) - new Date(b.fixture_date))[0]
@@ -490,8 +489,15 @@ export default function TeamsHub() {
       </p>
 
       <select
+        aria-label="Select a team"
         value={teamId}
         onChange={(e) => {
+          if (e.target.value.startsWith('previous:')) {
+            const name = e.target.value.slice('previous:'.length)
+            trackInteraction('team_selection', name)
+            navigate(previousTeamUrl(name))
+            return
+          }
           const selected = teams.find((entry) => entry.id === e.target.value)
           setTeamId(e.target.value)
           if (selected) trackInteraction('team_selection', selected.name)
@@ -499,40 +505,19 @@ export default function TeamsHub() {
         style={{ ...selectStyle, marginBottom: 24 }}
       >
         <option value="">Select a team…</option>
-        {teams.map((t) => (
-          <option key={t.id} value={t.id}>
-            {t.name}
-          </option>
-        ))}
-      </select>
-
-      <section style={{ marginBottom: 28 }} aria-labelledby="team-websites-heading">
-        <h2 id="team-websites-heading" style={{ ...sectionHeaderStyle, marginTop: 0 }}>Team websites</h2>
-        <div style={{ display: 'grid', gap: 8 }}>
-          {teamWebsites.map((team) => (
-            <div key={team.id} style={{ ...cardStyle, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12 }}>
-              <strong>{team.team_website_label?.trim() || team.name}</strong>
-              <TeamWebsiteLinks team={team} context="Teams" />
-            </div>
+        <optgroup label="Current league teams">
+          {teams.map((t) => (
+            <option key={t.id} value={t.id}>{t.name}</option>
           ))}
-        </div>
-      </section>
-
-      {previousTeams.length > 0 && (
-        <section style={{ marginBottom: 28 }}>
-          <h2 style={{ ...sectionHeaderStyle, marginTop: 0 }}>Previous teams</h2>
-          <p style={{ color: 'var(--muted)', fontSize: 14, marginTop: -4, marginBottom: 12 }}>
-            Former ECFA teams with records held in the archive.
-          </p>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(210px, 1fr))', gap: 8 }}>
+        </optgroup>
+        {previousTeams.length > 0 && (
+          <optgroup label="Previous teams — no longer in the league">
             {previousTeams.map((name) => (
-              <Link key={name} to={previousTeamUrl(name)} style={{ ...cardStyle, color: 'var(--ink)', textDecoration: 'none', fontWeight: 700 }}>
-                {name} <span aria-hidden="true" style={{ color: 'var(--brass)', float: 'right' }}>→</span>
-              </Link>
+              <option key={name} value={`previous:${name}`}>{name} — former team</option>
             ))}
-          </div>
-        </section>
-      )}
+          </optgroup>
+        )}
+      </select>
 
       {loading && <p style={{ color: 'var(--muted)' }}>Loading…</p>}
 

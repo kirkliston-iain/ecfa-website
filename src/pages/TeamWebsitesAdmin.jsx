@@ -84,7 +84,7 @@ export default function TeamWebsitesAdmin() {
   return <div className="container" style={{ padding: '32px 20px 48px', maxWidth: 720 }}>
     <Link to="/admin/dashboard" style={{ color: 'var(--brass)', fontWeight: 700 }}>← Back to admin</Link>
     <h1 style={{ fontSize: 27, margin: '20px 0 6px' }}>Manage team websites</h1>
-    <p style={{ color: 'var(--muted)', lineHeight: 1.5 }}>Add up to five website or social media links per team. They appear in Team websites and on the club’s team page. Link clicks are recorded in the existing website audit.</p>
+    <p style={{ color: 'var(--muted)', lineHeight: 1.5 }}>Add up to five website or social media links per team. They appear on the club’s profile when visitors select that team. Link clicks are recorded in the existing website audit.</p>
 
     <label style={labelStyle}>Team
       <select value={teamId} disabled={saving} onChange={(event) => chooseTeam(event.target.value)} style={fieldStyle}>
@@ -98,7 +98,7 @@ export default function TeamWebsitesAdmin() {
 
     {teamId && <form onSubmit={saveWebsites} style={{ display: 'grid', gap: 16, marginTop: 20 }}>
       <fieldset disabled={saving} style={{ border: 0, padding: 0, margin: 0, minWidth: 0, display: 'grid', gap: 16 }}>
-        <label style={labelStyle}>Name shown in Team websites
+        <label style={labelStyle}>Team website display name
           <input value={label} onChange={(event) => { setLabel(event.target.value); setMessage('') }} style={fieldStyle} placeholder="Team name" />
         </label>
         <p style={{ margin: 0, color: 'var(--muted)', fontSize: 14 }}>{links.length} of {MAX_TEAM_LINKS} link slots in use. Empty addresses are not saved. Remove a link, then save to apply the removal.</p>

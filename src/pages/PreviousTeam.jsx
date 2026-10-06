@@ -85,7 +85,7 @@ export default function PreviousTeam() {
     <div className="container" style={{ padding: '32px 20px 48px' }}>
       <Link to="/teams" style={{ color: 'var(--brass)', fontWeight: 700, textDecoration: 'none' }}>← Back to teams</Link>
       <h1 style={{ fontSize: 30, marginBottom: 4 }}>{teamName}</h1>
-      <p style={{ color: 'var(--muted)', marginTop: 0, marginBottom: 22 }}>Previous team · complete records held on this website.</p>
+      <p style={{ color: 'var(--muted)', marginTop: 0, marginBottom: 22 }}>Former ECFA team · no longer in the league. Historical records are available below.</p>
 
       {loading && <p style={{ color: 'var(--muted)' }}>Loading team history…</p>}
       {error && <p role="alert" style={{ color: '#b3261e' }}>{error}</p>}
