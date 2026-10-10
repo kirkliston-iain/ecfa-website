@@ -596,7 +596,13 @@ export default function HistoricalSeason() {
                     {linkedTeamName(f.home_team_name, f.home_team_id, { overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' })}
                   </div>
                   <div style={{ minWidth: 60, textAlign: 'center', fontWeight: 800 }}>
-                    {historicDisplayedScore(f)}
+                    <Link
+                      to={`/fixtures/${f.id}`}
+                      aria-label={`View ${f.home_team_name} versus ${f.away_team_name}, ${displayFixtureDate(f.fixture_date)}`}
+                      style={{ display: 'block', padding: '8px 4px', color: 'var(--ink)', textDecoration: 'underline', textDecorationColor: 'var(--brass)', textUnderlineOffset: 3 }}
+                    >
+                      {historicDisplayedScore(f)}
+                    </Link>
                   </div>
                   <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 8, justifyContent: 'flex-end', minWidth: 0 }}>
                     {linkedTeamName(f.away_team_name, f.away_team_id, { overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' })}

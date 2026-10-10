@@ -135,7 +135,7 @@ story.append(PageBreak())
 story += section_title('3. Competitions, tables and cups', 'Competition pages separate the league and cup tournaments while keeping their fixtures and progress easy to follow.')
 story.append(card_grid([
     ('League standings', 'View played, won, drawn, lost, goals for, goals against, goal difference and points.'),
-    ('League fixtures and results', 'Review scheduled and completed games within the selected competition.'),
+    ('League fixtures and results', 'Review scheduled and completed games within the selected competition. Select a fixture to open its match details.'),
     ('Cup progress', 'Follow group tables and knockout fixtures. Gold labels in Match Hub previews link to the relevant group, cup draw or league table.'),
     ('Competition switching', 'Move between the Appin Sports League, ECFA Knockout Cup, ECFA League Cup and Brian Latto Cup.'),
 ]))
@@ -155,7 +155,7 @@ story.append(card_grid([
     ('Team websites', 'Select a club to see up to five website or social links on its team profile. Links appear only for the selected club. Links are labelled Facebook, Instagram, X, Own Website or Other when available.'),
     ('Form and fixtures', 'See the next five fixtures with home or away, competition and venue. Upcoming lists show these details too and default to the Appin Sports League. Choose another competition or all, filter by month or date, and share the list as a picture.'),
     ('Results by season', 'Switch between the current campaign and available historical seasons. The team page’s recent results mark the club as home or away and show the recorded venue.'),
-    ('Team scorers and honours', 'See season-by-season scorers and honours won by the club. Use View final on a cup honour to open its recorded final, including on former team profiles. After viewing a match, Back restores the selected team, filters and place on the page.'),
+    ('Team scorers and honours', 'See season-by-season scoring totals, with opponents, goals and match links from 2025/26 onwards. Use View final on a cup honour to open its recorded final, including on former team profiles. After viewing a match, Back restores the selected team, filters and place on the page.'),
     ('Head-to-head comparisons', 'Filter the opponent table by season and sort any column in ascending or descending order.'),
 ]))
 
@@ -164,7 +164,7 @@ story += section_title('6. Honours and historical records')
 story.append(card_grid([
     ('Major honours', 'A season-by-season grid records winners of the League, League Cup, Knockout Cup and Brian Latto Cup. Cup final results below the honours tables can be filtered by season, competition and team.'),
     ('All-time honours table', 'Compare clubs by competition wins and total major honours.'),
-    ('Historical seasons', 'Browse archived league tables, fixtures and results from previous campaigns. Filter each season’s fixtures by the teams recorded in that season, including clubs no longer active.'),
+    ('Historical seasons', 'Browse archived league tables, fixtures and results from previous campaigns. Select a result score to open the recorded match details, including match-linked scorers for 2025/26. Filter each season’s fixtures by the teams recorded in that season, including clubs no longer active.'),
     ('Linked team records', 'Team names in honours and historical areas link back to current team pages when a match is available.'),
 ]))
 story += [Spacer(1, 10)] + section_title('7. Referee information', 'The referee section builds a public statistical picture from recorded appointments and discipline data.')

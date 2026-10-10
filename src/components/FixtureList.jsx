@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom'
 import { displayedScore, outcomeNote } from '../utils/fixtureOutcome'
 
 function Badge({ logoUrl, name, size = 20 }) {
@@ -54,6 +55,10 @@ export default function FixtureList({ fixtures }) {
       {fixtures.map((f) => (
         <li
           key={f.id}
+        >
+          <Link
+          to={`/fixtures/${f.id}`}
+          aria-label={`View ${f.home_team?.name || f.home_placeholder || 'TBC'} versus ${f.away_team?.name || f.away_placeholder || 'TBC'}`}
           style={{
             display: 'flex',
             alignItems: 'center',
@@ -61,6 +66,8 @@ export default function FixtureList({ fixtures }) {
             padding: '14px 0',
             borderBottom: '1px solid var(--line)',
             fontSize: 14,
+            color: 'inherit',
+            textDecoration: 'none',
           }}
         >
           <div style={{ flex: 1 }}>
@@ -109,6 +116,7 @@ export default function FixtureList({ fixtures }) {
               </span>
             )}
           </div>
+          </Link>
         </li>
       ))}
     </ul>

@@ -92,6 +92,8 @@ export default function TeamsHub() {
   const [historicFixtures, setHistoricFixtures] = useRememberedState('historicFixtures', [])
   const [currentScorers, setCurrentScorers] = useRememberedState('currentScorers', [])
   const [historicScorers, setHistoricScorers] = useRememberedState('historicScorers', [])
+  const [linkedHistoricScorers, setLinkedHistoricScorers] = useRememberedState('linkedHistoricScorers', null)
+  const [scorerDetailsError, setScorerDetailsError] = useRememberedState('scorerDetailsError', '')
   const [honours, setHonours] = useRememberedState('honours', [])
   const [squad, setSquad] = useRememberedState('squad', [])
 
@@ -167,6 +169,8 @@ export default function TeamsHub() {
     setLoading(true)
 
     async function load() {
+      setScorerDetailsError('')
+      setLinkedHistoricScorers(null)
       setTeam(teams.find((t) => t.id === teamId) || null)
 
       const { data: cf } = await supabase
@@ -200,9 +204,9 @@ export default function TeamsHub() {
         return fixture.home_team_id === teamId || fixture.away_team_id === teamId || homeName === selectedTeamName || awayName === selectedTeamName
       }))
 
-      const { data: cs } = await supabase
+      const { data: cs, error: csError } = await supabase
         .from('fixture_scorers')
-        .select('goals, player:player_id(id, first_name, last_name)')
+        .select('fixture_id, goals, player:player_id(id, first_name, last_name)')
         .eq('team_id', teamId)
       if (cancelled) return
       setCurrentScorers(cs || [])
@@ -213,6 +217,30 @@ export default function TeamsHub() {
         .eq('team_id', teamId)
       if (cancelled) return
       setHistoricScorers(hs || [])
+
+      // Join archived scorer rows only through their recorded fixture ID.
+      const fixtureIds = (hf || []).filter((fixture) => Number.parseInt(fixture.season, 10) >= 2025
+        && (fixture.home_team_id === teamId || fixture.away_team_id === teamId
+          || canonicalTeamName(fixture.home_team_name, fixture.home_team_id, teams) === selectedTeamName
+          || canonicalTeamName(fixture.away_team_name, fixture.away_team_id, teams) === selectedTeamName))
+        .map((fixture) => fixture.id)
+      const linkedScorers = []
+      let detailsError = csError ? 'Unable to load some match-linked scoring details.' : ''
+      for (let offset = 0; offset < fixtureIds.length; offset += 100) {
+        for (let from = 0; ; from += 1000) {
+          const result = await supabase.from('historic_match_scorers')
+            .select('id, historic_fixture_id, player_name, team_name, goals')
+            .in('historic_fixture_id', fixtureIds.slice(offset, offset + 100))
+            .order('id').range(from, from + 999)
+          if (cancelled) return
+          if (result.error) { detailsError = 'Unable to load some match-linked scoring details.'; break }
+          linkedScorers.push(...(result.data || []).filter((row) => historicTeamName(row.team_name) === selectedTeamName))
+          if ((result.data || []).length < 1000) break
+        }
+      }
+      if (cancelled) return
+      setLinkedHistoricScorers(linkedScorers)
+      setScorerDetailsError(detailsError)
 
       const { data: ho } = await supabase
         .from('honours')
@@ -399,6 +427,40 @@ export default function TeamsHub() {
     overallScorersAgg[s.player_name] = (overallScorersAgg[s.player_name] || 0) + Number(s.goals || 0)
   }
   const overallScorersList = Object.entries(overallScorersAgg).sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
+
+  const scoringMatches = new Map()
+  const currentFixturesById = new Map(currentFixtures.map((fixture) => [fixture.id, fixture]))
+  const historicFixturesById = new Map(historicFixtures.map((fixture) => [fixture.id, fixture]))
+  function addScoringMatch(name, row, fixture, archived) {
+    if (!fixture) return
+    const season = archived ? fixture.season : fixture.stage?.competition?.season || CURRENT_SEASON
+    if (scorersSeason !== 'Overall' && scorersSeason !== season) return
+    const isHome = archived
+      ? fixture.home_team_id === teamId || canonicalTeamName(fixture.home_team_name, fixture.home_team_id, teams) === team?.name
+      : fixture.home_team?.id === teamId
+    const opponent = archived
+      ? canonicalTeamName(isHome ? fixture.away_team_name : fixture.home_team_name, isHome ? fixture.away_team_id : fixture.home_team_id, teams)
+      : (isHome ? fixture.away_team?.name : fixture.home_team?.name)
+    if (!opponent) return
+    const key = `${name}|${archived ? 'archive' : 'live'}|${fixture.id}`
+    const existing = scoringMatches.get(key)
+    scoringMatches.set(key, {
+      id: fixture.id, name, opponent, goals: (existing?.goals || 0) + Number(row.goals || 0),
+      date: fixture.fixture_date,
+      competition: archived ? fixture.competition_name : fixture.stage?.competition?.name,
+    })
+  }
+  for (const row of currentScorers) {
+    addScoringMatch(row.player ? `${row.player.first_name} ${row.player.last_name}` : 'Unknown', row, currentFixturesById.get(row.fixture_id), false)
+  }
+  for (const row of linkedHistoricScorers || []) {
+    addScoringMatch(row.player_name, row, historicFixturesById.get(row.historic_fixture_id), true)
+  }
+  const scoringMatchesByPlayer = new Map()
+  for (const match of [...scoringMatches.values()].sort((a, b) => String(b.date).localeCompare(String(a.date)))) {
+    if (!scoringMatchesByPlayer.has(match.name)) scoringMatchesByPlayer.set(match.name, [])
+    scoringMatchesByPlayer.get(match.name).push(match)
+  }
 
   const headToHeadMap = {}
   function addHeadToHead(opponentName, goalsFor, goalsAgainst, outcome) {
@@ -728,7 +790,7 @@ export default function TeamsHub() {
               <p style={{ color: 'var(--muted)', fontSize: 14 }}>No results for this season.</p>
             ) : resultsSeason === CURRENT_SEASON ? (
               currentPlayedForResults.map((f) => (
-                <div key={f.id} style={resultRowStyle}>
+                <Link key={f.id} to={`/fixtures/${f.id}`} style={{ ...resultRowStyle, color: 'inherit', textDecoration: 'none' }}>
                   <span>
                     {f.home_team?.name} {displayedScore(f)} {f.away_team?.name}
                     {outcomeNote(f) && <div style={{ fontSize: 11, color: 'var(--muted)' }}>{outcomeNote(f)}</div>}
@@ -736,16 +798,16 @@ export default function TeamsHub() {
                   <span style={{ color: 'var(--muted)', fontSize: 12 }}>
                     {new Date(f.fixture_date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}
                   </span>
-                </div>
+                </Link>
               ))
             ) : (
               historicForSeason.map((f) => (
-                <div key={f.id} style={resultRowStyle}>
+                <Link key={f.id} to={`/fixtures/${f.id}`} style={{ ...resultRowStyle, color: 'inherit', textDecoration: 'none' }}>
                   <span>
                     {f.home_team_name} {historicDisplayedScore(f)} {f.away_team_name}
                   </span>
                   <span style={{ color: 'var(--muted)', fontSize: 12 }}>{f.competition_name}</span>
-                </div>
+                </Link>
               ))
             )}
           </div>
@@ -763,12 +825,22 @@ export default function TeamsHub() {
             ))}
           </select>
           <div style={{ marginBottom: 12 }}>
+            {scorerDetailsError && <p style={{ color: 'var(--muted)', fontSize: 13 }}>{scorerDetailsError}</p>}
             {displayedScorers.length === 0 ? (
               <p style={{ color: 'var(--muted)', fontSize: 14 }}>No scorers recorded for this season.</p>
             ) : (
               displayedScorers.map(([name, goals]) => (
                 <div key={name} style={resultRowStyle}>
-                  <span>{name}</span>
+                  <span style={{ flex: 1, minWidth: 0 }}>
+                    {name}
+                    {(scoringMatchesByPlayer.get(name) || []).map((match) => (
+                      <Link key={match.id} to={`/fixtures/${match.id}`} style={{ display: 'block', color: 'var(--muted)', fontSize: 12, marginTop: 6, lineHeight: 1.5, textDecoration: 'underline', textDecorationColor: 'var(--brass)', textUnderlineOffset: 2 }}>
+                        {match.goals} {match.goals === 1 ? 'goal' : 'goals'} against {match.opponent}
+                        {' · '}{new Date(match.date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
+                        {match.competition ? ` · ${match.competition}` : ''}
+                      </Link>
+                    ))}
+                  </span>
                   <strong>{goals}</strong>
                 </div>
               ))
