@@ -719,10 +719,10 @@ export default function Home() {
       }
       const days = Array.from(dateMap.values()).sort((a, b) => a.date.localeCompare(b.date))
       // Keep the date only for this browser history entry (Back from a match).
-      // A fresh Match Hub navigation starts at the next scheduled matchday.
+      // A fresh visit follows the UK weekend recap / Monday fixtures rule.
       setSelectedDate((previous) => days.some((day) => day.date === previous)
         ? previous
-        : pickDefaultDate(days, todayUK(), 'fixtures'))
+        : pickDefaultDate(days, todayUK(), getMode()))
       setLoading(false)
     }
 
