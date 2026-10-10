@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useRememberedState, useRememberedScroll } from '../hooks/usePageMemory'
+import { useEffect, useMemo } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { supabase } from '../supabaseClient'
 import { cleanVenueName, isVenueLinkable, venueGroupKey, venueHistoryUrl } from '../utils/venueGrouping'
@@ -10,6 +11,7 @@ const SITE_PAGES = [
   { label: 'Competitions', description: 'Tables, fixtures, results and next-round possibilities', to: '/standings' },
   { label: 'Goalscorers', description: 'Current and historical goalscorers', to: '/goalscorers' },
   { label: 'Honours', description: 'ECFA competition winners', to: '/honours' },
+  { label: 'Match history', description: 'All recorded games with team, venue and competition links', to: '/matches' },
   { label: 'Archive', description: 'Past seasons, results, tables, honours and historical scorers', to: '/archive' },
   { label: 'Teams', description: 'Team pages, squads, managers and fixtures', to: '/teams' },
   { label: 'Stats', description: 'Current-season team records, player scoring and referee statistics', to: '/stats' },
@@ -57,11 +59,12 @@ function ResultGroup({ title, rows }) {
 
 export default function Search() {
   const [params, setParams] = useSearchParams()
-  const [input, setInput] = useState(params.get('q') || '')
+  const [input, setInput] = useRememberedState('input', params.get('q') || '')
   const query = (params.get('q') || '').trim()
-  const [loading, setLoading] = useState(false)
-  const [dynamic, setDynamic] = useState({ players: [], referees: [], teams: [], competitions: [], venues: [] })
-  const [error, setError] = useState('')
+  const [loading, setLoading] = useRememberedState('loading', false)
+  const [dynamic, setDynamic] = useRememberedState('dynamic', { players: [], referees: [], teams: [], competitions: [], venues: [] })
+  const [error, setError] = useRememberedState('error', '')
+  useRememberedScroll(!loading)
 
   useEffect(() => {
     let cancelled = false

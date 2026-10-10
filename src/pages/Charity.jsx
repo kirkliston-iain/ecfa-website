@@ -1,3 +1,4 @@
+import { TeamHistoryLink } from '../components/HistoryLinks'
 import { useSiteLogos } from '../contexts/SiteLogos'
 import { Link } from 'react-router-dom'
 
@@ -87,7 +88,7 @@ export default function Charity() {
           {teamEvents.map((item) => (
             <article key={`${item.season}-${item.team}`} style={cardStyle}>
               <div style={seasonStyle}>{item.season} SEASON</div>
-              <h3 style={{ fontSize: 20, margin: '4px 0 2px' }}>{item.team}</h3>
+              <h3 style={{ fontSize: 20, margin: '4px 0 2px' }}><TeamHistoryLink name={item.team} /></h3>
               <div style={{ color: 'var(--muted)', fontSize: 13, fontWeight: 700 }}>{item.title}</div>
               <p style={{ margin: '12px 0', color: 'var(--muted)', fontSize: 14, lineHeight: 1.5 }}>{item.summary}</p>
               <a href={item.url} target="_blank" rel="noreferrer" style={buttonLinkStyle}>View fundraiser</a>

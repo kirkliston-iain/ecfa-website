@@ -1,3 +1,4 @@
+import { TeamHistoryLink } from '../components/HistoryLinks'
 import { useEffect, useState } from 'react'
 import { supabase } from '../supabaseClient'
 
@@ -71,7 +72,7 @@ export default function Sponsors() {
             {fundraisers.map((item) => (
               <article key={item.id} style={{ ...competitionStyle, padding: 18 }}>
                 <div style={eyebrowStyle}>{item.season} · Team fundraiser</div>
-                <h3 style={{ fontSize: 19, margin: '5px 0 2px' }}>{item.team_name}</h3>
+                <h3 style={{ fontSize: 19, margin: '5px 0 2px' }}><TeamHistoryLink name={item.team_name} /></h3>
                 <div style={{ fontWeight: 700, marginBottom: 9 }}>{item.title}</div>
                 {item.amount_raised_text && <div style={amountStyle}>{item.amount_raised_text}</div>}
                 <p style={{ color: 'var(--muted)', lineHeight: 1.5, fontSize: 14 }}>{item.summary}</p>

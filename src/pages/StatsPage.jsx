@@ -1,4 +1,7 @@
-import { useEffect, useMemo, useState } from 'react'
+import { TeamHistoryLink } from '../components/HistoryLinks'
+import { matchHistoryUrl } from '../utils/historyLinks'
+import { useRememberedState, useRememberedScroll } from '../hooks/usePageMemory'
+import { useEffect, useMemo } from 'react'
 import { Link } from 'react-router-dom'
 import { supabase } from '../supabaseClient'
 
@@ -137,16 +140,16 @@ function displayValue(value, metric) {
 }
 
 export default function StatsPage() {
-  const [fixtures, setFixtures] = useState([])
-  const [teams, setTeams] = useState([])
-  const [scope, setScope] = useState('all')
-  const [metricKey, setMetricKey] = useState('goalsFor')
-  const [season, setSeason] = useState('')
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState('')
+  const [fixtures, setFixtures] = useRememberedState('fixtures', [])
+  const [teams, setTeams] = useRememberedState('teams', [])
+  const [scope, setScope] = useRememberedState('scope', 'all')
+  const [metricKey, setMetricKey] = useRememberedState('metricKey', 'goalsFor')
+  const [season, setSeason] = useRememberedState('season', '')
+  const [loading, setLoading] = useRememberedState('loading', true)
+  const [error, setError] = useRememberedState('error', '')
+  useRememberedScroll(!loading)
 
   useEffect(() => {
-    window.scrollTo({ top: 0, left: 0, behavior: 'auto' })
     let cancelled = false
 
     async function load() {
@@ -221,8 +224,8 @@ export default function StatsPage() {
           </div>
 
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 10, marginBottom: 28 }}>
-            <div style={summaryCardStyle}><strong style={summaryValueStyle}>{scopedFixtures.length}</strong><span style={summaryLabelStyle}>Played matches</span></div>
-            <div style={summaryCardStyle}><strong style={summaryValueStyle}>{totalGoals}</strong><span style={summaryLabelStyle}>Goals</span></div>
+            <div style={summaryCardStyle}><Link to={matchHistoryUrl({ season, scope, status: 'played' })}><strong style={summaryValueStyle}>{scopedFixtures.length}</strong></Link><span style={summaryLabelStyle}>Played matches</span></div>
+            <div style={summaryCardStyle}><Link to={matchHistoryUrl({ season, scope, status: 'played' })}><strong style={summaryValueStyle}>{totalGoals}</strong></Link><span style={summaryLabelStyle}>Goals</span></div>
             <div style={summaryCardStyle}><strong style={summaryValueStyle}>{scopedFixtures.length ? (totalGoals / scopedFixtures.length).toFixed(2) : '0.00'}</strong><span style={summaryLabelStyle}>Goals per match</span></div>
           </div>
 
@@ -240,15 +243,15 @@ export default function StatsPage() {
                 ? rankings.findIndex((row) => row[metricKey] === team[metricKey]) + 1
                 : index + 1
               return (
-                <Link key={team.id} to={`/teams/${team.id}`} style={rankingRowStyle}>
+                <div key={team.id} style={rankingRowStyle}>
                   <span style={{ width: 30, fontSize: 18, fontWeight: 800, color: index < 3 ? 'var(--brass)' : 'var(--muted)' }}>{rank}</span>
                   <Badge logoUrl={team.logoUrl} name={team.name} />
-                  <span style={{ flex: 1, minWidth: 0, fontWeight: 750 }}>{team.name}</span>
-                  <span style={{ textAlign: 'right', flexShrink: 0 }}>
+                  <TeamHistoryLink id={team.id} name={team.name} style={{ flex: 1, minWidth: 0, fontWeight: 750 }} />
+                  <Link to={matchHistoryUrl({ team: team.id, season, scope, status: 'played', stat: metricKey, result: metricKey === 'wins' ? 'W' : '' })} style={{ textAlign: 'right', flexShrink: 0, color: 'inherit' }}>
                     <strong style={{ display: 'block', fontSize: 22 }}>{displayValue(team[metricKey], metric)}</strong>
                     <span style={{ color: 'var(--muted)', fontSize: 10, textTransform: 'uppercase' }}>{metric.suffix}</span>
-                  </span>
-                </Link>
+                  </Link>
+                </div>
               )
             })}
           </section>

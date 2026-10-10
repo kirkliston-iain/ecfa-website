@@ -1,5 +1,7 @@
+import { TeamHistoryLink, PlayerHistoryLink, VenueHistoryLink, CompetitionHistoryLink } from '../components/HistoryLinks'
+import { matchHistoryUrl } from '../utils/historyLinks'
 import { useEffect } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { supabase } from '../supabaseClient'
 import { displayedScore, outcomeNote } from '../utils/fixtureOutcome'
 import { historicDisplayedScore } from '../utils/historicFixtureOutcome'
@@ -76,9 +78,10 @@ function canvasLines(ctx, value, width, limit = 2) {
 
 export default function TeamsHub() {
   const navigate = useNavigate()
+  const [params] = useSearchParams()
   const [teams, setTeams] = useRememberedState('teams', [])
   const [previousTeams, setPreviousTeams] = useRememberedState('previousTeams', [])
-  const [teamId, setTeamId] = useRememberedState('teamId', '')
+  const [teamId, setTeamId] = useRememberedState('teamId', params.get('team') || '')
   const [team, setTeam] = useRememberedState('team', null)
   const [loading, setLoading] = useRememberedState('loading', false)
   const [fixtureMonth, setFixtureMonth] = useRememberedState('fixtureMonth', '')
@@ -433,7 +436,7 @@ export default function TeamsHub() {
   const historicFixturesById = new Map(historicFixtures.map((fixture) => [fixture.id, fixture]))
   function addScoringMatch(name, row, fixture, archived) {
     if (!fixture) return
-    const season = archived ? fixture.season : fixture.stage?.competition?.season || CURRENT_SEASON
+    const season = String(archived ? fixture.season : fixture.stage?.competition?.season || CURRENT_SEASON).replace('-', '/')
     if (scorersSeason !== 'Overall' && scorersSeason !== season) return
     const isHome = archived
       ? fixture.home_team_id === teamId || canonicalTeamName(fixture.home_team_name, fixture.home_team_id, teams) === team?.name
@@ -832,7 +835,7 @@ export default function TeamsHub() {
               displayedScorers.map(([name, goals]) => (
                 <div key={name} style={resultRowStyle}>
                   <span style={{ flex: 1, minWidth: 0 }}>
-                    {name}
+                    <PlayerHistoryLink name={name} />
                     {(scoringMatchesByPlayer.get(name) || []).map((match) => (
                       <Link key={match.id} to={`/fixtures/${match.id}`} style={{ display: 'block', color: 'var(--muted)', fontSize: 12, marginTop: 6, lineHeight: 1.5, textDecoration: 'underline', textDecorationColor: 'var(--brass)', textUnderlineOffset: 2 }}>
                         {match.goals} {match.goals === 1 ? 'goal' : 'goals'} against {match.opponent}
@@ -841,7 +844,7 @@ export default function TeamsHub() {
                       </Link>
                     ))}
                   </span>
-                  <strong>{goals}</strong>
+                  <Link to={`/goalscorers?player=${encodeURIComponent(name)}${scorersSeason === 'Overall' ? '' : `&season=${encodeURIComponent(scorersSeason)}`}`} style={{ color: 'inherit' }}><strong>{goals}</strong></Link>
                 </div>
               ))
             )}
@@ -890,14 +893,14 @@ export default function TeamsHub() {
                 <tbody>
                   {headToHead.map((row) => (
                     <tr key={row.opponent} style={{ borderBottom: '1px solid var(--line)' }}>
-                      <td style={{ padding: '8px 3px', fontWeight: 600, fontSize: 12, lineHeight: 1.25 }}>{row.opponent}</td>
-                      <td style={headToHeadCellStyle}>{row.played}</td>
-                      <td style={headToHeadCellStyle}>{row.wins}</td>
-                      <td style={headToHeadCellStyle}>{row.losses}</td>
-                      <td style={headToHeadCellStyle}>{row.draws}</td>
-                      <td style={headToHeadCellStyle}>{row.goalsFor}</td>
-                      <td style={headToHeadCellStyle}>{row.goalsAgainst}</td>
-                      <td style={{ ...headToHeadCellStyle, fontWeight: 700 }}>{((row.wins / row.played) * 100).toFixed(1)}%</td>
+                      <td style={{ padding: '8px 3px', fontWeight: 600, fontSize: 12, lineHeight: 1.25 }}><TeamHistoryLink name={row.opponent} /></td>
+                      <td style={headToHeadCellStyle}><Link to={matchHistoryUrl({ team: teamId, opponent: row.opponent, season: headToHeadSeason, result: '', status: 'played' })} style={{ color: 'inherit' }}>{row.played}</Link></td>
+                      <td style={headToHeadCellStyle}><Link to={matchHistoryUrl({ team: teamId, opponent: row.opponent, season: headToHeadSeason, result: 'W', status: 'played' })} style={{ color: 'inherit' }}>{row.wins}</Link></td>
+                      <td style={headToHeadCellStyle}><Link to={matchHistoryUrl({ team: teamId, opponent: row.opponent, season: headToHeadSeason, result: 'L', status: 'played' })} style={{ color: 'inherit' }}>{row.losses}</Link></td>
+                      <td style={headToHeadCellStyle}><Link to={matchHistoryUrl({ team: teamId, opponent: row.opponent, season: headToHeadSeason, result: 'D', status: 'played' })} style={{ color: 'inherit' }}>{row.draws}</Link></td>
+                      <td style={headToHeadCellStyle}><Link to={matchHistoryUrl({ team: teamId, opponent: row.opponent, season: headToHeadSeason, result: '', status: 'played' })} style={{ color: 'inherit' }}>{row.goalsFor}</Link></td>
+                      <td style={headToHeadCellStyle}><Link to={matchHistoryUrl({ team: teamId, opponent: row.opponent, season: headToHeadSeason, result: '', status: 'played' })} style={{ color: 'inherit' }}>{row.goalsAgainst}</Link></td>
+                      <td style={{ ...headToHeadCellStyle, fontWeight: 700 }}><Link to={matchHistoryUrl({ team: teamId, opponent: row.opponent, season: headToHeadSeason, status: 'played' })} style={{ color: 'inherit' }}>{((row.wins / row.played) * 100).toFixed(1)}%</Link></td>
                     </tr>
                   ))}
                 </tbody>

@@ -1,3 +1,5 @@
+import { matchHistoryUrl } from '../utils/historyLinks'
+import { HistoryBack, TeamHistoryLink, PlayerHistoryLink } from '../components/HistoryLinks'
 import { useEffect, useMemo } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { supabase } from '../supabaseClient'
@@ -88,7 +90,7 @@ export default function PreviousTeam() {
 
   return (
     <div className="container" style={{ padding: '32px 20px 48px' }}>
-      <Link to="/teams" style={{ color: 'var(--brass)', fontWeight: 700, textDecoration: 'none' }}>← Back to teams</Link>
+      <HistoryBack fallback="/teams" />
       <h1 style={{ fontSize: 30, marginBottom: 4 }}>{teamName}</h1>
       <p style={{ color: 'var(--muted)', marginTop: 0, marginBottom: 22 }}>Former ECFA team · no longer in the league. Historical records are available below.</p>
 
@@ -130,7 +132,7 @@ export default function PreviousTeam() {
           </select>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0, 1fr))', gap: 8, margin: '12px 0 18px' }}>
             {[['Played', shownFixtures.length], ['Won', wins], ['Drawn', draws], ['Lost', losses]].map(([label, value]) => (
-              <div key={label} style={summaryStyle}><strong style={{ fontSize: 22 }}>{value}</strong><span style={{ color: 'var(--muted)', fontSize: 12 }}>{label}</span></div>
+              <div key={label} style={summaryStyle}><Link to={matchHistoryUrl({ team: teamName, season: resultsSeason, status: 'played', result: ({ Won: 'W', Drawn: 'D', Lost: 'L' })[label] })}><strong style={{ fontSize: 22 }}>{value}</strong></Link><span style={{ color: 'var(--muted)', fontSize: 12 }}>{label}</span></div>
             ))}
           </div>
           {shownFixtures.length === 0 ? <Empty>No results recorded for this selection.</Empty> : shownFixtures.map((fixture) => (

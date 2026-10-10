@@ -1,4 +1,7 @@
-import { useEffect, useState } from 'react'
+import { useRememberedState, useRememberedScroll } from '../hooks/usePageMemory'
+import { historicTeamName } from '../utils/historicTeams'
+import { PlayerHistoryLink, TeamHistoryLink, VenueHistoryLink, CompetitionHistoryLink } from '../components/HistoryLinks'
+import { useEffect } from 'react'
 import { useParams, useNavigate, useLocation, Link } from 'react-router-dom'
 import { supabase } from '../supabaseClient'
 import { displayedScore, fullOutcomeNote } from '../utils/fixtureOutcome'
@@ -54,15 +57,16 @@ export default function FixtureDetail() {
   const { id } = useParams()
   const navigate = useNavigate()
   const location = useLocation()
-  const [fixture, setFixture] = useState(null)
-  const [scorers, setScorers] = useState([])
-  const [discipline, setDiscipline] = useState([])
-  const [previousMeetings, setPreviousMeetings] = useState([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState(null)
+  const [fixture, setFixture] = useRememberedState('fixture', null)
+  const [scorers, setScorers] = useRememberedState('scorers', [])
+  const [discipline, setDiscipline] = useRememberedState('discipline', [])
+  const [previousMeetings, setPreviousMeetings] = useRememberedState('previousMeetings', [])
+  const [loading, setLoading] = useRememberedState('loading', true)
+  const [error, setError] = useRememberedState('error', null)
+
+  useRememberedScroll(!loading)
 
   useEffect(() => {
-    window.scrollTo({ top: 0, left: 0, behavior: 'auto' })
     let cancelled = false
 
     async function load() {
@@ -343,7 +347,7 @@ export default function FixtureDetail() {
         }}
       >
         <Link
-          to={`/teams/${fixture.home_team?.id}`}
+          to={fixture.home_team?.id ? `/teams/${fixture.home_team.id}` : `/teams/previous/${encodeURIComponent(historicTeamName(fixture.home_team?.name))}`}
           style={{ textAlign: 'center', flex: 1, color: 'inherit' }}
         >
           <Badge logoUrl={fixture.home_team?.logo_url} name={fixture.home_team?.name} />
@@ -410,7 +414,7 @@ export default function FixtureDetail() {
         </div>
 
         <Link
-          to={`/teams/${fixture.away_team?.id}`}
+          to={fixture.away_team?.id ? `/teams/${fixture.away_team.id}` : `/teams/previous/${encodeURIComponent(historicTeamName(fixture.away_team?.name))}`}
           style={{ textAlign: 'center', flex: 1, color: 'inherit' }}
         >
           <Badge logoUrl={fixture.away_team?.logo_url} name={fixture.away_team?.name} />
@@ -457,7 +461,7 @@ export default function FixtureDetail() {
           {previousMeetings.map((m) => (
             <div key={m.id} style={{ padding: '12px 0', borderBottom: '1px solid var(--line)' }}>
               <div style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 4 }}>
-                {m.competition_name} — {m.season} —{' '}
+                <CompetitionHistoryLink name={m.competition_name} season={m.season} /> — {m.season} —{' '}
                 {new Date(m.fixture_date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
               </div>
               {m.fixture_id ? (
@@ -483,7 +487,7 @@ export default function FixtureDetail() {
               )}
               {m.comment && (
                 <div style={{ fontSize: 12, color: 'var(--muted)', textAlign: 'center', marginBottom: 6 }}>
-                  {m.comment}
+                  <VenueHistoryLink name={m.comment} />
                 </div>
               )}
               {m.scorers.length > 0 && (
@@ -495,7 +499,7 @@ export default function FixtureDetail() {
                         .filter((s) => s.team_name === m.home_team_name)
                         .map((s, i, arr) => (
                           <span key={i}>
-                            {s.player_name} ({s.goals}){i < arr.length - 1 ? ', ' : ''}
+                            <PlayerHistoryLink name={s.player_name} /> ({s.goals}){i < arr.length - 1 ? ', ' : ''}
                           </span>
                         ))}
                     </div>
@@ -507,7 +511,7 @@ export default function FixtureDetail() {
                         .filter((s) => s.team_name === m.away_team_name)
                         .map((s, i, arr) => (
                           <span key={i}>
-                            {s.player_name} ({s.goals}){i < arr.length - 1 ? ', ' : ''}
+                            <PlayerHistoryLink name={s.player_name} /> ({s.goals}){i < arr.length - 1 ? ', ' : ''}
                           </span>
                         ))}
                     </div>
@@ -551,7 +555,7 @@ function ScorerColumn({ title, scorers }) {
                   {s.player.first_name} {s.player.last_name}
                 </Link>
               ) : (
-                <span>{s.player?.first_name} {s.player?.last_name}</span>
+                <PlayerHistoryLink name={[s.player?.first_name, s.player?.last_name].filter(Boolean).join(' ')} />
               )}
               <span style={{ fontWeight: 800, color: 'var(--ink)' }}>{s.goals}</span>
             </li>

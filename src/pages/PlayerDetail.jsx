@@ -1,4 +1,6 @@
-import { useEffect, useMemo, useState } from 'react'
+import { HistoryBack, TeamHistoryLink, PlayerHistoryLink } from '../components/HistoryLinks'
+import { useRememberedState, useRememberedScroll } from '../hooks/usePageMemory'
+import { useEffect, useMemo } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { supabase } from '../supabaseClient'
 
@@ -94,22 +96,19 @@ function hasOpponentLevelScoringData(season) {
 
 export default function PlayerDetail() {
   const { id } = useParams()
-  const [player, setPlayer] = useState(null)
-  const [goals, setGoals] = useState([])
-  const [historicGoals, setHistoricGoals] = useState([])
-  const [historicMatchGoals, setHistoricMatchGoals] = useState([])
-  const [scoringMatchSeason, setScoringMatchSeason] = useState('Overall')
-  const [opponentSeason, setOpponentSeason] = useState('Overall')
-  const [discipline, setDiscipline] = useState([])
-  const [cardSeason, setCardSeason] = useState('Overall')
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState('')
+  const [player, setPlayer] = useRememberedState('player', null)
+  const [goals, setGoals] = useRememberedState('goals', [])
+  const [historicGoals, setHistoricGoals] = useRememberedState('historicGoals', [])
+  const [historicMatchGoals, setHistoricMatchGoals] = useRememberedState('historicMatchGoals', [])
+  const [scoringMatchSeason, setScoringMatchSeason] = useRememberedState('scoringMatchSeason', 'Overall')
+  const [opponentSeason, setOpponentSeason] = useRememberedState('opponentSeason', 'Overall')
+  const [discipline, setDiscipline] = useRememberedState('discipline', [])
+  const [cardSeason, setCardSeason] = useRememberedState('cardSeason', 'Overall')
+  const [loading, setLoading] = useRememberedState('loading', true)
+  const [error, setError] = useRememberedState('error', '')
+  useRememberedScroll(!loading)
 
   useEffect(() => {
-    window.scrollTo({ top: 0, left: 0, behavior: 'auto' })
-    setScoringMatchSeason('Overall')
-    setOpponentSeason('Overall')
-    setCardSeason('Overall')
     let cancelled = false
 
     async function load() {
@@ -143,7 +142,7 @@ export default function PlayerDetail() {
           .order('season', { ascending: false }),
         supabase
           .from('historic_match_scorers')
-          .select('id, historic_fixture_id, season, fixture_date, team_name, home_team_name, away_team_name, home_goals, away_goals, goals')
+          .select('id, historic_fixture_id, team_name, goals, fixture:historic_fixture_id(season, fixture_date, home_team_name, away_team_name, home_goals, away_goals)')
           .ilike('player_name', fullName),
         supabase
           .from('discipline_records')
@@ -155,7 +154,7 @@ export default function PlayerDetail() {
         setPlayer(playerRow)
         setGoals(goalResult.data || [])
         setHistoricGoals(historicResult.data || [])
-        setHistoricMatchGoals(historicMatchResult.data || [])
+        setHistoricMatchGoals((historicMatchResult.data || []).filter((row) => row.historic_fixture_id && row.fixture && hasOpponentLevelScoringData(row.fixture.season)).map((row) => ({ ...row, ...row.fixture })))
         setDiscipline((disciplineResult.data || []).sort((a, b) => new Date(b.fixture?.fixture_date || 0) - new Date(a.fixture?.fixture_date || 0)))
         setLoading(false)
       }
@@ -294,7 +293,7 @@ export default function PlayerDetail() {
 
   return (
     <div className="container" style={{ padding: '32px 20px 48px', maxWidth: 820 }}>
-      <Link to="/search" style={{ color: 'var(--brass)', fontWeight: 700, fontSize: 13 }}>← Back to search</Link>
+      <HistoryBack fallback="/goalscorers" />
 
       <div style={{ display: 'flex', alignItems: 'center', gap: 16, margin: '24px 0 10px' }}>
         <Badge logoUrl={player.team?.logo_url} name={player.team?.name || fullName} />
@@ -376,15 +375,15 @@ export default function PlayerDetail() {
               {currentGoals > 0 && (
                 <tr>
                   <td style={tdStyle}>{CURRENT_SEASON}</td>
-                  <td style={tdStyle}>{player.team?.name || 'Current team'}</td>
+                  <td style={tdStyle}><TeamHistoryLink name={player.team?.name} id={player.team?.id} /></td>
                   <td style={{ ...tdStyle, textAlign: 'right', fontWeight: 800 }}>{currentGoals}</td>
                 </tr>
               )}
               {aggregatedHistoricGoals.map((row) => (
                 <tr key={`${row.season}-${row.team_name}`}>
                   <td style={tdStyle}>{row.season}</td>
-                  <td style={tdStyle}>{row.team_name}</td>
-                  <td style={{ ...tdStyle, textAlign: 'right', fontWeight: 800 }}>{row.goals}</td>
+                  <td style={tdStyle}><TeamHistoryLink name={row.team_name} /></td>
+                  <td style={{ ...tdStyle, textAlign: 'right', fontWeight: 800 }}><Link to={`/goalscorers?player=${encodeURIComponent(fullName)}&season=${encodeURIComponent(row.season || (opponentSeason === 'Overall' ? 'overall' : opponentSeason))}&opponent=${encodeURIComponent(row.opponent || '')}`}>{row.goals}</Link></td>
                 </tr>
               ))}
             </tbody>
@@ -416,8 +415,8 @@ export default function PlayerDetail() {
             <tbody>
               {goalsByOpponent.map((row) => (
                 <tr key={row.opponent}>
-                  <td style={tdStyle}>{row.opponent}</td>
-                  <td style={{ ...tdStyle, textAlign: 'right', fontWeight: 800 }}>{row.goals}</td>
+                  <td style={tdStyle}><TeamHistoryLink name={row.opponent} /></td>
+                  <td style={{ ...tdStyle, textAlign: 'right', fontWeight: 800 }}><Link to={`/goalscorers?player=${encodeURIComponent(fullName)}&season=${encodeURIComponent(row.season || (opponentSeason === 'Overall' ? 'overall' : opponentSeason))}&opponent=${encodeURIComponent(row.opponent || '')}`}>{row.goals}</Link></td>
                 </tr>
               ))}
             </tbody>

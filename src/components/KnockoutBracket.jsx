@@ -1,3 +1,5 @@
+import { Link } from 'react-router-dom'
+import { TeamHistoryLink } from './HistoryLinks'
 import { displayedScore } from '../utils/fixtureOutcome'
 
 const nameOf = (fixture, side) => fixture?.[`${side}_team`]?.name || fixture?.[`${side}_placeholder`] || 'To be decided'
@@ -24,7 +26,7 @@ function Slot({ fixture, side }) {
   return (
     <div className={`bracket-slot${team ? '' : ' bracket-slot-pending'}`}>
       {team?.logo_url && <img src={team.logo_url} alt="" />}
-      <span>{name}</span>
+      {team?.id ? <TeamHistoryLink name={name} id={team.id} /> : <span>{name}</span>}
     </div>
   )
 }
@@ -33,12 +35,12 @@ function Tie({ fixture, label }) {
   return (
     <div className={`bracket-tie${fixture?.status === 'played' ? ' bracket-tie-played' : ''}`}>
       <div className="bracket-tie-header">
-        <strong>{label}</strong>
+        {fixture?.id ? <Link to={`/fixtures/${fixture.id}`} style={{ color: 'inherit', fontWeight: 700 }}>{label}</Link> : <strong>{label}</strong>}
         <span>{dateOf(fixture)}{timeOf(fixture) ? ` · ${timeOf(fixture)}` : ''}</span>
       </div>
       <Slot fixture={fixture} side="home" />
       <Slot fixture={fixture} side="away" />
-      {fixture?.status === 'played' && <div className="bracket-result">Result: {displayedScore(fixture)}</div>}
+      {fixture?.status === 'played' && <div className="bracket-result"><Link to={`/fixtures/${fixture.id}`} style={{ color: 'inherit' }}>Result: {displayedScore(fixture)}</Link></div>}
     </div>
   )
 }

@@ -25,12 +25,16 @@ export function useRememberedScroll(ready = true) {
   const memory = pageMemory(key)
   const restored = useRef(false)
   const target = useRef(navigationType === 'POP' ? memory.scroll : null)
+  const readyRef = useRef(ready)
+  readyRef.current = ready
 
   useLayoutEffect(() => {
     function remember() {
+      if (!readyRef.current) return
       // Don't overwrite the saved position while the returning view is loading.
       if (target.current && !restored.current) return
       memory.scroll = { x: window.scrollX, y: window.scrollY }
+      if (restored.current) target.current = memory.scroll
     }
     window.addEventListener('scroll', remember, { passive: true })
     window.addEventListener('pagehide', remember)
@@ -45,6 +49,7 @@ export function useRememberedScroll(ready = true) {
   }, [memory])
 
   useLayoutEffect(() => {
+    if (!ready && target.current) restored.current = false
     if (!ready || restored.current || !target.current) return
     const { x, y } = target.current
     window.scrollTo({ left: x, top: y, behavior: 'instant' })

@@ -125,7 +125,7 @@ story.append(card_grid([
     ('Browse by date', 'Move between available matchdays to see a particular weekend. The website remembers the date being viewed when navigating away and returning.'),
     ('Upcoming fixtures', 'See the competition, home and away teams, badges, kick-off time, venue and appointed referee when available.'),
     ('Results and scores', 'Completed games show the score and link to an individual match page.'),
-    ('Match details', 'Open a fixture to review match information, scorers and previous meetings. Match previews link to previous meetings. Tap a venue to browse games by season (from 2025/26), or all seasons, and open match details.'),
+    ('Match details', 'Follow club names, scores, competitions, scorers, venues and referees into their recorded history. Match previews link to previous meetings. Back restores your selections and position. Venue history supports season filters from 2025/26.'),
     ('Current standings', 'A league-table snapshot provides a quick view of team positions and performance.'),
     ('Weekend context', 'The front page prioritises upcoming games or recent results depending on the day. On Knockout Cup quarter-final dates, a winner path tree appears below the usual fixtures and results.'),
 ]))
@@ -135,7 +135,7 @@ story.append(PageBreak())
 story += section_title('3. Competitions, tables and cups', 'Competition pages separate the league and cup tournaments while keeping their fixtures and progress easy to follow.')
 story.append(card_grid([
     ('League standings', 'View played, won, drawn, lost, goals for, goals against, goal difference and points.'),
-    ('League fixtures and results', 'Review scheduled and completed games within the selected competition. Select a fixture to open its match details.'),
+    ('League fixtures and results', 'Open match details from a score or date; club and venue names open their histories. Table figures link to the supporting games, respecting competition, group, result and historical table date. Cup bracket ties open their matches.'),
     ('Cup progress', 'Follow group tables and knockout fixtures. Gold labels in Match Hub previews link to the relevant group, cup draw or league table.'),
     ('Competition switching', 'Move between the Appin Sports League, ECFA Knockout Cup, ECFA League Cup and Brian Latto Cup.'),
 ]))
@@ -146,7 +146,7 @@ story.append(card_grid([
     ('Goalscorers sponsors', 'Game of Throwing Edinburgh and Escape Edinburgh appear together below the Goalscorers heading.'),
     ('Player profiles', 'View a player’s current team, current and historical goals, and recorded yellow and red cards.'),
     ('Scoring history', 'Historical goals are totalled by season, team and competition, avoiding duplicate single-goal lines.'),
-    ('Match-linked goals', 'Current-season and 2025/26 match records show their recorded scorers on fixture and previous-meeting details.'),
+    ('Match-linked goals', 'Player scoring history links to recorded matches from 2025/26 onwards, including players outside current squads. Follow team names, season totals and goals by opponent into further history. Earlier totals do not infer match links.'),
     ('Name search', 'Find current players and historical scorers using full or partial names.'),
 ]))
 story += [Spacer(1, 10)] + section_title('5. Teams')
@@ -156,13 +156,13 @@ story.append(card_grid([
     ('Form and fixtures', 'See the next five fixtures with home or away, competition and venue. Upcoming lists show these details too and default to the Appin Sports League. Choose another competition or all, filter by month or date, and share the list as a picture.'),
     ('Results by season', 'Switch between the current campaign and available historical seasons. The team page’s recent results mark the club as home or away and show the recorded venue.'),
     ('Team scorers and honours', 'See season-by-season scoring totals, with opponents, goals and match links from 2025/26 onwards. Use View final on a cup honour to open its recorded final, including on former team profiles. After viewing a match, Back restores the selected team, filters and place on the page.'),
-    ('Head-to-head comparisons', 'Filter the opponent table by season and sort any column in ascending or descending order.'),
+    ('Head-to-head comparisons', 'Filter by season and sort each column. Opponent names open club history; played, win, draw, loss and goal figures open the supporting matches. Statistics and streak figures also link to recorded games.'),
 ]))
 
 # Records/referees
 story += section_title('6. Honours and historical records')
 story.append(card_grid([
-    ('Major honours', 'A season-by-season grid records winners of the League, League Cup, Knockout Cup and Brian Latto Cup. Cup final results below the honours tables can be filtered by season, competition and team.'),
+    ('Major honours', 'Current and former winners link to club history, recorded cup honours link to finals, and season labels open the archive. A season-by-season grid records winners of the League, League Cup, Knockout Cup and Brian Latto Cup. Cup final results below the honours tables can be filtered by season, competition and team.'),
     ('All-time honours table', 'Compare clubs by competition wins and total major honours.'),
     ('Historical seasons', 'Browse archived league tables, fixtures and results from previous campaigns. Select a result score to open the recorded match details, including match-linked scorers for 2025/26. Filter each season’s fixtures by the teams recorded in that season, including clubs no longer active.'),
     ('Linked team records', 'Team names in honours and historical areas link back to current team pages when a match is available.'),
@@ -171,7 +171,7 @@ story += [Spacer(1, 10)] + section_title('7. Referee information', 'The referee 
 story.append(card_grid([
     ('Officials list', 'Search and select a referee to view recorded information.'),
     ('Games officiated', 'Review matches, dates, teams, scores, competitions and venues.'),
-    ('Venue and team breakdowns', 'See where an official has refereed and the teams involved in their appointments.'),
+    ('Venue and team breakdowns', 'Open clubs and venues from referee breakdowns. Select an appointment count to review that official’s matching games for the selected season, then open match details.'),
     ('Cards summary', 'Recorded yellow and red cards can be reviewed by match and player where the source data is available.'),
     ('Season selection', 'Choose the current season, last season or all available seasons.'),
     ('Referee reports', 'Create a referee report and download it in PDF or Word format.'),

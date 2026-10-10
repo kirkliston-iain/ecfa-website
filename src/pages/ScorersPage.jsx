@@ -1,4 +1,8 @@
-import { useEffect, useMemo, useState } from 'react'
+import { PlayerHistoryLink, TeamHistoryLink, CompetitionHistoryLink, HistoryBack } from '../components/HistoryLinks'
+import { historicTeamName } from '../utils/historicTeams'
+import { supportsMatchScorers } from '../utils/historyLinks'
+import { useRememberedState, useRememberedScroll } from '../hooks/usePageMemory'
+import { useEffect, useMemo } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { supabase } from '../supabaseClient'
 import { trackInteraction } from '../utils/webAnalytics'
@@ -77,18 +81,18 @@ async function fetchAllHistoricScorers() {
 export default function ScorersPage() {
   const [searchParams] = useSearchParams()
   const playerSearch = (searchParams.get('player') || '').trim()
-  const [season, setSeason] = useState('overall')
-  const [competition, setCompetition] = useState('all')
-  const [sortKey, setSortKey] = useState('overall')
-  const [sortDirection, setSortDirection] = useState('desc')
-  const [loading, setLoading] = useState(true)
-  const [historic, setHistoric] = useState([])
-  const [current, setCurrent] = useState([])
-  const [playerDirectory, setPlayerDirectory] = useState([])
-  const [sponsors, setSponsors] = useState([])
+  const [season, setSeason] = useRememberedState('season', searchParams.get('season') || 'overall')
+  const [competition, setCompetition] = useRememberedState('competition', searchParams.get('competition') || 'all')
+  const [sortKey, setSortKey] = useRememberedState('sortKey', 'overall')
+  const [sortDirection, setSortDirection] = useRememberedState('sortDirection', 'desc')
+  const [loading, setLoading] = useRememberedState('loading', true)
+  const [historic, setHistoric] = useRememberedState('historic', [])
+  const [current, setCurrent] = useRememberedState('current', [])
+  const [playerDirectory, setPlayerDirectory] = useRememberedState('playerDirectory', [])
+  const [sponsors, setSponsors] = useRememberedState('sponsors', [])
+  useRememberedScroll(!loading)
 
   useEffect(() => {
-    window.scrollTo({ top: 0, left: 0, behavior: 'auto' })
   }, [playerSearch])
 
   useEffect(() => {
@@ -102,7 +106,7 @@ export default function ScorersPage() {
       const [{ data: scorers }, { data: directoryPlayers }, { data: sponsorRows }] = await Promise.all([
         supabase
           .from('fixture_scorers')
-          .select('goals, player:player_id(id, first_name, last_name), team:team_id(name), fixture:fixture_id(stage:stage_id(competition:competition_id(name, slug)))'),
+          .select('goals, player:player_id(id, first_name, last_name), team:team_id(id, name), fixture:fixture_id(id, fixture_date, hidden_from_public, home_team:home_team_id(id, name), away_team:away_team_id(id, name), stage:stage_id(competition:competition_id(name, slug, season)))'),
         supabase.from('players').select('id, first_name, last_name, team_id').order('last_name').order('first_name'),
         supabase.from('sponsors').select('id, name, website_url, logo_url').eq('is_published', true).in('name', SPONSOR_NAMES),
       ])
@@ -111,6 +115,8 @@ export default function ScorersPage() {
         setHistoric((hist || []).map((row) => ({ ...row, competition: 'League' })))
         setCurrent(
           (scorers || []).map((s) => ({
+            fixture: s.fixture,
+            team_id: s.team?.id,
             player_id: s.player?.id || null,
             player_name: `${s.player?.first_name || ''} ${s.player?.last_name || ''}`.trim(),
             team_name: s.team?.name || '',
@@ -129,6 +135,42 @@ export default function ScorersPage() {
       cancelled = true
     }
   }, [])
+
+  const [historicMatches, setHistoricMatches] = useRememberedState('historicMatches', [])
+  const [matchError, setMatchError] = useRememberedState('matchError', '')
+  useEffect(() => {
+    let cancelled = false
+    setHistoricMatches([])
+    setMatchError('')
+    if (!playerSearch) return
+    async function loadMatches() {
+      const all = []
+      for (let from = 0; ; from += 1000) {
+        const result = await supabase.from('historic_match_scorers')
+          .select('id, historic_fixture_id, player_name, team_name, goals, fixture:historic_fixture_id(id, season, fixture_date, competition_name, home_team_name, away_team_name)')
+          .ilike('player_name', canonicalPlayerName(playerSearch).replace(/[%_]/g, '\\$&'))
+          .not('historic_fixture_id', 'is', null).order('id').range(from, from + 999)
+        if (cancelled) return
+        if (result.error) { setMatchError('Unable to load match-linked scoring history.'); return }
+        all.push(...(result.data || []))
+        if ((result.data || []).length < 1000) break
+      }
+      if (!cancelled) setHistoricMatches(all)
+    }
+    loadMatches()
+    return () => { cancelled = true }
+  }, [playerSearch])
+  const recordedMatches = [
+    ...current.filter((row) => playerKey(row.player_name) === playerKey(playerSearch) && row.fixture?.id && row.fixture.hidden_from_public === false)
+      .map((row) => ({ id: row.fixture.id, season: CURRENT_SEASON, date: row.fixture.fixture_date, competition: row.competition,
+        competitionName: row.fixture.stage?.competition?.name, goals: row.goals, team: row.team_name,
+        opponent: row.fixture.home_team?.id === row.team_id ? row.fixture.away_team?.name : row.fixture.home_team?.name })),
+    ...historicMatches.filter((row) => row.fixture && supportsMatchScorers(row.fixture.season))
+      .map((row) => ({ id: row.fixture.id, season: row.fixture.season, date: row.fixture.fixture_date,
+        competition: competitionGroup(row.fixture.competition_name), competitionName: row.fixture.competition_name,
+        goals: row.goals, team: row.team_name,
+        opponent: historicTeamName(row.team_name) === historicTeamName(row.fixture.home_team_name) ? row.fixture.away_team_name : row.fixture.home_team_name })),
+  ].filter((row) => (competition === 'all' || row.competition === competition) && (season === 'overall' || row.season?.replace('-', '/') === season.replace('-', '/')) && (!searchParams.get('opponent') || historicTeamName(row.opponent) === historicTeamName(searchParams.get('opponent')))).sort((a, b) => String(b.date).localeCompare(String(a.date)))
 
   const rows = useMemo(() => {
     const rosterNames = {}
@@ -247,6 +289,7 @@ export default function ScorersPage() {
 
   return (
     <div className="container" style={{ padding: '32px 20px 48px' }}>
+      {playerSearch && <HistoryBack fallback="/goalscorers" />}
       <h1 style={{ fontSize: 30, marginBottom: 4 }}>Goalscorers</h1>
       {sponsors.length > 0 && <div aria-label="Goalscorers sponsors" style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 8, maxWidth: 500, margin: '12px 0 18px' }}>
         {sponsors.map((sponsor) => <a key={sponsor.id} href={sponsor.website_url} target="_blank" rel="noopener noreferrer" onClick={() => trackInteraction('sponsor_click', `${sponsor.name} — Goalscorers`)} style={sponsorLinkStyle}>
@@ -302,16 +345,28 @@ export default function ScorersPage() {
             <tbody>
               {playerSeasonRows.map((row) => (
                 <tr key={`${row.season}-${row.team_name}-${row.competition}`} style={{ borderBottom: '1px solid var(--line)' }}>
-                  <td style={goalCellStyle}>{row.season}</td>
-                  <td style={goalCellStyle}>{row.team_name}</td>
-                  <td style={goalCellStyle}>{row.competition}</td>
-                  <td style={{ ...goalCellStyle, textAlign: 'center', fontWeight: 800 }}>{row.goals}</td>
+                  <td style={goalCellStyle}><Link to={`/archive?season=${encodeURIComponent(row.season)}`}>{row.season}</Link></td>
+                  <td style={goalCellStyle}><TeamHistoryLink name={row.team_name} /></td>
+                  <td style={goalCellStyle}><CompetitionHistoryLink name={row.competition} season={row.season} /></td>
+                  <td style={{ ...goalCellStyle, textAlign: 'center', fontWeight: 800 }}><Link to={`/goalscorers?player=${encodeURIComponent(playerSearch)}&season=${encodeURIComponent(row.season)}&competition=${row.competition === 'League' || row.competition === 'Cup' ? row.competition : 'all'}`}>{row.goals}</Link></td>
                 </tr>
               ))}
             </tbody>
           </table>
         </section>
       )}
+
+      {playerSearch && <section style={{ marginBottom: 28 }}>
+        <h2 style={{ color: 'var(--brass)', fontSize: 18 }}>Games scored in</h2>
+        {playerDirectory.filter((player) => playerKey(`${player.first_name} ${player.last_name}`) === playerKey(playerSearch)).map((player) => <p key={player.id}><PlayerHistoryLink id={player.id} name={`${player.first_name} ${player.last_name}`}>Player profile and scoring details</PlayerHistoryLink></p>)}
+        {matchError && <p role="alert">{matchError}</p>}
+        <p style={{ color: 'var(--muted)', fontSize: 12 }}>Match-linked records from 2025/26 onwards.</p>
+        {recordedMatches.length === 0 && <p style={{ color: 'var(--muted)', fontSize: 13 }}>No linked scoring matches recorded for this selection.</p>}
+        {recordedMatches.map((match, index) => <article key={`${match.id}-${index}`} style={{ padding: '10px 0', borderBottom: '1px solid var(--line)', fontSize: 13 }}>
+          <Link to={`/fixtures/${match.id}`} style={{ color: 'var(--ink)', fontWeight: 700 }}>{match.goals} {match.goals === 1 ? 'goal' : 'goals'} against {match.opponent}</Link>
+          <div style={{ color: 'var(--muted)', fontSize: 12, marginTop: 5 }}>{match.season} · {new Date(match.date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })} · <TeamHistoryLink name={match.team} /> · <CompetitionHistoryLink name={match.competitionName} season={match.season} /></div>
+        </article>)}
+      </section>}
 
       <table style={{ width: '100%', tableLayout: 'fixed', borderCollapse: 'collapse', fontSize: 12 }}>
         <colgroup><col style={{ width: '30%' }} /><col style={{ width: '27%' }} /><col style={{ width: '14%' }} /><col style={{ width: '12%' }} /><col style={{ width: '17%' }} /></colgroup>
@@ -336,11 +391,11 @@ export default function ScorersPage() {
                   {row.player_name}
                 </Link>
               </td>
-              <td style={{ ...goalCellStyle, color: 'var(--muted)' }} title={season === 'overall' ? 'Most recently recorded team' : undefined}>{row.team_name || '—'}</td>
-              <td style={{ ...goalCellStyle, textAlign: 'center' }}>{row.byCompetition.League || '—'}</td>
-              <td style={{ ...goalCellStyle, textAlign: 'center' }}>{row.byCompetition.Cup || '—'}</td>
+              <td style={{ ...goalCellStyle, color: 'var(--muted)' }} title={season === 'overall' ? 'Most recently recorded team' : undefined}>{row.team_name ? row.team_name.split(' / ').map((name, i) => <span key={name}>{i > 0 && ' / '}<TeamHistoryLink name={name} /></span>) : '—'}</td>
+              <td style={{ ...goalCellStyle, textAlign: 'center' }}>{row.byCompetition.League ? <Link to={`/goalscorers?player=${encodeURIComponent(row.player_name)}&season=${encodeURIComponent(season)}&competition=League`}>{row.byCompetition.League}</Link> : '—'}</td>
+              <td style={{ ...goalCellStyle, textAlign: 'center' }}>{row.byCompetition.Cup ? <Link to={`/goalscorers?player=${encodeURIComponent(row.player_name)}&season=${encodeURIComponent(season)}&competition=Cup`}>{row.byCompetition.Cup}</Link> : '—'}</td>
               <td style={{ ...goalCellStyle, textAlign: 'center', fontWeight: 800, color: 'var(--ink)' }}>
-                {row.goals}
+                <Link to={`/goalscorers?player=${encodeURIComponent(row.player_name)}&season=${encodeURIComponent(season)}`} style={{ color: 'inherit' }}>{row.goals}</Link>
               </td>
             </tr>
           ))}

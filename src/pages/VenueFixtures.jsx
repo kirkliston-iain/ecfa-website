@@ -1,4 +1,6 @@
-import { useEffect, useMemo, useState } from 'react'
+import { TeamHistoryLink, CompetitionHistoryLink } from '../components/HistoryLinks'
+import { useRememberedState, useRememberedScroll } from '../hooks/usePageMemory'
+import { useEffect, useMemo } from 'react'
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { supabase } from '../supabaseClient'
 import { historicDisplayedScore } from '../utils/historicFixtureOutcome'
@@ -27,15 +29,15 @@ export default function VenueFixtures() {
   const [searchParams, setSearchParams] = useSearchParams()
   const navigate = useNavigate()
   const suppliedName = searchParams.get('name') || ''
-  const [matches, setMatches] = useState([])
-  const [currentSeason, setCurrentSeason] = useState('')
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState('')
+  const [matches, setMatches] = useRememberedState('matches', [])
+  const [currentSeason, setCurrentSeason] = useRememberedState('currentSeason', '')
+  const [loading, setLoading] = useRememberedState('loading', true)
+  const [error, setError] = useRememberedState('error', '')
+  useRememberedScroll(!loading)
 
   const decodedKey = useMemo(() => decodeURIComponent(venueKey), [venueKey])
 
   useEffect(() => {
-    window.scrollTo({ top: 0, left: 0, behavior: 'auto' })
     let cancelled = false
 
     async function load() {
@@ -150,29 +152,28 @@ export default function VenueFixtures() {
 
       <div style={{ marginTop: 28 }}>
         {visibleMatches.map((match) => (
-          <Link
+          <article
             key={match.id}
-            to={`/fixtures/${match.id}`}
             style={{ display: 'block', color: 'inherit', textDecoration: 'none', padding: '18px 0', borderBottom: '1px solid var(--line)' }}
           >
             <div style={{ color: 'var(--brass)', fontSize: 12, fontWeight: 700, textTransform: 'uppercase' }}>
-              {match.competition} — {displaySeason(match.season)}
+              <CompetitionHistoryLink name={match.competition} season={match.season} /> — {displaySeason(match.season)}
             </div>
             <div style={{ color: 'var(--muted)', fontSize: 12, marginTop: 5 }}>
               {formatDate(match.fixtureDate)}
               {match.fixtureDate.length > 10 && match.fixtureDate.slice(11, 16) !== '00:00' ? ` · ${match.fixtureDate.slice(11, 16)}` : ''}
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 12 }}>
-              <span style={{ flex: 1, textAlign: 'right', fontWeight: 700 }}>{match.homeTeam?.name}</span>
+              <span style={{ flex: 1, textAlign: 'right', fontWeight: 700 }}><TeamHistoryLink name={match.homeTeam?.name} id={match.homeTeam?.id} /></span>
               <span style={{ minWidth: 64, textAlign: 'center', fontWeight: 800, fontSize: 18 }}>
-                {match.score || (match.played ? `${match.homeScore} - ${match.awayScore}` : 'v')}
+                <Link to={`/fixtures/${match.id}`} aria-label={`View ${match.homeTeam?.name} versus ${match.awayTeam?.name}`} style={{ color: 'inherit' }}>{match.score || (match.played ? `${match.homeScore} - ${match.awayScore}` : 'v')}</Link>
               </span>
-              <span style={{ flex: 1, fontWeight: 700 }}>{match.awayTeam?.name}</span>
+              <span style={{ flex: 1, fontWeight: 700 }}><TeamHistoryLink name={match.awayTeam?.name} id={match.awayTeam?.id} /></span>
             </div>
             <div style={{ textAlign: 'center', color: 'var(--muted)', fontSize: 12, marginTop: 8 }}>
               {cleanVenueName(match.venue)}
             </div>
-          </Link>
+          </article>
         ))}
       </div>
     </div>

@@ -1,4 +1,6 @@
-import { useEffect, useState } from 'react'
+import { CompetitionHistoryLink, VenueHistoryLink } from '../components/HistoryLinks'
+import { useRememberedState, useRememberedScroll } from '../hooks/usePageMemory'
+import { useEffect } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { supabase } from '../supabaseClient'
 import { historicDisplayedScore, historicPenaltyWinnerName } from '../utils/historicFixtureOutcome'
@@ -53,15 +55,16 @@ function competitionFamily(name) {
 
 export default function HistoricalSeason() {
   const [params, setParams] = useSearchParams()
-  const [seasons, setSeasons] = useState([])
-  const [seasonSummaries, setSeasonSummaries] = useState([])
-  const [season, setSeason] = useState(params.get('season') || '')
-  const [teams, setTeams] = useState([])
-  const [teamName, setTeamName] = useState('')
-  const [loading, setLoading] = useState(false)
-  const [seasonFixtures, setSeasonFixtures] = useState([])
-  const [storedLeagueTable, setStoredLeagueTable] = useState([])
-  const [seasonScorers, setSeasonScorers] = useState([])
+  const [seasons, setSeasons] = useRememberedState('seasons', [])
+  const [seasonSummaries, setSeasonSummaries] = useRememberedState('seasonSummaries', [])
+  const [season, setSeason] = useRememberedState('season', params.get('season') || '')
+  const [teams, setTeams] = useRememberedState('teams', [])
+  const [teamName, setTeamName] = useRememberedState('teamName', '')
+  const [loading, setLoading] = useRememberedState('loading', false)
+  const [seasonFixtures, setSeasonFixtures] = useRememberedState('seasonFixtures', [])
+  const [storedLeagueTable, setStoredLeagueTable] = useRememberedState('storedLeagueTable', [])
+  const [seasonScorers, setSeasonScorers] = useRememberedState('seasonScorers', [])
+  useRememberedScroll(!loading)
 
   useEffect(() => {
     let cancelled = false
@@ -323,8 +326,7 @@ export default function HistoricalSeason() {
                   setSeason(entry.season)
                   setTeamName('')
                   setParams({ season: entry.season })
-                  window.scrollTo({ top: 0, left: 0, behavior: 'auto' })
-                }}
+                              }}
                 style={seasonCardStyle}
               >
                 <strong style={{ fontSize: 21 }}>{entry.season}</strong>
@@ -349,8 +351,7 @@ export default function HistoricalSeason() {
             setSeason('')
             setTeamName('')
             setParams({})
-            window.scrollTo({ top: 0, left: 0, behavior: 'auto' })
-          }}
+                  }}
           style={backButtonStyle}
         >
           ← All archived seasons
@@ -366,8 +367,7 @@ export default function HistoricalSeason() {
           setSeason(nextSeason)
           setTeamName('')
           setParams(nextSeason ? { season: nextSeason } : {})
-          window.scrollTo({ top: 0, left: 0, behavior: 'auto' })
-        }}
+              }}
         style={{
           width: '100%',
           boxSizing: 'border-box',
@@ -451,14 +451,14 @@ export default function HistoricalSeason() {
           </h2>
           {cupResults.map((r, i) => (
             <div key={i} style={{ padding: '10px 0', borderBottom: '1px solid var(--line)', fontSize: 14 }}>
-              <div style={{ fontWeight: 700 }}>{r.competition}</div>
+              <div style={{ fontWeight: 700 }}><CompetitionHistoryLink name={r.competition} season={season} /></div>
               <div>
                 🏆 <strong>{linkedTeamName(r.winner)}</strong>
                 <span style={{ color: 'var(--muted)' }}> beat {linkedTeamName(r.runnerUp)}</span>
                 {r.fixture.home_goals != null && r.fixture.away_goals != null && (
                   <span style={{ color: 'var(--muted)' }}>
                     {' '}
-                    ({r.fixture.home_team_name} {r.fixture.home_goals}-{r.fixture.away_goals} {r.fixture.away_team_name})
+                    <Link to={`/fixtures/${r.fixture.id}`}>({r.fixture.home_team_name} {r.fixture.home_goals}-{r.fixture.away_goals} {r.fixture.away_team_name})</Link>
                   </span>
                 )}
               </div>
@@ -574,7 +574,7 @@ export default function HistoricalSeason() {
                 borderBottom: '2px solid var(--line)',
               }}
             >
-              {compName}
+              <CompetitionHistoryLink name={compName} season={season} />
             </h2>
             {comps.map((f) => (
               <div

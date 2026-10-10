@@ -1,5 +1,6 @@
+import { useRememberedState, useRememberedScroll } from '../hooks/usePageMemory'
 import ManagedSponsorLogo from '../components/ManagedSponsorLogo'
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo } from 'react'
 import { useLocation, useParams } from 'react-router-dom'
 import { supabase } from '../supabaseClient'
 import StandingsTable, { TopScorersTable } from '../components/StandingsTable'
@@ -9,12 +10,13 @@ import KnockoutBracket from '../components/KnockoutBracket'
 export default function Competition() {
   const { slug } = useParams()
   const location = useLocation()
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState(null)
-  const [competition, setCompetition] = useState(null)
-  const [stages, setStages] = useState([])
-  const [topScorers, setTopScorers] = useState([])
-  const [tableDate, setTableDate] = useState('current')
+  const [loading, setLoading] = useRememberedState('loading', true)
+  const [error, setError] = useRememberedState('error', null)
+  const [competition, setCompetition] = useRememberedState('competition', null)
+  const [stages, setStages] = useRememberedState('stages', [])
+  const [topScorers, setTopScorers] = useRememberedState('topScorers', [])
+  const [tableDate, setTableDate] = useRememberedState('tableDate', 'current')
+  useRememberedScroll(!loading)
 
   useEffect(() => {
     let cancelled = false
@@ -211,6 +213,9 @@ export default function Competition() {
               .map((group) => (
                 <div key={group.id} id={competition.slug === 'appin-league' ? 'table' : `group-${group.id}`} style={{ scrollMarginTop: 20 }}>
                   <StandingsTable
+                    competition={competition.slug}
+                    groupId={group.id}
+                    through={tableDate === 'current' ? '' : tableDate}
                     groupName={stage.groups.length > 1 ? group.name : null}
                     rows={rowsForDate(stage, group.id)}
                   />

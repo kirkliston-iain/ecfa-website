@@ -1,4 +1,8 @@
-import { useEffect, useState } from 'react'
+import { TeamHistoryLink, CompetitionHistoryLink } from '../components/HistoryLinks'
+import { useSearchParams } from 'react-router-dom'
+import { previousTeamUrl } from '../utils/historicTeams'
+import { useRememberedState, useRememberedScroll } from '../hooks/usePageMemory'
+import { useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { supabase } from '../supabaseClient'
 import { historicPenaltyWinnerName } from '../utils/historicFixtureOutcome'
@@ -67,27 +71,23 @@ function liveFinal(fixture) {
   }
 }
 
-function Cell({ row }) {
+function Cell({ row, final }) {
   if (!row || row.status === 'not_existing') return <span style={{ color: 'var(--line)' }}>**</span>
   if (row.status === 'void') return <span style={{ color: 'var(--line)' }}>*</span>
-  if (row.team_id)
-    return (
-      <Link to={`/teams/${row.team_id}`} style={{ color: 'var(--brass)', textDecoration: 'underline' }}>
-        {row.winner_name}
-      </Link>
-    )
-  return <span>{row.winner_name}</span>
+  return <span><TeamHistoryLink name={row.winner_name} id={row.team_id} />{final?.fixtureId && <Link to={`/fixtures/${final.fixtureId}`} style={{ display: 'block', fontSize: 11, color: 'var(--brass)', marginTop: 3 }}>View final</Link>}</span>
 }
 
 export default function HonoursPage() {
-  const [loading, setLoading] = useState(true)
-  const [grid, setGrid] = useState({})
-  const [totals, setTotals] = useState([])
-  const [cupFinals, setCupFinals] = useState([])
-  const [seasons, setSeasons] = useState([])
-  const [finalSeason, setFinalSeason] = useState('')
-  const [finalCompetitionFilter, setFinalCompetitionFilter] = useState('')
-  const [finalTeam, setFinalTeam] = useState('')
+  const [params] = useSearchParams()
+  const [loading, setLoading] = useRememberedState('loading', true)
+  const [grid, setGrid] = useRememberedState('grid', {})
+  const [totals, setTotals] = useRememberedState('totals', [])
+  const [cupFinals, setCupFinals] = useRememberedState('cupFinals', [])
+  const [seasons, setSeasons] = useRememberedState('seasons', [])
+  const [finalSeason, setFinalSeason] = useRememberedState('finalSeason', params.get('season') || '')
+  const [finalCompetitionFilter, setFinalCompetitionFilter] = useRememberedState('finalCompetitionFilter', '')
+  const [finalTeam, setFinalTeam] = useRememberedState('finalTeam', params.get('team') || '')
+  useRememberedScroll(!loading)
 
   useEffect(() => {
     let cancelled = false
@@ -217,10 +217,10 @@ export default function HonoursPage() {
           <tbody>
             {seasons.map((season) => (
               <tr key={season} style={{ borderBottom: '1px solid var(--line)' }}>
-                <td style={{ padding: '8px', fontWeight: 700, whiteSpace: 'nowrap' }}>{season}</td>
+                <td style={{ padding: '8px', fontWeight: 700, whiteSpace: 'nowrap' }}><Link to={`/archive?season=${encodeURIComponent(season)}`}>{season}</Link></td>
                 {COMPETITIONS.map((c) => (
                   <td key={c} style={{ padding: '8px' }}>
-                    <Cell row={grid[`${season}|${c}`]} />
+                    <Cell row={grid[`${season}|${c}`]} final={cupFinals.find((final) => final.season === season && final.competition === c)} />
                   </td>
                 ))}
               </tr>
@@ -253,19 +253,13 @@ export default function HonoursPage() {
               <tr key={t.key} style={{ borderBottom: '1px solid var(--line)' }}>
                 <td style={{ padding: '10px 8px' }}>{i + 1}</td>
                 <td style={{ padding: '10px 8px', fontWeight: 600 }}>
-                  {t.teamId ? (
-                    <Link to={`/teams/${t.teamId}`} style={{ color: 'var(--brass)', textDecoration: 'underline' }}>
-                      {t.name}
-                    </Link>
-                  ) : (
-                    t.name
-                  )}
+                  <TeamHistoryLink name={t.name} id={t.teamId} />
                 </td>
-                <td style={tdStyle}>{t.League || ''}</td>
-                <td style={tdStyle}>{t['League Cup'] || ''}</td>
-                <td style={tdStyle}>{t['Knockout Cup'] || ''}</td>
-                <td style={tdStyle}>{t['Brian Latto Cup'] || ''}</td>
-                <td style={{ ...tdStyle, fontWeight: 800, color: 'var(--ink)' }}>{t.total}</td>
+                <td style={tdStyle}>{t.League ? <Link to={t.teamId ? `/teams/${t.teamId}` : previousTeamUrl(historicTeamName(t.name))}>{t.League}</Link> : ''}</td>
+                <td style={tdStyle}>{t['League Cup'] ? <Link to={t.teamId ? `/teams/${t.teamId}` : previousTeamUrl(historicTeamName(t.name))}>{t['League Cup']}</Link> : ''}</td>
+                <td style={tdStyle}>{t['Knockout Cup'] ? <Link to={t.teamId ? `/teams/${t.teamId}` : previousTeamUrl(historicTeamName(t.name))}>{t['Knockout Cup']}</Link> : ''}</td>
+                <td style={tdStyle}>{t['Brian Latto Cup'] ? <Link to={t.teamId ? `/teams/${t.teamId}` : previousTeamUrl(historicTeamName(t.name))}>{t['Brian Latto Cup']}</Link> : ''}</td>
+                <td style={{ ...tdStyle, fontWeight: 800, color: 'var(--ink)' }}><Link to={t.teamId ? `/teams/${t.teamId}` : previousTeamUrl(historicTeamName(t.name))}>{t.total}</Link></td>
               </tr>
             ))}
           </tbody>
@@ -315,16 +309,12 @@ export default function HonoursPage() {
                 </tr></thead>
                 <tbody>{rows.map((final) => (
                   <tr key={final.season} style={{ borderBottom: '1px solid var(--line)' }}>
-                    <td style={{ ...finalCellStyle, fontWeight: 800, verticalAlign: 'top' }}>{final.season}</td>
+                    <td style={{ ...finalCellStyle, fontWeight: 800, verticalAlign: 'top' }}><Link to={`/archive?season=${encodeURIComponent(final.season)}`}>{final.season}</Link></td>
                     <td style={finalCellStyle}>
-                      {final.fixtureId ? (
-                        <Link to={`/fixtures/${final.fixtureId}`} style={{ color: 'var(--ink)', textDecoration: 'underline', textDecorationColor: 'var(--brass)', textUnderlineOffset: 2 }} aria-label={`View ${final.competition} final: ${final.home} versus ${final.away}, ${final.season}`}>
-                          <strong>{final.home}</strong> <span style={{ color: 'var(--muted)' }}>v</span> <strong>{final.away}</strong>
-                        </Link>
-                      ) : <><strong>{final.home}</strong> <span style={{ color: 'var(--muted)' }}>v</span> <strong>{final.away}</strong></>}
+                      <TeamHistoryLink name={final.home}><strong>{final.home}</strong></TeamHistoryLink> <span style={{ color: 'var(--muted)' }}>v</span> <TeamHistoryLink name={final.away}><strong>{final.away}</strong></TeamHistoryLink>
                       {final.detail && <div style={{ color: 'var(--muted)', fontSize: 11, marginTop: 1 }}>{final.detail}</div>}
                     </td>
-                    <td style={{ ...finalCellStyle, textAlign: 'right', fontWeight: 800, whiteSpace: 'nowrap', verticalAlign: 'top' }}>{final.score}</td>
+                    <td style={{ ...finalCellStyle, textAlign: 'right', fontWeight: 800, whiteSpace: 'nowrap', verticalAlign: 'top' }}>{final.fixtureId ? <Link to={`/fixtures/${final.fixtureId}`} aria-label={`View ${final.competition} final: ${final.home} versus ${final.away}, ${final.season}`}>{final.score}</Link> : final.score}</td>
                   </tr>
                 ))}</tbody>
               </table>

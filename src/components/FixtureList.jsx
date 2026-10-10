@@ -1,3 +1,4 @@
+import { TeamHistoryLink, VenueHistoryLink } from './HistoryLinks'
 import { Link } from 'react-router-dom'
 import { displayedScore, outcomeNote } from '../utils/fixtureOutcome'
 
@@ -56,9 +57,7 @@ export default function FixtureList({ fixtures }) {
         <li
           key={f.id}
         >
-          <Link
-          to={`/fixtures/${f.id}`}
-          aria-label={`View ${f.home_team?.name || f.home_placeholder || 'TBC'} versus ${f.away_team?.name || f.away_placeholder || 'TBC'}`}
+          <div
           style={{
             display: 'flex',
             alignItems: 'center',
@@ -80,7 +79,7 @@ export default function FixtureList({ fixtures }) {
                 name={f.home_team?.name || f.home_placeholder || 'TBC'}
               />
               <span style={!f.home_team ? placeholderStyle : undefined}>
-                {f.home_team?.name || f.home_placeholder || 'TBC'}
+                {f.home_team ? <TeamHistoryLink id={f.home_team.id} name={f.home_team.name} /> : f.home_placeholder || 'TBC'}
               </span>
               <span style={{ color: 'var(--muted)' }}>v</span>
               <Badge
@@ -88,18 +87,18 @@ export default function FixtureList({ fixtures }) {
                 name={f.away_team?.name || f.away_placeholder || 'TBC'}
               />
               <span style={!f.away_team ? placeholderStyle : undefined}>
-                {f.away_team?.name || f.away_placeholder || 'TBC'}
+                {f.away_team ? <TeamHistoryLink id={f.away_team.id} name={f.away_team.name} /> : f.away_placeholder || 'TBC'}
               </span>
             </div>
             {(f.venue || (f.fixture_date && f.fixture_date.slice(11, 16) !== '00:00')) && (
               <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 3 }}>
                 {f.fixture_date && f.fixture_date.slice(11, 16) !== '00:00' ? f.fixture_date.slice(11, 16) : ''}
                 {f.fixture_date && f.fixture_date.slice(11, 16) !== '00:00' && f.venue ? ' · ' : ''}
-                {f.venue || ''}
+                {f.venue && <VenueHistoryLink name={f.venue} />}
               </div>
             )}
           </div>
-          <div style={{ textAlign: 'right' }}>
+          <Link to={`/fixtures/${f.id}`} aria-label={`View ${f.home_team?.name || f.home_placeholder || 'TBC'} versus ${f.away_team?.name || f.away_placeholder || 'TBC'}`} style={{ textAlign: 'right', color: 'inherit', padding: '8px' }}>
             {f.status === 'played' ? (
               <>
                 <span style={{ fontWeight: 800, color: 'var(--ink)' }}>{displayedScore(f)}</span>
@@ -115,8 +114,8 @@ export default function FixtureList({ fixtures }) {
                   : 'TBC'}
               </span>
             )}
-          </div>
           </Link>
+          </div>
         </li>
       ))}
     </ul>

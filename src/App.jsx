@@ -1,4 +1,7 @@
-import { Routes, Route, Navigate, useLocation } from 'react-router-dom'
+import { useLayoutEffect } from 'react'
+import { Routes, Route, Navigate, useLocation, useNavigationType } from 'react-router-dom'
+import MatchHistory from './pages/MatchHistory'
+import { HistoryDirectory } from './components/HistoryLinks'
 import Header from './components/Header'
 import Footer from './components/Footer'
 import ManagerGate from './components/ManagerGate'
@@ -51,30 +54,36 @@ import LogosAdmin from './pages/LogosAdmin'
 
 export default function App() {
   const location = useLocation()
+  const navigationType = useNavigationType()
+  useLayoutEffect(() => {
+    if (navigationType === 'PUSH') window.scrollTo({ top: 0, left: 0, behavior: 'instant' })
+  }, [location.key, navigationType])
   const isAdminArea = location.pathname.startsWith('/admin') || location.pathname.startsWith('/discipline')
 
   return (
     <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
+      <HistoryDirectory>
       <Header />
       <main className={isAdminArea ? 'site-main site-main--admin' : 'site-main site-main--public'} style={{ flex: 1 }}>
         <Routes>
-          <Route path="/" element={<Home />} />
-          <Route path="/news" element={<News />} />
-          <Route path="/competitions" element={<CompetitionsIndex />} />
-          <Route path="/standings" element={<StandingsPage />} />
-          <Route path="/competitions/:slug" element={<Competition />} />
-          <Route path="/fixtures/:id" element={<FixtureDetail />} />
-          <Route path="/venues/:venueKey" element={<VenueFixtures />} />
-          <Route path="/teams/:id" element={<TeamDetail />} />
+          <Route path="/" element={<Home key={location.key} />} />
+          <Route path="/news" element={<News key={location.key} />} />
+          <Route path="/competitions" element={<CompetitionsIndex key={location.key} />} />
+          <Route path="/standings" element={<StandingsPage key={location.key} />} />
+          <Route path="/competitions/:slug" element={<Competition key={location.key} />} />
+          <Route path="/fixtures/:id" element={<FixtureDetail key={location.key} />} />
+          <Route path="/matches" element={<MatchHistory key={location.key} />} />
+          <Route path="/venues/:venueKey" element={<VenueFixtures key={location.key} />} />
+          <Route path="/teams/:id" element={<TeamDetail key={location.key} />} />
           <Route path="/scorers" element={<Navigate to={`/goalscorers${location.search}`} replace />} />
-          <Route path="/goalscorers" element={<ScorersPage />} />
-          <Route path="/stats" element={<StatsPage />} />
-          <Route path="/honours" element={<HonoursPage />} />
-          <Route path="/archive" element={<HistoricalSeason />} />
-          <Route path="/history" element={<HistoricalSeason />} />
+          <Route path="/goalscorers" element={<ScorersPage key={location.key} />} />
+          <Route path="/stats" element={<StatsPage key={location.key} />} />
+          <Route path="/honours" element={<HonoursPage key={location.key} />} />
+          <Route path="/archive" element={<HistoricalSeason key={location.key} />} />
+          <Route path="/history" element={<HistoricalSeason key={location.key} />} />
           <Route path="/teams" element={<TeamsHub key={location.key} />} />
           <Route path="/teams/previous/:teamName" element={<PreviousTeam key={location.key} />} />
-          <Route path="/referees" element={<RefereesHub />} />
+          <Route path="/referees" element={<RefereesHub key={location.key} />} />
           <Route path="/downloads" element={<Downloads />} />
           <Route path="/downloads/player-report" element={<PlayerReportDownload />} />
           <Route path="/downloads/referee-report" element={<RefereeReportDownload />} />
@@ -83,8 +92,8 @@ export default function App() {
           <Route path="/contact" element={<Contact />} />
           <Route path="/sponsors" element={<Sponsors />} />
           <Route path="/charity" element={<Charity />} />
-          <Route path="/search" element={<Search />} />
-          <Route path="/players/:id" element={<PlayerDetail />} />
+          <Route path="/search" element={<Search key={location.key} />} />
+          <Route path="/players/:id" element={<PlayerDetail key={location.key} />} />
           <Route
             path="/admin/season"
             element={
@@ -221,6 +230,7 @@ export default function App() {
       </main>
       <Footer />
       <ManagerGate />
+      </HistoryDirectory>
     </div>
   )
 }

@@ -1,4 +1,6 @@
-import { useEffect, useState } from 'react'
+import { PlayerHistoryLink, TeamHistoryLink } from '../components/HistoryLinks'
+import { useRememberedState, useRememberedScroll } from '../hooks/usePageMemory'
+import { useEffect } from 'react'
 import { useParams, Link, useNavigate } from 'react-router-dom'
 import { supabase } from '../supabaseClient'
 import TeamWebsiteLinks from '../components/TeamWebsiteLinks'
@@ -93,18 +95,19 @@ function wrapCanvasText(ctx, value, maxWidth) {
 export default function TeamDetail() {
   const { id } = useParams()
   const navigate = useNavigate()
-  const [team, setTeam] = useState(null)
-  const [playedFixtures, setPlayedFixtures] = useState([])
-  const [upcomingFixtures, setUpcomingFixtures] = useState([])
-  const [scorers, setScorers] = useState([])
-  const [squad, setSquad] = useState([])
-  const [honours, setHonours] = useState([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState(null)
-  const [fixtureMonth, setFixtureMonth] = useState('')
-  const [fixtureDate, setFixtureDate] = useState('')
-  const [fixtureCompetition, setFixtureCompetition] = useState('appin-league')
-  const [sharing, setSharing] = useState(false)
+  const [team, setTeam] = useRememberedState('team', null)
+  const [playedFixtures, setPlayedFixtures] = useRememberedState('playedFixtures', [])
+  const [upcomingFixtures, setUpcomingFixtures] = useRememberedState('upcomingFixtures', [])
+  const [scorers, setScorers] = useRememberedState('scorers', [])
+  const [squad, setSquad] = useRememberedState('squad', [])
+  const [honours, setHonours] = useRememberedState('honours', [])
+  const [loading, setLoading] = useRememberedState('loading', true)
+  const [error, setError] = useRememberedState('error', null)
+  const [fixtureMonth, setFixtureMonth] = useRememberedState('fixtureMonth', '')
+  const [fixtureDate, setFixtureDate] = useRememberedState('fixtureDate', '')
+  const [fixtureCompetition, setFixtureCompetition] = useRememberedState('fixtureCompetition', 'appin-league')
+  const [sharing, setSharing] = useRememberedState('sharing', false)
+  useRememberedScroll(!loading)
 
   useEffect(() => {
     let cancelled = false
@@ -151,6 +154,7 @@ export default function TeamDetail() {
         const key = s.player?.id || `${s.player?.first_name}-${s.player?.last_name}`
         if (!agg[key]) {
           agg[key] = {
+            id: s.player?.id,
             name: `${s.player?.first_name || ''} ${s.player?.last_name || ''}`.trim(),
             goals: 0,
           }
@@ -306,6 +310,7 @@ export default function TeamDetail() {
         <Badge logoUrl={team.logo_url} name={team.name} size={64} />
         <div>
           <h1 style={{ fontSize: 26, margin: 0 }}>{team.name}</h1>
+          <Link to={`/teams?team=${encodeURIComponent(team.id)}`} style={{ color: 'var(--brass)', display: 'block', marginTop: 6 }}>All seasons, scorers and head-to-head history</Link>
           <TeamWebsiteLinks team={team} context="Team page" />
         </div>
       </div>
@@ -347,7 +352,7 @@ export default function TeamDetail() {
               .map((c) => (
                 <div key={c} style={{ fontSize: 14 }}>
                   <span style={{ fontWeight: 700 }}>{c}</span>
-                  <span style={{ color: 'var(--muted)' }}> ({honoursByCompetition[c].length}): {honoursByCompetition[c].join(', ')}</span>
+                  <span style={{ color: 'var(--muted)' }}> ({honoursByCompetition[c].length}): {honoursByCompetition[c].map((season, index) => <span key={season}>{index > 0 && ', '}<Link to={`/honours?season=${encodeURIComponent(season)}&team=${encodeURIComponent(team.name)}`}>{season}</Link></span>)}</span>
                 </div>
               ))}
           </div>
@@ -438,7 +443,7 @@ export default function TeamDetail() {
                   fontSize: 14,
                 }}
               >
-                <span>{s.name}</span>
+                <PlayerHistoryLink name={s.name} id={s.id} />
                 <span style={{ fontWeight: 800, color: 'var(--ink)' }}>{s.goals}</span>
               </li>
             ))}

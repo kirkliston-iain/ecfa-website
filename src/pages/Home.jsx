@@ -1,6 +1,8 @@
+import { TeamHistoryLink, CompetitionHistoryLink } from '../components/HistoryLinks'
+import { useRememberedState, useRememberedScroll } from '../hooks/usePageMemory'
 import ManagedSponsorLogo from '../components/ManagedSponsorLogo'
 import { Link } from 'react-router-dom'
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo } from 'react'
 import { supabase } from '../supabaseClient'
 import { displayedScore, outcomeNote } from '../utils/fixtureOutcome'
 import MatchdayCarousel from '../components/MatchdayCarousel'
@@ -587,19 +589,19 @@ function MatchCard({ f, allFixtures }) {
         background: '#fff',
       }}
     >
-      <Link to={`/fixtures/${f.id}`} style={{ display: 'block' }}>
+      <div style={{ display: 'block' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11, fontWeight: 700, color: 'var(--brass)', textTransform: 'uppercase', letterSpacing: 0.4, marginBottom: 6 }}>
           {f.compSlug === 'appin-league' && (
             <ManagedSponsorLogo alt="" style={{ height: 14, width: 'auto', objectFit: 'contain' }} />
           )}
-          {f.compName}
+          <CompetitionHistoryLink name={f.compName} />
           {f.round_name ? ` — ${f.round_name}` : ''}
         </div>
         <div className="match-card-teams" style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) auto minmax(0, 1fr)', alignItems: 'center', gap: 8 }}>
           <div className="match-card-team match-card-team-home" style={{ minWidth: 0, display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 6, fontWeight: 600, fontSize: 15, textAlign: 'right' }}>
             <span style={{ minWidth: 0 }}>
               <span className="match-card-team-name" style={{ display: 'block', minWidth: 0, overflowWrap: 'anywhere', lineHeight: 1.25, ...(!f.home_team ? { color: 'var(--muted)', fontStyle: 'italic', fontWeight: 400 } : {}) }}>
-                {f.home_team?.name || f.home_placeholder || 'TBC'}
+                {f.home_team ? <TeamHistoryLink id={f.home_team.id} name={f.home_team.name} /> : f.home_placeholder || 'TBC'}
               </span>
               {f.home_team && <FormStrip results={homeForm} align="right" teamName={f.home_team.name} />}
             </span>
@@ -621,7 +623,7 @@ function MatchCard({ f, allFixtures }) {
               padding: played ? '4px 10px' : 0,
             }}
           >
-            {played ? displayedScore(f) : 'v'}
+            <Link to={`/fixtures/${f.id}`} aria-label={`View ${f.home_team?.name || 'TBC'} versus ${f.away_team?.name || 'TBC'}`} style={{ color: 'inherit' }}>{played ? displayedScore(f) : 'v'}</Link>
           </div>
           <div className="match-card-team match-card-team-away" style={{ minWidth: 0, display: 'flex', alignItems: 'center', gap: 6, fontWeight: 600, fontSize: 15 }}>
             {f.away_team ? (
@@ -631,7 +633,7 @@ function MatchCard({ f, allFixtures }) {
             )}
             <span style={{ minWidth: 0 }}>
               <span className="match-card-team-name" style={{ display: 'block', minWidth: 0, overflowWrap: 'anywhere', lineHeight: 1.25, ...(!f.away_team ? { color: 'var(--muted)', fontStyle: 'italic', fontWeight: 400 } : {}) }}>
-                {f.away_team?.name || f.away_placeholder || 'TBC'}
+                {f.away_team ? <TeamHistoryLink id={f.away_team.id} name={f.away_team.name} /> : f.away_placeholder || 'TBC'}
               </span>
               {f.away_team && <FormStrip results={awayForm} teamName={f.away_team.name} />}
             </span>
@@ -643,9 +645,9 @@ function MatchCard({ f, allFixtures }) {
           </div>
         )}
         <div style={{ fontSize: 10, color: 'var(--brass)', marginTop: 7, textAlign: 'center', fontWeight: 700 }}>
-          Click game to see previous meeting history
+          <Link to={`/fixtures/${f.id}`} style={{ color: 'inherit' }}>Match details and previous meeting history</Link>
         </div>
-      </Link>
+      </div>
       {(kickoff || venueName || f.referee_name) && (
         <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 6, textAlign: 'center' }}>
           {kickoff}
@@ -676,13 +678,13 @@ function MatchCard({ f, allFixtures }) {
 }
 
 export default function Home() {
-  const [loading, setLoading] = useState(true)
-  const [competitions, setCompetitions] = useState([])
-  const [selectedDate, setSelectedDate] = useState(null)
-  const [calendarEvents, setCalendarEvents] = useState([])
-  const [scorerRows, setScorerRows] = useState([])
-  const [historicFixtures, setHistoricFixtures] = useState([])
-  const [disciplineRows, setDisciplineRows] = useState([])
+  const [loading, setLoading] = useRememberedState('loading', true)
+  const [competitions, setCompetitions] = useRememberedState('competitions', [])
+  const [selectedDate, setSelectedDate] = useRememberedState('selectedDate', null)
+  const [calendarEvents, setCalendarEvents] = useRememberedState('calendarEvents', [])
+  const [scorerRows, setScorerRows] = useRememberedState('scorerRows', [])
+  const [historicFixtures, setHistoricFixtures] = useRememberedState('historicFixtures', [])
+  const [disciplineRows, setDisciplineRows] = useRememberedState('disciplineRows', [])
   useEffect(() => {
     supabase
       .from('calendar_events')
@@ -782,7 +784,7 @@ export default function Home() {
 
   const hasResultsToday = matchesForDate.some((f) => f.status === 'played')
 
-  const [currentSeasonLabel, setCurrentSeasonLabel] = useState('')
+  const [currentSeasonLabel, setCurrentSeasonLabel] = useRememberedState('currentSeasonLabel', '')
   useEffect(() => {
     supabase
       .from('competitions')
@@ -791,7 +793,8 @@ export default function Home() {
       .then(({ data }) => setCurrentSeasonLabel(data?.[0]?.season || ''))
   }, [])
 
-  const [previewInfo, setPreviewInfo] = useState({})
+  const [previewInfo, setPreviewInfo] = useRememberedState('previewInfo', {})
+  useRememberedScroll(!loading)
   useEffect(() => {
     const upcoming = matchesForDate.filter((f) => f.status !== 'played')
     if (upcoming.length === 0) {

@@ -1,3 +1,5 @@
+import { matchHistoryUrl } from '../utils/historyLinks'
+import { PlayerHistoryLink, TeamHistoryLink } from './HistoryLinks'
 import { Link } from 'react-router-dom'
 
 function Badge({ logoUrl, name, size = 26 }) {
@@ -63,12 +65,12 @@ export function TopScorersTable({ rows }) {
             <tr key={row.player_id} style={{ borderBottom: '1px solid var(--line)' }}>
               <td style={{ padding: '10px 8px', color: 'var(--muted)' }}>{i + 1}</td>
               <td style={{ padding: '10px 8px', fontWeight: 600 }}>
-                {row.first_name} {row.last_name}
+                <PlayerHistoryLink id={row.player_id} name={`${row.first_name} ${row.last_name}`} />
               </td>
               <td style={{ padding: '10px 8px', color: 'var(--muted)' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                   <Badge logoUrl={row.team_logo} name={row.team_name} size={20} />
-                  <span>{row.team_name}</span>
+                  <TeamHistoryLink name={row.team_name} id={row.team_id} />
                 </div>
               </td>
               <td style={{ padding: '10px 8px', textAlign: 'center', fontWeight: 800, color: 'var(--ink)' }}>
@@ -89,7 +91,7 @@ export function TopScorersTable({ rows }) {
   )
 }
 
-export default function StandingsTable({ groupName, rows }) {
+export default function StandingsTable({ groupName, rows, competition, groupId, through }) {
   return (
     <div style={{ marginBottom: 40 }}>
       {groupName && (
@@ -123,14 +125,14 @@ export default function StandingsTable({ groupName, rows }) {
                   <span>{row.teamName}</span>
                 </Link>
               </td>
-              <td style={tdStyle()}>{row.played}</td>
-              <td style={tdStyle()}>{row.won}</td>
-              <td style={tdStyle()}>{row.drawn}</td>
-              <td style={tdStyle()}>{row.lost}</td>
-              <td style={tdStyle()}>{row.goalsFor}</td>
-              <td style={tdStyle()}>{row.goalsAgainst}</td>
-              <td style={tdStyle()}>{row.goalDifference}</td>
-              <td style={{ ...tdStyle(), fontWeight: 800, color: 'var(--ink)' }}>{row.points}</td>
+              <td style={tdStyle()}><Link to={matchHistoryUrl({ team: row.teamId, competition, group: groupId, through, status: 'played', result: '' })} style={{ color: 'inherit' }}>{row.played}</Link></td>
+              <td style={tdStyle()}><Link to={matchHistoryUrl({ team: row.teamId, competition, group: groupId, through, status: 'played', result: 'W' })} style={{ color: 'inherit' }}>{row.won}</Link></td>
+              <td style={tdStyle()}><Link to={matchHistoryUrl({ team: row.teamId, competition, group: groupId, through, status: 'played', result: 'D' })} style={{ color: 'inherit' }}>{row.drawn}</Link></td>
+              <td style={tdStyle()}><Link to={matchHistoryUrl({ team: row.teamId, competition, group: groupId, through, status: 'played', result: 'L' })} style={{ color: 'inherit' }}>{row.lost}</Link></td>
+              <td style={tdStyle()}><Link to={matchHistoryUrl({ team: row.teamId, competition, group: groupId, through, status: 'played', result: '' })} style={{ color: 'inherit' }}>{row.goalsFor}</Link></td>
+              <td style={tdStyle()}><Link to={matchHistoryUrl({ team: row.teamId, competition, group: groupId, through, status: 'played', result: '' })} style={{ color: 'inherit' }}>{row.goalsAgainst}</Link></td>
+              <td style={tdStyle()}><Link to={matchHistoryUrl({ team: row.teamId, competition, group: groupId, through, status: 'played', result: '' })} style={{ color: 'inherit' }}>{row.goalDifference}</Link></td>
+              <td style={{ ...tdStyle(), fontWeight: 800, color: 'var(--ink)' }}><Link to={matchHistoryUrl({ team: row.teamId, competition, group: groupId, through, status: 'played' })} style={{ color: 'inherit' }}>{row.points}</Link></td>
             </tr>
           ))}
           {rows.length === 0 && (

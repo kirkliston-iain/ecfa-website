@@ -1,6 +1,7 @@
+import { useRememberedState, useRememberedScroll } from '../hooks/usePageMemory'
 import ManagedSponsorLogo from '../components/ManagedSponsorLogo'
 import { Link } from 'react-router-dom'
-import { useEffect, useState } from 'react'
+import { useEffect } from 'react'
 import { supabase } from '../supabaseClient'
 import StandingsTable from '../components/StandingsTable'
 
@@ -100,8 +101,9 @@ async function loadCompetitionTables(meta) {
 }
 
 export default function StandingsPage() {
-  const [loading, setLoading] = useState(true)
-  const [competitions, setCompetitions] = useState([])
+  const [loading, setLoading] = useRememberedState('loading', true)
+  const [competitions, setCompetitions] = useRememberedState('competitions', [])
+  useRememberedScroll(!loading)
 
   useEffect(() => {
     let cancelled = false
@@ -159,7 +161,7 @@ export default function StandingsPage() {
           {comp.tables.length === 0 ? (
             <p style={{ color: 'var(--muted)', fontSize: 14 }}>No table for this competition (knockout format).</p>
           ) : (
-            comp.tables.map((t) => <StandingsTable key={t.groupId} groupName={t.groupName} rows={t.rows} />)
+            comp.tables.map((t) => <StandingsTable key={t.groupId} groupName={t.groupName} rows={t.rows} competition={comp.slug} groupId={t.groupId} />)
           )}
         </section>
       ))}

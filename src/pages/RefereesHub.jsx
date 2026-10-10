@@ -1,4 +1,7 @@
-import { useEffect, useState } from 'react'
+import { TeamHistoryLink, VenueHistoryLink, CompetitionHistoryLink } from '../components/HistoryLinks'
+import { matchHistoryUrl } from '../utils/historyLinks'
+import { useRememberedState, useRememberedScroll } from '../hooks/usePageMemory'
+import { useEffect } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { supabase } from '../supabaseClient'
 import { historicDisplayedScore } from '../utils/historicFixtureOutcome'
@@ -50,25 +53,25 @@ function GameRow({ f, showResult }) {
 }
 
 export default function RefereesHub() {
-  const [searchParams] = useSearchParams()
-  const [referees, setReferees] = useState([])
-  const [refName, setRefName] = useState(searchParams.get('ref') || '')
-  const [loading, setLoading] = useState(false)
-  const [currentSeason, setCurrentSeason] = useState(CURRENT_SEASON_FALLBACK)
-  const [isAdmin, setIsAdmin] = useState(false)
-  const [signedIn, setSignedIn] = useState(false)
-  const [leagueTable, setLeagueTable] = useState([])
-  const [refereeContacts, setRefereeContacts] = useState({})
+  const [searchParams, setSearchParams] = useSearchParams()
+  const [referees, setReferees] = useRememberedState('referees', [])
+  const [refName, setRefName] = useRememberedState('refName', searchParams.get('ref') || '')
+  const [loading, setLoading] = useRememberedState('loading', false)
+  const [currentSeason, setCurrentSeason] = useRememberedState('currentSeason', CURRENT_SEASON_FALLBACK)
+  const [isAdmin, setIsAdmin] = useRememberedState('isAdmin', false)
+  const [signedIn, setSignedIn] = useRememberedState('signedIn', false)
+  const [leagueTable, setLeagueTable] = useRememberedState('leagueTable', [])
+  const [refereeContacts, setRefereeContacts] = useRememberedState('refereeContacts', {})
 
-  const [lastGame, setLastGame] = useState(null)
-  const [nextGame, setNextGame] = useState(null)
-  const [allGames, setAllGames] = useState([]) // current season, played, from live fixtures
-  const [historicGames, setHistoricGames] = useState([]) // from historic_fixtures
-  const [seasonFilter, setSeasonFilter] = useState('')
-  const [cardStats, setCardStats] = useState(null)
+  const [lastGame, setLastGame] = useRememberedState('lastGame', null)
+  const [nextGame, setNextGame] = useRememberedState('nextGame', null)
+  const [allGames, setAllGames] = useRememberedState('allGames', []) // current season, played, from live fixtures
+  const [historicGames, setHistoricGames] = useRememberedState('historicGames', []) // from historic_fixtures
+  const [seasonFilter, setSeasonFilter] = useRememberedState('seasonFilter', '')
+  const [cardStats, setCardStats] = useRememberedState('cardStats', null)
+  useRememberedScroll(!loading)
 
   useEffect(() => {
-    window.scrollTo({ top: 0, left: 0, behavior: 'auto' })
   }, [])
 
   useEffect(() => {
@@ -217,6 +220,7 @@ export default function RefereesHub() {
           'id, fixture_date, venue, round_name, status, home_score, away_score, home_team:home_team_id(name), away_team:away_team_id(name), stage:stage_id(name, competition:competition_id(name))'
         )
         .eq('referee_name', refName)
+        .eq('hidden_from_public', false)
         .order('fixture_date')
 
       const shaped = (live || []).map((f) => ({
@@ -252,6 +256,7 @@ export default function RefereesHub() {
         (hist || []).map((h) => ({
           id: h.id,
           season: h.season,
+          venue: h.comment,
           fixture_date: h.fixture_date,
           home_name: h.home_team_name,
           away_name: h.away_team_name,
@@ -355,7 +360,7 @@ export default function RefereesHub() {
         </section>
       )}
 
-      <select value={refName} onChange={(e) => setRefName(e.target.value)} style={{ ...selectStyle, marginBottom: 16 }}>
+      <select value={refName} onChange={(e) => { setRefName(e.target.value); const next = new URLSearchParams(searchParams); next.set('ref', e.target.value); setSearchParams(next, { replace: true }) }} style={{ ...selectStyle, marginBottom: 16 }}>
         <option value="">Select a referee…</option>
         {referees.map((r) => (
           <option key={r.id} value={r.name}>
@@ -413,7 +418,7 @@ export default function RefereesHub() {
               <div style={{ ...cardStyle, marginBottom: 28, display: 'flex', gap: 20 }}>
                 <div>
                   <div style={statLabelStyle}>Games</div>
-                  <div style={statValueStyle}>{cardStats.games}</div>
+                  <Link to={matchHistoryUrl({ referee: refName, season: cardStats.season, status: 'played' })} style={statValueStyle}>{cardStats.games}</Link>
                 </div>
                 <div>
                   <div style={statLabelStyle}>Total cards</div>
@@ -446,8 +451,8 @@ export default function RefereesHub() {
               <div style={{ marginBottom: 28 }}>
                 {teamCountsList.map(([team, count]) => (
                   <div key={team} style={{ display: 'flex', justifyContent: 'space-between', padding: '5px 0', borderBottom: '1px solid var(--line)', fontSize: 13 }}>
-                    <span>{team}</span>
-                    <strong>{count}</strong>
+                    <TeamHistoryLink name={team} />
+                    <Link to={matchHistoryUrl({ referee: refName, team, season: seasonFilter, status: 'played' })}><strong>{count}</strong></Link>
                   </div>
                 ))}
               </div>
@@ -463,8 +468,8 @@ export default function RefereesHub() {
               <div style={{ marginBottom: 28 }}>
                 {venueCountsList.map(([venue, count]) => (
                   <div key={venue} style={{ display: 'flex', justifyContent: 'space-between', padding: '5px 0', borderBottom: '1px solid var(--line)', fontSize: 13 }}>
-                    <span>{venue}</span>
-                    <strong>{count}</strong>
+                    <VenueHistoryLink name={venue} />
+                    <Link to={matchHistoryUrl({ referee: refName, venue, season: seasonFilter, status: 'played' })}><strong>{count}</strong></Link>
                   </div>
                 ))}
               </div>
