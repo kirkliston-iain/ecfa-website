@@ -98,7 +98,7 @@ cover = Table([[p('ECFA WEBSITE', 'CoverSub')], [p('Public Features Guide', 'Cov
               ]))
 story += [Spacer(1, 35*mm), cover, Spacer(1, 18*mm)]
 story.append(Table([[p('WEBSITE', 'Smallx'), p('https://ecfa-website.vercel.app', 'CardTitle')],
-                    [p('GUIDE UPDATED', 'Smallx'), p('5 October 2026', 'CardTitle')]],
+                    [p('GUIDE UPDATED', 'Smallx'), p('10 October 2026', 'CardTitle')]],
                    colWidths=[35*mm, 125*mm], style=TableStyle([
                        ('BOX', (0,0), (-1,-1), 0.7, LINE), ('INNERGRID', (0,0), (-1,-1), 0.5, LINE),
                        ('BACKGROUND', (0,0), (0,-1), PALE), ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
@@ -125,7 +125,7 @@ story.append(card_grid([
     ('Browse by date', 'Move between available matchdays to see a particular weekend. The website remembers the date being viewed when navigating away and returning.'),
     ('Upcoming fixtures', 'See the competition, home and away teams, badges, kick-off time, venue and appointed referee when available.'),
     ('Results and scores', 'Completed games show the score and link to an individual match page.'),
-    ('Match details', 'Open a fixture to review match information, scorers and previous meetings. Match previews link straight to previous meetings.'),
+    ('Match details', 'Open a fixture to review match information, scorers and previous meetings. Match previews link to previous meetings. Tap a venue to browse games by season (from 2025/26), or all seasons, and open match details.'),
     ('Current standings', 'A league-table snapshot provides a quick view of team positions and performance.'),
     ('Weekend context', 'The front page prioritises upcoming games or recent results depending on the day. On Knockout Cup quarter-final dates, a winner path tree appears below the usual fixtures and results.'),
 ]))

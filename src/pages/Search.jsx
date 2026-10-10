@@ -122,7 +122,7 @@ export default function Search() {
         venueMap.set(key, {
           key: `venue-${key}`,
           label: name,
-          description: 'Venue · Current-season match history',
+          description: 'Venue · Current and previous-season match history',
           to: venueHistoryUrl(name),
         })
       }
