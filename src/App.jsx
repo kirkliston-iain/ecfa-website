@@ -22,6 +22,7 @@ import AdminLogin from './pages/AdminLogin'
 import AdminDashboard from './pages/AdminDashboard'
 import Discipline from './pages/Discipline'
 import TeamsAdmin from './pages/TeamsAdmin'
+import TransfersAdmin from './pages/TransfersAdmin'
 import HistoricalSeason from './pages/HistoricalSeason'
 import ListsAdmin from './pages/ListsAdmin'
 import TeamsHub from './pages/TeamsHub'
@@ -175,6 +176,7 @@ export default function App() {
               </ProtectedRoute>
             }
           />
+          <Route path="/admin/transfers" element={<ProtectedRoute requireAdmin><TransfersAdmin /></ProtectedRoute>} />
           <Route path="/admin/news" element={<ProtectedRoute requireAdmin><NewsAdmin /></ProtectedRoute>} />
           <Route path="/admin/logos" element={<ProtectedRoute requireAdmin><LogosAdmin /></ProtectedRoute>} />
           <Route path="/admin/team-websites" element={<ProtectedRoute requireAdmin><TeamWebsitesAdmin /></ProtectedRoute>} />

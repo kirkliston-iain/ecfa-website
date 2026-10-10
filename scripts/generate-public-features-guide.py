@@ -144,8 +144,8 @@ story.append(card_grid([
     ('Season scorer tables', 'Choose All goals, League or Cup and select a season. The mobile-friendly table shows name, team, league goals, cup goals and overall goals. Tap any heading to sort; tap again to reverse the order. Earlier seasons are recorded under League.'),
     ('All-time scorers', 'Combine every recorded ECFA season into an overall career goals table with competition totals.'),
     ('Goalscorers sponsors', 'Game of Throwing Edinburgh and Escape Edinburgh appear together below the Goalscorers heading.'),
-    ('Player profiles', 'View a player’s current team, current and historical goals, and recorded yellow and red cards.'),
-    ('Scoring history', 'Historical goals are totalled by season, team and competition, avoiding duplicate single-goal lines.'),
+    ('Player profiles', 'View a player’s current team, goals, yellow and red cards, and recorded transfers with dates, previous clubs and new clubs. Club names open their team pages.'),
+    ('Scoring history', 'Goals are totalled by season and the club represented in each match. Transferring a player keeps previous goals and cards with their original clubs.'),
     ('Match-linked goals', 'Player scoring history links to recorded matches from 2025/26 onwards, including players outside current squads. Follow team names, season totals and goals by opponent into further history. Earlier totals do not infer match links.'),
     ('Name search', 'Find current players and historical scorers using full or partial names.'),
 ]))

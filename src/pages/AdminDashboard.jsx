@@ -66,7 +66,7 @@ export default function AdminDashboard() {
         .select('id, display_name, username')
         .eq('id', data.user.id)
         .maybeSingle()
-      setCurrentProfile({ ...(profile || {}), id: data.user.id, role: data.user.app_metadata?.role })
+      setCurrentProfile({ ...(profile || {}), id: data.user.id, role: data.user.app_metadata?.role, isLeagueAdmin: !!profile })
     })
 
     supabase
@@ -732,6 +732,10 @@ export default function AdminDashboard() {
       <Link to="/admin/teams" style={{ ...linkButtonStyle, display: 'block', marginBottom: 8 }}>
         Manage squads &rarr;
       </Link>
+
+      {currentProfile?.isLeagueAdmin && <Link to="/admin/transfers" style={{ ...linkButtonStyle, display: 'block', marginBottom: 8 }}>
+        Player transfers &amp; history &rarr;
+      </Link>}
 
       <Link to="/admin/lists" style={{ ...linkButtonStyle, display: 'block', marginBottom: 8 }}>
         Manage referees &amp; venues &rarr;

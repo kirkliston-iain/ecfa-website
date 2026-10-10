@@ -76,6 +76,7 @@ async function loadExportData() {
     historicFixtures,
     historicScorers,
     historicLeagueTables,
+    transfers,
   ] = await Promise.all([
     fetchAll('competitions'),
     fetchAll('stages'),
@@ -92,6 +93,7 @@ async function loadExportData() {
     fetchAll('historic_fixtures'),
     fetchAll('historic_scorers', 'id'),
     fetchAll('historic_league_tables', 'id'),
+    fetchAll('player_transfers', 'transfer_date'),
   ])
 
   const teamNames = lookup(teams)
@@ -265,6 +267,16 @@ async function loadExportData() {
   return {
     fixtures: fixtureRows,
     players: playerRows,
+    transfers: transfers.map((row) => ({
+      'Transfer ID': row.id,
+      'Player ID': row.player_id,
+      Player: playerNames.get(row.player_id) || '',
+      'Previous club': teamNames.get(row.previous_team_id) || '',
+      'New club': teamNames.get(row.new_team_id) || '',
+      'Transfer date': excelDate(row.transfer_date),
+      'History only': row.history_only ? 'Yes' : 'No',
+      'Recorded at': excelDateTime(row.recorded_at),
+    })),
     scorers: scorerRows,
     discipline: disciplineRows,
     referees: refereeRows,
@@ -286,7 +298,7 @@ async function loadExportData() {
 
 const exports = [
   { key: 'fixtures', title: 'Fixtures', description: 'All scheduled, played, postponed and hidden fixtures, with results and appointments.', sheets: ['fixtures'] },
-  { key: 'players', title: 'Players and squads', description: 'Every player, current squad assignment and private date of birth.', sheets: ['players'] },
+  { key: 'players', title: 'Players and squads', description: 'Every player, current squad assignment and private date of birth, plus recorded transfer history.', sheets: ['players', 'transfers'] },
   { key: 'scoring', title: 'Scoring records', description: 'Match-linked scorers plus historic season records.', sheets: ['scorers', 'historicScorers'] },
   { key: 'discipline', title: 'Discipline', description: 'All yellow, red and serious-offence records linked to fixtures.', sheets: ['discipline'] },
   { key: 'referees', title: 'Referees', description: 'Referee list and private mobile contact details.', sheets: ['referees'] },
@@ -296,6 +308,7 @@ const exports = [
 
 const sheetSettings = {
   fixtures: ['Fixtures', [38, 12, 30, 22, 14, 18, 18, 20, 14, 28, 28, 12, 12, 12, 14, 14, 12, 18, 18, 28, 24, 18, 18, 30, 20, 20]],
+  transfers: ['Player Transfers', [38, 38, 30, 30, 30, 18, 14, 24]],
   players: ['Players - Private', [38, 18, 18, 30, 30, 20, 24, 20, 22]],
   scorers: ['Match Scorers', [38, 38, 12, 30, 20, 30, 38, 28, 28, 10, 28, 28, 12, 12]],
   discipline: ['Discipline', [38, 38, 12, 30, 20, 30, 38, 28, 15, 10, 28, 36, 28, 28]],

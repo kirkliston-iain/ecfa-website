@@ -1,6 +1,8 @@
+import TransferHistory, { TRANSFER_SELECT } from '../components/TransferHistory'
+import { goalsBySeasonAndClub } from '../lib/playerTransfers.mjs'
 import { HistoryBack, TeamHistoryLink, PlayerHistoryLink } from '../components/HistoryLinks'
 import { useRememberedState, useRememberedScroll } from '../hooks/usePageMemory'
-import { useEffect, useMemo } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { supabase } from '../supabaseClient'
 
@@ -96,6 +98,8 @@ function hasOpponentLevelScoringData(season) {
 
 export default function PlayerDetail() {
   const { id } = useParams()
+  const [transfers, setTransfers] = useState([])
+  const [transferError, setTransferError] = useState('')
   const [player, setPlayer] = useRememberedState('player', null)
   const [goals, setGoals] = useRememberedState('goals', [])
   const [historicGoals, setHistoricGoals] = useRememberedState('historicGoals', [])
@@ -130,7 +134,7 @@ export default function PlayerDetail() {
       }
 
       const fullName = `${playerRow.first_name || ''} ${playerRow.last_name || ''}`.trim()
-      const [goalResult, historicResult, historicMatchResult, disciplineResult] = await Promise.all([
+      const [goalResult, historicResult, historicMatchResult, disciplineResult, transferResult] = await Promise.all([
         supabase
           .from('fixture_scorers')
           .select('id, goals, team:team_id(id, name), fixture:fixture_id(id, fixture_date, home_score, away_score, went_to_extra_time, home_extra_time_score, away_extra_time_score, decided_by_penalties, home_penalty_score, away_penalty_score, home_team:home_team_id(id, name), away_team:away_team_id(id, name), stage:stage_id(competition:competition_id(season)))')
@@ -148,9 +152,12 @@ export default function PlayerDetail() {
           .from('discipline_records')
           .select('id, card_type, card_count, notes, serious_offence, team:team_id(id, name), fixture:fixture_id(id, fixture_date, home_score, away_score, went_to_extra_time, home_extra_time_score, away_extra_time_score, decided_by_penalties, home_penalty_score, away_penalty_score, home_team:home_team_id(id, name), away_team:away_team_id(id, name), stage:stage_id(competition:competition_id(season)))')
           .eq('player_id', id),
+        supabase.from('player_transfers').select(TRANSFER_SELECT).eq('player_id', id).order('transfer_date', { ascending: false }).order('recorded_at', { ascending: false }),
       ])
 
       if (!cancelled) {
+        setTransfers(transferResult.data || [])
+        setTransferError(transferResult.error ? 'Transfer history could not be loaded. Please refresh to try again.' : '')
         setPlayer(playerRow)
         setGoals(goalResult.data || [])
         setHistoricGoals(historicResult.data || [])
@@ -197,6 +204,7 @@ export default function PlayerDetail() {
     })
   }, [historicGoals])
 
+  const recordedGoalTotals = useMemo(() => goalsBySeasonAndClub(goals, CURRENT_SEASON), [goals])
   const currentGoals = goals.reduce((sum, row) => sum + Number(row.goals || 0), 0)
   const historicalGoals = aggregatedHistoricGoals.reduce((sum, row) => sum + Number(row.goals || 0), 0)
   const goalsByOpponent = useMemo(() => {
@@ -314,6 +322,11 @@ export default function PlayerDetail() {
       </div>
 
       <section style={{ marginBottom: 34 }}>
+        <h2 style={sectionHeadingStyle}>Transfer history</h2>
+        {transferError ? <p role="alert">{transferError}</p> : <TransferHistory rows={transfers} />}
+      </section>
+
+      <section style={{ marginBottom: 34 }}>
         <h2 style={sectionHeadingStyle}>Cards received</h2>
         <p style={{ color: 'var(--muted)', fontSize: 13, marginTop: -5 }}>
           Recorded yellow and red cards, shown match by match.
@@ -372,13 +385,13 @@ export default function PlayerDetail() {
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
             <thead><tr><th style={thStyle}>Season</th><th style={thStyle}>Team</th><th style={{ ...thStyle, textAlign: 'right' }}>Goals</th></tr></thead>
             <tbody>
-              {currentGoals > 0 && (
-                <tr>
-                  <td style={tdStyle}>{CURRENT_SEASON}</td>
-                  <td style={tdStyle}><TeamHistoryLink name={player.team?.name} id={player.team?.id} /></td>
-                  <td style={{ ...tdStyle, textAlign: 'right', fontWeight: 800 }}>{currentGoals}</td>
+              {recordedGoalTotals.map((row) => (
+                <tr key={row.key}>
+                  <td style={tdStyle}>{row.season}</td>
+                  <td style={tdStyle}><TeamHistoryLink name={row.team.name} id={row.team.id} /></td>
+                  <td style={{ ...tdStyle, textAlign: 'right', fontWeight: 800 }}>{row.goals}</td>
                 </tr>
-              )}
+              ))}
               {aggregatedHistoricGoals.map((row) => (
                 <tr key={`${row.season}-${row.team_name}`}>
                   <td style={tdStyle}>{row.season}</td>

@@ -295,6 +295,8 @@ export default function TeamsAdmin() {
       </Link>
       <h1 style={{ fontSize: 22, color: 'var(--pitch)', marginBottom: 20 }}>Manage Squads</h1>
 
+      {isAdmin && <p><Link to="/admin/transfers">Transfer a player &amp; view transfer history →</Link></p>}
+
       <section style={{ ...cardStyle, marginBottom: 20, background: '#fafafa' }}>
         <div style={{ fontWeight: 800, marginBottom: 5 }}>Export squad lists</div>
         <p style={{ color: 'var(--muted)', fontSize: 13, margin: '0 0 12px' }}>
