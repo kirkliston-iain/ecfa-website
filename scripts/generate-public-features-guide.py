@@ -122,7 +122,7 @@ story.append(card_grid([
 story += [Spacer(1, 8), p('<b>Tip:</b> On a phone, swipe the top navigation left or right to reveal additional sections.', 'Bodyx')]
 story += [Spacer(1, 7)] + section_title('2. Match Hub', 'The Match Hub brings the main matchday information together in one place.')
 story.append(card_grid([
-    ('Browse by date', 'Move between available matchdays to see a particular weekend. The website remembers the date being viewed when navigating away and returning.'),
+    ('Browse by date', 'Move between available matchdays to see a particular weekend. Back from a match restores the date you were viewing. Opening Match Hub through the site navigation starts at the upcoming games.'),
     ('Upcoming fixtures', 'See the competition, home and away teams, badges, kick-off time, venue and appointed referee when available.'),
     ('Results and scores', 'Completed games show the score and link to an individual match page.'),
     ('Match details', 'Follow club names, scores, competitions, scorers, venues and referees into their recorded history. Match previews link to previous meetings. Back restores your selections and position. Venue history supports season filters from 2025/26.'),
