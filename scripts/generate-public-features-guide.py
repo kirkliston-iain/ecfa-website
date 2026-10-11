@@ -127,6 +127,7 @@ story.append(card_grid([
     ('Results and scores', 'Completed games show the score and link to an individual match page.'),
     ('Match details', 'Follow club names, scores, competitions, scorers, venues and referees into their recorded history. Match previews link to previous meetings. Back restores your selections and position. Venue history supports season filters from 2025/26.'),
     ('Current standings', 'A league-table snapshot provides a quick view of team positions and performance.'),
+    ('Competitions this week', 'Compact links below the matchday fixtures open each competition with games scheduled in the selected Monday-to-Sunday week, where you can browse its tables, fixtures and results.'),
     ('Weekend context', 'The front page prioritises upcoming games or recent results depending on the day. On Knockout Cup quarter-final dates, a winner path tree appears below the usual fixtures and results.'),
 ]))
 story.append(PageBreak())

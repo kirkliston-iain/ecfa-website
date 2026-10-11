@@ -922,25 +922,19 @@ export default function Home() {
       )[0] || null
   }, [competitions, matchesForDate, selectedDate])
 
-  const featuredCupResults = useMemo(() => {
-    if (!featuredCompetition || featuredCompetition.slug === 'appin-league') return []
-    return featuredCompetition.fixtures
-      .filter((fixture) => fixture.status === 'played')
-      .sort((a, b) => b.fixture_date.localeCompare(a.fixture_date))
-  }, [featuredCompetition])
-
-  const featuredCupResultGroups = useMemo(() => {
-    return featuredCupResults.reduce((groups, fixture) => {
-      const stage = fixture.round_name || 'Other results'
-      const currentGroup = groups[groups.length - 1]
-      if (!currentGroup || currentGroup.stage !== stage) {
-        groups.push({ stage, fixtures: [fixture] })
-      } else {
-        currentGroup.fixtures.push(fixture)
-      }
-      return groups
-    }, [])
-  }, [featuredCupResults])
+  const competitionsForWeek = useMemo(() => {
+    if (!selectedDate) return []
+    const start = new Date(`${selectedDate}T00:00:00Z`)
+    start.setUTCDate(start.getUTCDate() - (start.getUTCDay() + 6) % 7)
+    const end = new Date(start)
+    end.setUTCDate(end.getUTCDate() + 7)
+    const from = start.toISOString().slice(0, 10)
+    const until = end.toISOString().slice(0, 10)
+    return competitions.filter((competition) => competition.fixtures.some((fixture) => {
+      const date = dateKey(fixture.fixture_date)
+      return date >= from && date < until
+    }))
+  }, [competitions, selectedDate])
 
   const showKnockoutBracket = featuredCompetition?.slug === 'knockout-cup'
     && matchesForDate.some((fixture) => fixture.compSlug === 'knockout-cup' && fixture.round_name === 'Quarter-Final')
@@ -1047,21 +1041,23 @@ export default function Home() {
         </section>
       )}
 
-      {featuredCompetition?.slug !== 'appin-league' && featuredCupResults.length > 0 && (
+      {competitionsForWeek.length > 0 && (
         <section style={{ marginBottom: 40 }}>
           <h2 style={{ fontSize: 13, textTransform: 'uppercase', letterSpacing: 0.5, color: 'var(--muted)', marginBottom: 12 }}>
-            {featuredCompetition.name} Results
+            Competitions this week
           </h2>
-          {featuredCupResultGroups.map((group, index) => (
-            <div
-              key={group.stage}
-              style={index > 0 ? { borderTop: '2px solid var(--line)', marginTop: 24, paddingTop: 24 } : undefined}
-            >
-              <div className="desktop-card-grid">
-                {group.fixtures.map((fixture) => <MatchCard key={fixture.id} f={fixture} allFixtures={allCurrentSeasonFixtures} />)}
-              </div>
-            </div>
-          ))}
+          <div style={{ border: '1px solid var(--line)', borderRadius: 6, overflow: 'hidden' }}>
+            {competitionsForWeek.map((competition, index) => (
+              <Link
+                key={competition.slug}
+                to={`/competitions/${competition.slug}`}
+                style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, padding: '12px 14px', borderTop: index > 0 ? '1px solid var(--line)' : undefined, color: 'var(--brass)', fontWeight: 700 }}
+              >
+                <span>{competition.name}</span>
+                <span aria-hidden="true">→</span>
+              </Link>
+            ))}
+          </div>
         </section>
       )}
 
