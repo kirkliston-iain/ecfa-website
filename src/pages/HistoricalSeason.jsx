@@ -1,3 +1,5 @@
+import StandingsTable from '../components/StandingsTable'
+import { historicTeamName } from '../utils/historicTeams'
 import { CompetitionHistoryLink } from '../components/HistoryLinks'
 import { useRememberedState, useRememberedScroll } from '../hooks/usePageMemory'
 import { useEffect } from 'react'
@@ -48,7 +50,7 @@ export default function HistoricalSeason() {
         supabase.from('historic_fixture_seasons').select('season'),
         supabase.from('historic_scorers').select('season'),
         supabase.from('honours').select('season, status'),
-        supabase.from('teams').select('id, name').order('name'),
+        supabase.from('teams').select('id, name, logo_url').order('name'),
       ])
 
       const fixtureSeasons = (seasonResult.data || []).map((row) => row.season).filter(Boolean)
@@ -130,7 +132,7 @@ export default function HistoricalSeason() {
           .select('id, competition_name, fixture_date, home_team_name, home_team_id, home_goals, away_team_name, away_team_id, away_goals, comment, penalty_winner_name')
           .eq('season', season).order('fixture_date').range(0, 9999),
         supabase.from('historic_league_tables')
-          .select('position, team_name, played, won, drawn, lost, goal_difference, points')
+          .select('*')
           .eq('season', season).order('position'),
         supabase.from('historic_scorers')
           .select('player_name, team_name, goals').eq('season', season).range(0, 9999),
@@ -243,8 +245,21 @@ export default function HistoricalSeason() {
   // Prefer the officially-recorded final table when we have one on file — computing
   // from match data alone can't reflect points deductions or fill in missing fixtures.
   const displayTable = tableDate === 'final' && storedLeagueTable.length > 0
-    ? storedLeagueTable.map((t) => ({ name: t.team_name, p: t.played, w: t.won, d: t.drawn, l: t.lost, gd: t.goal_difference, pts: t.points }))
-    : leagueTable.map((t) => ({ name: t.name, p: t.p, w: t.w, d: t.d, l: t.l, gd: t.gf - t.ga, pts: t.pts }))
+    ? storedLeagueTable.map((t) => ({ name: t.team_name, p: t.played, w: t.won, d: t.drawn, l: t.lost, gf: t.goals_for, ga: t.goals_against, gd: t.goal_difference, pts: t.points }))
+    : leagueTable.map((t) => ({ name: t.name, p: t.p, w: t.w, d: t.d, l: t.l, gf: t.gf, ga: t.ga, gd: t.gf - t.ga, pts: t.pts }))
+
+  const standingsRows = displayTable.map((t) => {
+    const team = teams.find((team) => historicTeamName(team.name).toLowerCase() === historicTeamName(t.name).toLowerCase())
+    const recorded = leagueTable.find((row) => row.name === t.name)
+    const completeResults = recorded && recorded.p === t.p && recorded.w === t.w && recorded.d === t.d && recorded.l === t.l && recorded.gf - recorded.ga === t.gd
+    return {
+      teamId: team?.id, teamName: t.name, teamLogo: team?.logo_url,
+      played: t.p, won: t.w, drawn: t.d, lost: t.l,
+      goalsFor: t.gf ?? (completeResults ? recorded.gf : null),
+      goalsAgainst: t.ga ?? (completeResults ? recorded.ga : null),
+      goalDifference: t.gd, points: t.pts,
+    }
+  })
 
   const scorerTotals = new Map()
   for (const scorer of seasonScorers) {
@@ -519,37 +534,7 @@ export default function HistoricalSeason() {
             </label>
           </div>}
           <Link to={`/matches?${new URLSearchParams({ season, scope: 'league', ...(tableDate === 'final' ? {} : { through: tableDate }) })}`} style={{ display: 'inline-block', marginBottom: 16, fontSize: 13 }}>View league results {tableDate !== 'final' && 'to this date'} →</Link>
-          <div style={{ display: 'flex', fontSize: 11, color: 'var(--muted)', padding: '4px 0', fontWeight: 700 }}>
-            <div style={{ flex: 1 }}>Team</div>
-            <div style={{ width: 28, textAlign: 'center' }}>P</div>
-            <div style={{ width: 28, textAlign: 'center' }}>W</div>
-            <div style={{ width: 28, textAlign: 'center' }}>D</div>
-            <div style={{ width: 28, textAlign: 'center' }}>L</div>
-            <div style={{ width: 36, textAlign: 'center' }}>GD</div>
-            <div style={{ width: 32, textAlign: 'center' }}>Pts</div>
-          </div>
-          {displayTable.map((t, i) => (
-            <div
-              key={t.name}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                fontSize: 13,
-                padding: '6px 0',
-                borderBottom: '1px solid var(--line)',
-              }}
-            >
-              <div style={{ flex: 1, minWidth: 0, paddingRight: 8 }}>
-                {i + 1}. {linkedTeamName(t.name)}
-              </div>
-              <div style={{ width: 28, textAlign: 'center' }}>{t.p}</div>
-              <div style={{ width: 28, textAlign: 'center' }}>{t.w}</div>
-              <div style={{ width: 28, textAlign: 'center' }}>{t.d}</div>
-              <div style={{ width: 28, textAlign: 'center' }}>{t.l}</div>
-              <div style={{ width: 36, textAlign: 'center' }}>{t.gd}</div>
-              <div style={{ width: 32, textAlign: 'center', fontWeight: 700 }}>{t.pts}</div>
-            </div>
-          ))}
+          <StandingsTable rows={standingsRows} season={season} scope="league" through={tableDate === 'final' ? '' : tableDate} />
         </section>
       )}
 
