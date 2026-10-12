@@ -1,37 +1,9 @@
-import { CompetitionHistoryLink, VenueHistoryLink } from '../components/HistoryLinks'
+import { CompetitionHistoryLink } from '../components/HistoryLinks'
 import { useRememberedState, useRememberedScroll } from '../hooks/usePageMemory'
 import { useEffect } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { supabase } from '../supabaseClient'
 import { historicDisplayedScore, historicPenaltyWinnerName } from '../utils/historicFixtureOutcome'
-
-function Badge({ name, size = 20 }) {
-  const initials = (name || '?')
-    .split(' ')
-    .map((w) => w[0])
-    .slice(0, 2)
-    .join('')
-    .toUpperCase()
-  return (
-    <span
-      style={{
-        width: size,
-        height: size,
-        borderRadius: '50%',
-        background: 'var(--ink)',
-        color: '#fff',
-        display: 'inline-flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        fontSize: size * 0.4,
-        fontWeight: 700,
-        flexShrink: 0,
-      }}
-    >
-      {initials}
-    </span>
-  )
-}
 
 function displayFixtureDate(value) {
   if (!value) return ''
@@ -60,6 +32,8 @@ export default function HistoricalSeason() {
   const [season, setSeason] = useRememberedState('season', params.get('season') || '')
   const [teams, setTeams] = useRememberedState('teams', [])
   const [teamName, setTeamName] = useRememberedState('teamName', '')
+  const [view, setView] = useRememberedState('archiveView', 'table')
+  const [tableDate, setTableDate] = useRememberedState('tableDate', 'final')
   const [loading, setLoading] = useRememberedState('loading', false)
   const [seasonFixtures, setSeasonFixtures] = useRememberedState('seasonFixtures', [])
   const [storedLeagueTable, setStoredLeagueTable] = useRememberedState('storedLeagueTable', [])
@@ -181,8 +155,9 @@ export default function HistoricalSeason() {
 
   const grouped = {}
   for (const f of fixtures) {
-    if (!grouped[f.competition_name]) grouped[f.competition_name] = []
-    grouped[f.competition_name].push(f)
+    const family = competitionFamily(f.competition_name)
+    if (!grouped[family]) grouped[family] = []
+    grouped[family].push(f)
   }
 
   // ---- Cup winners / runners-up ----
@@ -225,12 +200,19 @@ export default function HistoricalSeason() {
     return n.includes('league') && !n.includes('cup')
   }
   const leagueFixtures = seasonFixtures.filter((f) => isLeagueFixture(f.competition_name) && f.home_goals != null && f.away_goals != null)
+  const leagueMatchdays = [...new Set(leagueFixtures.map((f) => f.fixture_date?.slice(0, 10)).filter(Boolean))].sort((a, b) => b.localeCompare(a))
   const table = {}
   function row(name) {
     if (!table[name]) table[name] = { name, p: 0, w: 0, d: 0, l: 0, gf: 0, ga: 0, pts: 0 }
     return table[name]
   }
-  for (const f of leagueFixtures) {
+  // Keep every participating team visible, even before its first result.
+  for (const f of seasonFixtures.filter((f) => isLeagueFixture(f.competition_name))) {
+    row(f.home_team_name)
+    row(f.away_team_name)
+  }
+  for (const t of storedLeagueTable) row(t.team_name)
+  for (const f of leagueFixtures.filter((f) => tableDate === 'final' || (f.fixture_date && f.fixture_date.slice(0, 10) <= tableDate))) {
     const home = row(f.home_team_name)
     const away = row(f.away_team_name)
     home.p++
@@ -260,7 +242,7 @@ export default function HistoricalSeason() {
 
   // Prefer the officially-recorded final table when we have one on file — computing
   // from match data alone can't reflect points deductions or fill in missing fixtures.
-  const displayTable = storedLeagueTable.length > 0
+  const displayTable = tableDate === 'final' && storedLeagueTable.length > 0
     ? storedLeagueTable.map((t) => ({ name: t.team_name, p: t.played, w: t.won, d: t.drawn, l: t.lost, gd: t.goal_difference, pts: t.points }))
     : leagueTable.map((t) => ({ name: t.name, p: t.p, w: t.w, d: t.d, l: t.l, gd: t.gf - t.ga, pts: t.pts }))
 
@@ -296,28 +278,18 @@ export default function HistoricalSeason() {
     <div className="container" style={{ padding: '32px 20px 48px' }}>
       <h1 style={{ fontSize: 30, marginBottom: 4 }}>Archive</h1>
       <p style={{ color: 'var(--muted)', marginBottom: 24 }}>
-        Explore past ECFA seasons, results, final tables and competition winners.
+        Explore past seasons, league tables, competitions and scorers.
       </p>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(210px, 1fr))', gap: 12, marginBottom: 30 }}>
-        <Link to="/honours" style={archiveLinkStyle}>
-          <strong>Honours archive</strong>
-          <span style={archiveLinkDescriptionStyle}>Season-by-season winners and all-time team totals.</span>
-        </Link>
-        <Link to="/goalscorers" style={archiveLinkStyle}>
-          <strong>Historical scorers</strong>
-          <span style={archiveLinkDescriptionStyle}>Recorded season totals. Match-level links are only available where the underlying data supports them.</span>
-        </Link>
-        <Link to="/stats" style={archiveLinkStyle}>
-          <strong>Current-season stats</strong>
-          <span style={archiveLinkDescriptionStyle}>Team records, streaks, scorers and referee statistics.</span>
-        </Link>
-      </div>
+      {!season && <nav aria-label="Other archives" style={{ display: 'flex', flexWrap: 'wrap', gap: 20, marginBottom: 24, fontSize: 14 }}>
+        <Link to="/honours">Honours</Link>
+        <Link to="/goalscorers">Historical scorers</Link>
+      </nav>}
 
       {!season && (
         <section style={{ marginBottom: 30 }}>
           <h2 style={sectionHeadingStyle}>Seasons</h2>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(210px, 1fr))', gap: 12 }}>
+          <div style={{ display: 'grid', gap: 8 }}>
             {seasonSummaries.filter((entry) => entry.fixtures > 0).map((entry) => (
               <button
                 key={entry.season}
@@ -327,7 +299,7 @@ export default function HistoricalSeason() {
                   setTeamName('')
                   setParams({ season: entry.season })
                               }}
-                style={seasonCardStyle}
+                style={{ ...seasonCardStyle, display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between' }}
               >
                 <strong style={{ fontSize: 21 }}>{entry.season}</strong>
                 <span style={{ color: 'var(--muted)', fontSize: 13 }}>
@@ -407,7 +379,8 @@ export default function HistoricalSeason() {
         </div>
       )}
 
-      {season && (
+      {season && view === 'competitions' && (
+        <label style={selectLabelStyle}>Filter results by team
         <select
           value={teamName}
           onChange={(e) => setTeamName(e.target.value)}
@@ -430,11 +403,18 @@ export default function HistoricalSeason() {
             </option>
           ))}
         </select>
+        </label>
       )}
+
+      {season && <nav aria-label="Season sections" style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 24 }}>
+        {[['table', 'League table'], ['competitions', 'Competitions'], ['scorers', 'Scorers']].map(([key, label]) => (
+          <button key={key} type="button" aria-pressed={view === key} onClick={() => setView(key)} style={{ padding: '10px 14px', border: '1px solid var(--line)', borderRadius: 5, font: 'inherit', fontSize: 14, fontWeight: 700, cursor: 'pointer', background: view === key ? 'var(--ink)' : '#fff', color: view === key ? '#fff' : 'var(--ink)' }}>{label}</button>
+        ))}
+      </nav>}
 
       {loading && <p style={{ color: 'var(--muted)' }}>Loading…</p>}
 
-      {!loading && season && cupResults.length > 0 && (
+      {!loading && season && view === 'competitions' && cupResults.length > 0 && (
         <section style={{ marginBottom: 32 }}>
           <h2
             style={{
@@ -473,7 +453,7 @@ export default function HistoricalSeason() {
         </section>
       )}
 
-      {!loading && season && topScorers.length > 0 && (
+      {!loading && season && view === 'scorers' && topScorers.length > 0 && (
         <section style={{ marginBottom: 32 }}>
           <h2 style={sectionHeadingStyle}>Top 10 Scorers</h2>
           <div style={{ borderTop: '1px solid var(--line)' }}>
@@ -511,7 +491,7 @@ export default function HistoricalSeason() {
         </section>
       )}
 
-      {!loading && season && displayTable.length > 0 && (
+      {!loading && season && view === 'table' && displayTable.length > 0 && (
         <section style={{ marginBottom: 32 }}>
           <h2
             style={{
@@ -524,8 +504,21 @@ export default function HistoricalSeason() {
               borderBottom: '2px solid var(--line)',
             }}
           >
-            League Table {storedLeagueTable.length === 0 && <span style={{ fontWeight: 400, textTransform: 'none', letterSpacing: 0, fontSize: 11 }}>(computed from recorded results — may be incomplete)</span>}
+            League Table {(tableDate !== 'final' || storedLeagueTable.length === 0) && <span style={{ fontWeight: 400, textTransform: 'none', letterSpacing: 0, fontSize: 11 }}>(computed from recorded results — may be incomplete)</span>}
           </h2>
+          {leagueMatchdays.length > 0 && <div style={{ background: '#f7f8f9', border: '1px solid var(--line)', borderRadius: 6, padding: 14, marginBottom: 18 }}>
+            <strong style={{ fontSize: 14 }}>Table history</strong>
+            <p style={{ color: 'var(--muted)', fontSize: 12, margin: '5px 0 12px' }}>
+              {tableDate === 'final' ? 'Showing the final league table.' : `Showing the table after ${displayFixtureDate(tableDate)}. Calculated from recorded results; historical points adjustments are not included.`}
+            </p>
+            <label style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 10, fontSize: 13, fontWeight: 700 }}>Table after
+              <select value={tableDate} onChange={(e) => setTableDate(e.target.value)} style={{ padding: '10px', minHeight: 42, maxWidth: '100%', border: '1px solid var(--line)', borderRadius: 5, background: '#fff', font: 'inherit' }}>
+                <option value="final">Final table</option>
+                {leagueMatchdays.map((date) => <option key={date} value={date}>{displayFixtureDate(date)}</option>)}
+              </select>
+            </label>
+          </div>}
+          <Link to={`/matches?${new URLSearchParams({ season, scope: 'league', ...(tableDate === 'final' ? {} : { through: tableDate }) })}`} style={{ display: 'inline-block', marginBottom: 16, fontSize: 13 }}>View league results {tableDate !== 'final' && 'to this date'} →</Link>
           <div style={{ display: 'flex', fontSize: 11, color: 'var(--muted)', padding: '4px 0', fontWeight: 700 }}>
             <div style={{ flex: 1 }}>Team</div>
             <div style={{ width: 28, textAlign: 'center' }}>P</div>
@@ -546,7 +539,7 @@ export default function HistoricalSeason() {
                 borderBottom: '1px solid var(--line)',
               }}
             >
-              <div style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              <div style={{ flex: 1, minWidth: 0, paddingRight: 8 }}>
                 {i + 1}. {linkedTeamName(t.name)}
               </div>
               <div style={{ width: 28, textAlign: 'center' }}>{t.p}</div>
@@ -560,59 +553,19 @@ export default function HistoricalSeason() {
         </section>
       )}
 
-      {!loading &&
-        Object.entries(grouped).map(([compName, comps]) => (
-          <section key={compName} style={{ marginBottom: 32 }}>
-            <h2
-              style={{
-                fontSize: 13,
-                textTransform: 'uppercase',
-                letterSpacing: 0.5,
-                color: 'var(--brass)',
-                marginBottom: 12,
-                paddingBottom: 8,
-                borderBottom: '2px solid var(--line)',
-              }}
-            >
-              <CompetitionHistoryLink name={compName} season={season} />
-            </h2>
-            {comps.map((f) => (
-              <div
-                key={f.id}
-                style={{
-                  padding: '10px 0',
-                  borderBottom: '1px solid var(--line)',
-                  fontSize: 14,
-                }}
-              >
-                {f.fixture_date && (
-                  <div style={{ color: 'var(--muted)', fontSize: 11, marginBottom: 5 }}>
-                    {displayFixtureDate(f.fixture_date)}
-                  </div>
-                )}
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                  <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
-                    <Badge name={f.home_team_name} />
-                    {linkedTeamName(f.home_team_name, f.home_team_id, { overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' })}
-                  </div>
-                  <div style={{ minWidth: 60, textAlign: 'center', fontWeight: 800 }}>
-                    <Link
-                      to={`/fixtures/${f.id}`}
-                      aria-label={`View ${f.home_team_name} versus ${f.away_team_name}, ${displayFixtureDate(f.fixture_date)}`}
-                      style={{ display: 'block', padding: '8px 4px', color: 'var(--ink)', textDecoration: 'underline', textDecorationColor: 'var(--brass)', textUnderlineOffset: 3 }}
-                    >
-                      {historicDisplayedScore(f)}
-                    </Link>
-                  </div>
-                  <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 8, justifyContent: 'flex-end', minWidth: 0 }}>
-                    {linkedTeamName(f.away_team_name, f.away_team_id, { overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' })}
-                    <Badge name={f.away_team_name} />
-                  </div>
-                </div>
-              </div>
-            ))}
-          </section>
+      {!loading && season && view === 'competitions' && <section>
+        <h2 style={sectionHeadingStyle}>Competitions &amp; results</h2>
+        <Link to={`/matches?${new URLSearchParams({ season, ...(teamName ? { team: teamName } : {}) })}`} style={{ display: 'inline-block', marginBottom: 16, fontSize: 14 }}>View all season results →</Link>
+        {Object.entries(grouped).map(([name, matches]) => (
+          <Link key={name} to={`/matches?${new URLSearchParams({ season, ...(name === 'League' ? { scope: 'league' } : { competition: name }), ...(teamName ? { team: teamName } : {}) })}`} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, padding: '14px 0', borderBottom: '1px solid var(--line)', color: 'var(--ink)', textDecoration: 'none' }}>
+            <strong style={{ fontSize: 14 }}>{name}</strong>
+            <span style={{ color: 'var(--muted)', fontSize: 12, flexShrink: 0 }}>{matches.length} matches →</span>
+          </Link>
         ))}
+        <p style={{ fontSize: 13, marginTop: 20 }}><Link to={`/honours?season=${encodeURIComponent(season)}`}>View season honours →</Link></p>
+      </section>}
+      {!loading && season && view === 'table' && displayTable.length === 0 && <p>No league table records are available for this season.</p>}
+      {!loading && season && view === 'scorers' && topScorers.length === 0 && <p>No scorer totals are available for this season.</p>}
 
       {!loading && season && fixtures.length === 0 && (
         <p style={{ color: 'var(--muted)', fontSize: 14 }}>No results found for this season.</p>
@@ -621,23 +574,6 @@ export default function HistoricalSeason() {
   )
 }
 
-
-const archiveLinkStyle = {
-  display: 'grid',
-  gap: 6,
-  padding: 16,
-  border: '1px solid var(--line)',
-  borderRadius: 8,
-  color: 'var(--ink)',
-  textDecoration: 'none',
-  background: '#f5f8fa',
-}
-
-const archiveLinkDescriptionStyle = {
-  color: 'var(--muted)',
-  fontSize: 13,
-  lineHeight: 1.45,
-}
 
 const sectionHeadingStyle = {
   color: 'var(--brass)',
