@@ -27,7 +27,7 @@ export default function MatchScene3D({ kits, minute, running, speed, story, came
         fallbackFrame=requestAnimationFrame(frame)
       }
     }
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1,1.5))
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1,2.5))
     renderer.setClearColor('#8bbecb')
     renderer.outputColorSpace=THREE.SRGBColorSpace
     container.appendChild(renderer.domElement)
@@ -93,8 +93,8 @@ export default function MatchScene3D({ kits, minute, running, speed, story, came
         const canvas=document.createElement('canvas');canvas.width=1024;canvas.height=300
         const ctx=canvas.getContext('2d');ctx.fillStyle='#ffffff';ctx.fillRect(0,0,1024,300)
         ctx.fillStyle='#14292a';ctx.font='bold 64px sans-serif';ctx.textAlign='center';ctx.fillText(sponsor.name,512,175,990)
-        const texture=new THREE.CanvasTexture(canvas);texture.colorSpace=THREE.SRGBColorSpace;textures.add(texture)
-        const mat=new THREE.MeshBasicMaterial({map:texture,side:THREE.DoubleSide});materials.add(mat)
+        const texture=new THREE.CanvasTexture(canvas);texture.colorSpace=THREE.SRGBColorSpace;texture.anisotropy=renderer.capabilities.getMaxAnisotropy();textures.add(texture)
+        const mat=new THREE.MeshBasicMaterial({map:texture,side:THREE.DoubleSide,fog:false});materials.add(mat)
         for(const slot of slots){const face=new THREE.Mesh(geometry(new THREE.PlaneGeometry(13.3,3.9)),mat);face.position.set(slot.x,2.05,slot.z-Math.sign(slot.z)*.16);if(slot.z>0)face.rotation.y=Math.PI;scene.add(face)}
         const image=new Image();image.crossOrigin='anonymous'
         image.onload=()=>{if(disposed)return;ctx.fillStyle='#ffffff';ctx.fillRect(0,0,1024,300);const scale=Math.min(990/image.width,274/image.height);const w=image.width*scale,h=image.height*scale;ctx.drawImage(image,(1024-w)/2,(300-h)/2,w,h);texture.needsUpdate=true;lastMinute=-1}
