@@ -1,10 +1,11 @@
 import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { supabase, createPredictionClient } from '../supabaseClient'
-import { activePredictionWeek, inPredictionWeek, weekKey, predictionWindow, predictionOpen, validScore, makeHighlights } from '../utils/weekendPredictions'
+import { activePredictionWeek, inPredictionWeek, weekKey, predictionWindow, predictionOpen, validScore } from '../utils/weekendPredictions'
 import './WeekendPredictions.css'
 import { simulatorKits } from '../utils/simulatorKits'
 import { MATCH_MINUTE_MS } from '../utils/matchMotion'
+import { loadPredictionEvidence, simulatePrediction } from '../utils/predictionModel'
 const MatchScene3D = lazy(() => import('../components/MatchScene3D'))
 
 function Badge({ team }) {
@@ -20,6 +21,17 @@ function readEntry() {
 function Simulator({ fixture }) {
   const kits = useMemo(() => simulatorKits(fixture.home_team, fixture.away_team), [fixture.home_team.name, fixture.away_team.name])
   const [story, setStory] = useState([])
+  const [evidence, setEvidence] = useState(null)
+  const [analysis, setAnalysis] = useState(null)
+  const [evidenceLoading, setEvidenceLoading] = useState(true)
+  const [evidenceError, setEvidenceError] = useState('')
+  const [evidenceRetry, setEvidenceRetry] = useState(0)
+  useEffect(() => {
+    let cancelled = false
+    setEvidenceLoading(true); setEvidenceError('')
+    loadPredictionEvidence(supabase, fixture).then(data => { if(!cancelled) setEvidence(data) }).catch(() => { if(!cancelled) setEvidenceError('Could not load squad and form data. Please retry.') }).finally(() => { if(!cancelled) setEvidenceLoading(false) })
+    return () => { cancelled = true }
+  }, [fixture.id, evidenceRetry])
   const [minute, setMinute] = useState(0)
   const [running, setRunning] = useState(false)
   const [speed, setSpeed] = useState(1)
@@ -36,12 +48,26 @@ function Simulator({ fixture }) {
   const away = goals.length - home
   const latest = seen.at(-1)
   const name = latest?.side === 'home' ? fixture.home_team.name : fixture.away_team.name
-  const message = minute === 90 ? 'Full time! Your fictional match result is in.' : latest
-    ? latest.goal ? `GOAL! ${name} find the net!` : `${name}: ${['a shot saved by the keeper.', 'a dangerous attack cleared away.', 'a strike just wide of the post.'][latest.kind]}`
-    : minute ? 'Kick-off! Both sides settle into the game.' : 'The teams are ready. Press Play match to kick off.'
-  function play() { setStory(makeHighlights()); setMinute(0); setRunning(true) }
+  const person = player => player ? <Link to={`/players/${player.id}`}>{player.name}</Link> : null
+  const message = minute === 90 ? 'Full time! Your fictional match prediction is in.' : latest
+    ? latest.goal ? <>GOAL! {latest.scorer ? person(latest.scorer) : name}{latest.scorer ? ` for ${name}` : ''}.{latest.assist ? <> Assist: {person(latest.assist)}.</> : ' Unassisted.'}</>
+    : <>{latest.actor ? person(latest.actor) : name}{latest.actor ? ` (${name})` : ''}: {['a shot saved by the keeper.', 'a dangerous attack cleared away.', 'a strike just wide of the post.'][latest.kind]}</>
+    : minute ? 'Kick-off! Both sides settle into the game.' : 'The teams are ready. Press Play match to generate a prediction and kick off.'
+  function play() {
+    if(!evidence || evidenceLoading || evidenceError) return
+    const prediction=simulatePrediction(evidence)
+    setAnalysis(prediction); setStory(prediction.events); setMinute(0); setRunning(true)
+  }
+  const record = stats => stats.played ? `${stats.played} games · W${stats.won} D${stats.drawn} L${stats.lost} · Goals ${stats.gf} for / ${stats.ga} against` : 'No recorded games — neutral contribution'
   return <section className="wp-simulator" aria-label="Fictional match simulator">
     <div className="wp-scoreboard"><span><Badge team={fixture.home_team} />{fixture.home_team.name}<small className="wp-kit-label"><i style={{ background: kits[0].colour, borderColor: kits[0].trim }} />{kits[0].name}</small></span><strong>{home} : {away}<small>{minute === 90 ? 'FT' : `${minute}′`}</small></strong><span><Badge team={fixture.away_team} />{fixture.away_team.name}<small className="wp-kit-label"><i style={{ background: kits[1].colour, borderColor: kits[1].trim }} />{kits[1].name}</small></span></div>
+    <div className="wp-prediction-evidence">
+      {evidenceLoading ? <p role="status">Loading current squads, season scorers and match history…</p> : evidenceError ? <p role="alert">{evidenceError} <button type="button" onClick={() => setEvidenceRetry(value=>value+1)}>Retry</button></p> : <>
+        <p>Each play uses a fresh selection of <b>three of four</b> form factors. Named goals and assists are fictional; this season’s scoring records influence scorer selection.</p>
+        <p className="wp-evidence-squads">{fixture.home_team.name}: {evidence.squads[0].length} squad players · {fixture.away_team.name}: {evidence.squads[1].length} squad players</p>
+        {analysis ? <details><summary>Factors used: {analysis.selected.map(factor=>factor.label).join(' · ')}</summary><div className="wp-factor-list">{analysis.selected.map(factor => <div className="wp-factor" key={factor.key}><b>{factor.label}</b><small>{factor.note}</small><span>{fixture.home_team.name}: {record(factor.home)}</span><span>{fixture.away_team.name}: {record(factor.away)}</span></div>)}</div><p>Not used this time: <b>{analysis.omitted.label}</b>. Limited or missing history is balanced with neutral scoring rates; no results are invented.</p></details> : <p>Press Play match to select three factors and generate the match.</p>}
+      </>}
+    </div>
     <div className="wp-stadium">
       <Suspense fallback={<div className="wp-scene3d wp-scene-loading" role="status">Preparing the 3D pitch…</div>}><MatchScene3D kits={kits} minute={minute} running={running} speed={speed} story={story} cameraMode={cameraMode} /></Suspense>
       <span className="wp-camera-tag">3D • {cameraMode === 'goal' ? 'Behind goal' : 'Broadcast'}</span>
@@ -49,8 +75,10 @@ function Simulator({ fixture }) {
     </div>
     <div className="wp-camera-controls" aria-label="Camera angle"><button type="button" aria-pressed={cameraMode === 'broadcast'} onClick={() => setCameraMode('broadcast')}>Broadcast</button><button type="button" aria-pressed={cameraMode === 'goal'} onClick={() => setCameraMode('goal')}>Behind goal</button></div>
     <p className="wp-commentary" role="status">{message}</p>
-    <div className="wp-controls"><button type="button" onClick={play} disabled={running}>▶ {minute ? 'Play again' : 'Play match'}</button>{minute > 0 && minute < 90 && <button type="button" onClick={() => setRunning(value => !value)}>{running ? 'Pause' : 'Resume'}</button>}<label>Speed <select value={speed} onChange={event => setSpeed(Number(event.target.value))}><option value="1">Normal</option><option value="3">Fast</option></select></label></div>
-    {seen.length > 0 && <details><summary>Match highlights ({seen.length})</summary><ol className="wp-highlights">{seen.map(event => <li key={event.minute}><b>{event.minute}′</b> {event.side === 'home' ? fixture.home_team.name : fixture.away_team.name} — {event.goal ? '⚽ Goal!' : ['Shot saved', 'Attack cleared', 'Shot wide'][event.kind]}</li>)}</ol></details>}
+    <div className="wp-controls"><button type="button" onClick={play} disabled={running || evidenceLoading || !!evidenceError}>▶ {minute ? 'Play again' : 'Play match'}</button>{minute > 0 && minute < 90 && <button type="button" onClick={() => setRunning(value => !value)}>{running ? 'Pause' : 'Resume'}</button>}<label>Speed <select value={speed} onChange={event => setSpeed(Number(event.target.value))}><option value="1">Normal</option><option value="3">Fast</option></select></label></div>
+    {goals.length > 0 && <div className="wp-simulated-goals"><h3>Simulated scorers &amp; assists</h3><ul>{goals.map(event => <li key={event.minute}><b>{event.minute}′</b> {event.scorer ? person(event.scorer) : 'Unnamed scorer'} — {event.side === 'home' ? fixture.home_team.name : fixture.away_team.name}{event.assist ? <> · Assist: {person(event.assist)}</> : ' · Unassisted'}</li>)}</ul></div>}
+    {seen.length > 0 && <details><summary>Match highlights ({seen.length})</summary><ol className="wp-highlights">{seen.map(event => <li key={event.minute}><b>{event.minute}′</b> {event.side === 'home' ? fixture.home_team.name : fixture.away_team.name} — {event.goal ? <>⚽ {event.scorer ? person(event.scorer) : 'Goal'}{event.assist ? <> (assist: {person(event.assist)})</> : ' (unassisted)'}</> : <>{event.actor ? <>{person(event.actor)}: </> : ''}{['Shot saved', 'Attack cleared', 'Shot wide'][event.kind]}</>}</li>)}</ol></details>}
+
   </section>
 }
 
@@ -77,7 +105,7 @@ export default function WeekendPredictions() {
   useEffect(() => { const timer = setInterval(() => setNow(Date.now()), 1000); return () => clearInterval(timer) }, [])
   async function loadFixtures() {
     setLoading(true); setError('')
-    const { data, error: failure } = await supabase.from('fixtures').select('id,fixture_date,status,home_score,away_score,home_team:home_team_id(id,name,logo_url),away_team:away_team_id(id,name,logo_url),stage:stage_id(competition:competition_id(name))').eq('hidden_from_public', false).gte('fixture_date', `${activePredictionWeek()}T00:00:00Z`).order('fixture_date').order('id').range(0, 9999)
+    const { data, error: failure } = await supabase.from('fixtures').select('id,fixture_date,status,home_score,away_score,home_team:home_team_id(id,name,logo_url),away_team:away_team_id(id,name,logo_url),stage:stage_id(competition:competition_id(id,name,slug,season))').eq('hidden_from_public', false).gte('fixture_date', `${activePredictionWeek()}T00:00:00Z`).order('fixture_date').order('id').range(0, 9999)
     if (failure) setError('Could not load the weekend fixtures. Please try again.')
     else setFixtures(data || [])
     setLoading(false)
@@ -128,7 +156,7 @@ export default function WeekendPredictions() {
     <div className="wp-intro"><span className="wp-kicker">ECFA • JUST FOR FUN</span><h1>Weekly Predictions</h1><p>A little matchday magic. Watch a fictional match, then have your say on the week’s real games.</p></div>
     <label className="wp-week">Week beginning <select value={week} onChange={event => { setWeek(event.target.value); setSelected(''); setMessage('') }}>{weekends.map(value => <option key={value} value={value}>{new Date(`${value}T12:00:00Z`).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year:'numeric' })}</option>)}</select></label>
     {loading ? <p role="status">Loading fixtures…</p> : error ? <p role="alert">{error} <button onClick={loadFixtures}>Retry</button></p> : <>
-      <h2>Play the week’s games</h2><p className="wp-muted">A 3D, computer vs computer match with passing, attacking runs and defending. Choose a broadcast or behind-goal camera. Fictional results only; real match records stay as they are. Cup predictions are for 90 minutes.</p>
+      <h2>Play the week’s games</h2><p className="wp-muted">A 3D, computer vs computer prediction using real squads, season goals and three randomly selected form factors. Choose a broadcast or behind-goal camera. Fictional results only; real match records stay as they are. Cup predictions are for 90 minutes.</p>
       {active ? <><label className="wp-match-picker">Choose a match <select value={active.id} onChange={event => setSelected(event.target.value)}>{simulatable.map(f => <option key={f.id} value={f.id}>{f.home_team.name} v {f.away_team.name}</option>)}</select></label><Simulator key={`${week}-${active.id}`} fixture={active} /><Link to={`/fixtures/${active.id}`} className="wp-detail-link">View real match details →</Link></> : <p>No confirmed matches to simulate this week.</p>}
       <section className="wp-predictions"><h2>Your weekly picks</h2><p className="wp-muted">Predictions open Monday at 5am. Weekend entries close Friday at 10pm; midweek entries close 12 hours before kick-off. All times are UK time. Submit every open game to reveal its live community percentages. After each deadline, final percentages are public. This browser remembers your entries; submitted scores are final.</p>
       {pollError && <p role="alert">{pollError} <button type="button" onClick={() => loadPolls()}>Retry</button></p>}
