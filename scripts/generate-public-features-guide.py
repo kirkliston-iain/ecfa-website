@@ -239,14 +239,14 @@ story.append(Table([[p('Privacy note', 'CardTitle'), p('Public pages display lea
 story.append(PageBreak())
 
 # quick start
-story += section_title('13. Weekend Predictions', 'A fun weekend activity using the real scheduled ECFA fixtures.')
+story += section_title('13. Weekly Predictions', 'Weekend and midweek fixtures, with all voting times in UK time.')
 story.append(card_grid([
     ('Watch a fictional match', 'Choose a fixture for a 3D match with moving players, passing, runs and defending. The close Broadcast camera follows the ball; switch to Behind goal, pause, resume or select Fast. Badges, confirmed kits (Liberton purple), commentary and highlights accompany random fictional results. Real records stay unchanged.'),
-    ('Submit your scores', 'Below the simulation, enter home and away scores for every open game and submit them together without an account. Entries are final and lock at each game’s kick-off. This browser remembers your picks. Cup predictions are for 90 minutes.'),
-    ('See community picks', 'Each fixture shows the crowd’s home-win, draw and away-win percentages and number of picks. This is an informal anonymous poll. Real results appear when recorded.'),
-    ('Find the page', 'Use Predictions in the top navigation or Weekend Predictions on the Match Hub. Team names and match details link to their usual pages.'),
+    ('Submit your scores', 'Voting opens Monday 5am. Weekend games close Friday 10pm; midweek games close 12 hours before kick-off. Submit all open games without an account. Entries are final and remembered in this browser. Cup picks cover 90 minutes.'),
+    ('See community picks', 'Live home/draw/away percentages are visible only after submitting. After each deadline, final percentages replace entry boxes and become public. Future weeks open on Monday. Real results appear when recorded. This is an informal anonymous poll.'),
+    ('Find the page', 'Use Predictions in the top navigation or Weekly Predictions on the Match Hub. Team names and match details link to their usual pages.'),
 ]))
-story += [Spacer(1, 18)]
+story.append(PageBreak())
 story += section_title('Quick-start guide', 'Four common journeys for first-time visitors.')
 steps = [
     ('1', 'Find this weekend’s games', 'Open Match Hub, select the relevant date and tap a fixture for more detail.'),
