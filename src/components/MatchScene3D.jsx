@@ -42,14 +42,14 @@ export default function MatchScene3D({ kits, minute, running, speed, story, came
     const geometry=(g)=>{geometries.add(g);return g}
     const white=material('#f7f5e9'),dark=material('#17232a'),skin=[material('#c58d65'),material('#84563c'),material('#e6b68c')]
     function box(parent,w,h,d,mat,x,y,z){const mesh=new THREE.Mesh(geometry(new THREE.BoxGeometry(w,h,d)),mat);mesh.position.set(x,y,z);parent.add(mesh);return mesh}
-    box(scene,160,.7,110,material('#356447'),0,-.5,0)
-    for(let stripe=0;stripe<12;stripe++)box(scene,105/12,.12,68,material(stripe%2 ? '#348549':'#3c9654'),-52.5+(stripe+.5)*105/12,0,0)
+    box(scene,160,.7,110,material('#356447'),0,-.5,0).renderOrder=-100
+    for(let stripe=0;stripe<12;stripe++)box(scene,105/12,.12,68,material(stripe%2 ? '#348549':'#3c9654'),-52.5+(stripe+.5)*105/12,0,0).renderOrder=-90
     function line(points,colour='#f7f5e9'){
       const geo=geometry(new THREE.BufferGeometry().setFromPoints(points.map(([x,y,z])=>new THREE.Vector3(x,y,z))))
       const mat=new THREE.LineBasicMaterial({color:colour});materials.add(mat)
       const object=new THREE.Line(geo,mat);scene.add(object);return object
     }
-    const flat=(points)=>line(points.map(([x,z])=>[x,.1,z]))
+    const flat=(points)=>{const object=line(points.map(([x,z])=>[x,.1,z]));object.renderOrder=-80;return object}
     flat([[-52.5,-34],[52.5,-34],[52.5,34],[-52.5,34],[-52.5,-34]])
     flat([[0,-34],[0,34]])
     flat(Array.from({length:65},(_,i)=>[Math.cos(i*Math.PI/32)*9.15,Math.sin(i*Math.PI/32)*9.15]))
@@ -90,13 +90,13 @@ export default function MatchScene3D({ kits, minute, running, speed, story, came
         const numberMat=new THREE.MeshBasicMaterial({map:numberTex,transparent:true,side:THREE.DoubleSide});materials.add(numberMat)
         for(const sign of [-1,1]){const number=new THREE.Mesh(geometry(new THREE.PlaneGeometry(.8,.85)),numberMat);number.position.set(0,2.3,sign*.335);group.add(number)}
         }
-        const shadow=new THREE.Mesh(shadowGeo,shadowMat);shadow.rotation.x=-Math.PI/2;shadow.position.y=.13;scene.add(shadow)
+        const shadow=new THREE.Mesh(shadowGeo,shadowMat);shadow.renderOrder=-70;shadow.rotation.x=-Math.PI/2;shadow.position.y=.13;scene.add(shadow)
         players.push({group,shadow,legs,arms,body,index,team})
       }
     }
     const ball=new THREE.Mesh(sphere,white);scene.add(ball)
     const ballPatch=new THREE.Mesh(geometry(new THREE.IcosahedronGeometry(.56,0)),new THREE.MeshBasicMaterial({color:'#15212a',wireframe:true}));materials.add(ballPatch.material);ball.add(ballPatch)
-    const ballShadow=new THREE.Mesh(shadowGeo,shadowMat);ballShadow.rotation.x=-Math.PI/2;ballShadow.scale.setScalar(.6);ballShadow.position.y=.13;scene.add(ballShadow)
+    const ballShadow=new THREE.Mesh(shadowGeo,shadowMat);ballShadow.renderOrder=-70;ballShadow.rotation.x=-Math.PI/2;ballShadow.scale.setScalar(.6);ballShadow.position.y=.13;scene.add(ballShadow)
     let lastTime=performance.now(),lastMinute=-1,lastMode='',lastRunning=false
     function resize(){const width=container.clientWidth,height=container.clientHeight;renderer.setSize(width,height,false);camera.aspect=width/height;camera.updateProjectionMatrix();lastMode='';lastMinute=-1}
     const observer=new ResizeObserver(resize);observer.observe(container);resize()
