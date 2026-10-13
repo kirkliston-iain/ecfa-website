@@ -90,14 +90,14 @@ export default function MatchScene3D({ kits, minute, running, speed, story, came
           lastMinute=-1
           return
         }
-        const canvas=document.createElement('canvas');canvas.width=1024;canvas.height=384
-        const ctx=canvas.getContext('2d');ctx.fillStyle='#ffffff';ctx.fillRect(0,0,1024,384)
-        ctx.fillStyle='#14292a';ctx.font='bold 64px sans-serif';ctx.textAlign='center';ctx.fillText(sponsor.name,512,210,990)
+        const canvas=document.createElement('canvas');canvas.width=1024;canvas.height=300
+        const ctx=canvas.getContext('2d');ctx.fillStyle='#ffffff';ctx.fillRect(0,0,1024,300)
+        ctx.fillStyle='#14292a';ctx.font='bold 64px sans-serif';ctx.textAlign='center';ctx.fillText(sponsor.name,512,175,990)
         const texture=new THREE.CanvasTexture(canvas);texture.colorSpace=THREE.SRGBColorSpace;textures.add(texture)
         const mat=new THREE.MeshBasicMaterial({map:texture,side:THREE.DoubleSide});materials.add(mat)
         for(const slot of slots){const face=new THREE.Mesh(geometry(new THREE.PlaneGeometry(13.3,3.9)),mat);face.position.set(slot.x,2.05,slot.z-Math.sign(slot.z)*.16);if(slot.z>0)face.rotation.y=Math.PI;scene.add(face)}
         const image=new Image();image.crossOrigin='anonymous'
-        image.onload=()=>{if(disposed)return;ctx.fillStyle='#ffffff';ctx.fillRect(0,0,1024,384);const scale=Math.min(990/image.width,350/image.height);const w=image.width*scale,h=image.height*scale;ctx.drawImage(image,(1024-w)/2,(384-h)/2,w,h);texture.needsUpdate=true;lastMinute=-1}
+        image.onload=()=>{if(disposed)return;ctx.fillStyle='#ffffff';ctx.fillRect(0,0,1024,300);const scale=Math.min(990/image.width,274/image.height);const w=image.width*scale,h=image.height*scale;ctx.drawImage(image,(1024-w)/2,(300-h)/2,w,h);texture.needsUpdate=true;lastMinute=-1}
         image.src=sponsor.logo_url
         lastMinute=-1
       })
