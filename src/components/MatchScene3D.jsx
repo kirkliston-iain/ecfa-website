@@ -76,7 +76,7 @@ export default function MatchScene3D({ kits, minute, running, speed, story, came
     }
     supabase.from('sponsors').select('id,name,logo_url').eq('is_published',true).order('sort_order').order('name').then(({data})=>{
       if(disposed || !data?.length)return
-      const sponsors=data.filter(item=>item.logo_url)
+      const sponsors=data.filter(item=>item.logo_url && !/^kwik\s*fit$/i.test(item.name.trim()))
       if(!sponsors.length)return
       container.dataset.sponsorCount=String(sponsors.length)
       sponsors.forEach((sponsor,index)=>{
