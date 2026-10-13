@@ -59,7 +59,13 @@ function Simulator({ fixture }) {
   }
 
   return <section className="wp-simulator" aria-label="Fictional match simulator">
-    <div className="wp-scoreboard"><span><Badge team={fixture.home_team} />{fixture.home_team.name}<small className="wp-kit-label"><i style={{ background: kits[0].colour, borderColor: kits[0].trim }} />{kits[0].name}</small></span><strong>{home} : {away}<small>{minute === 90 ? 'FT' : `${minute}′`}</small></strong><span><Badge team={fixture.away_team} />{fixture.away_team.name}<small className="wp-kit-label"><i style={{ background: kits[1].colour, borderColor: kits[1].trim }} />{kits[1].name}</small></span></div>
+    <div className="wp-scoreboard">
+      {[fixture.home_team, fixture.away_team].map((team,index) => <div className="wp-scoreboard-team" key={team.id} style={{gridColumn:index ? 3 : 1,gridRow:1}}>
+        <span className="wp-scoreboard-teamname"><Badge team={team} />{team.name}</span>
+        {goals.some(event => event.side === (index ? 'away' : 'home')) && <ul className="wp-team-goals" aria-label={`${team.name} simulated scorers and assists`}>{goals.filter(event => event.side === (index ? 'away' : 'home')).map(event => <li key={event.minute}><span>⚽ {event.scorer ? person(event.scorer) : 'Unnamed scorer'} <b>{event.minute}′</b></span><small>{event.assist ? <>Assist: {person(event.assist)}</> : 'Unassisted'}</small></li>)}</ul>}
+      </div>)}
+      <strong style={{gridColumn:2,gridRow:1}}>{home} : {away}<small>{minute === 90 ? 'FT' : `${minute}′`}</small></strong>
+    </div>
     {evidenceLoading && <p role="status">Preparing the match…</p>}
     {evidenceError && <p role="alert">Could not prepare the match. <button type="button" onClick={() => setEvidenceRetry(value=>value+1)}>Retry</button></p>}
     <div className="wp-stadium">
@@ -70,7 +76,7 @@ function Simulator({ fixture }) {
     <div className="wp-camera-controls" aria-label="Camera angle"><button type="button" aria-pressed={cameraMode === 'broadcast'} onClick={() => setCameraMode('broadcast')}>Broadcast</button><button type="button" aria-pressed={cameraMode === 'goal'} onClick={() => setCameraMode('goal')}>Behind goal</button></div>
     <p className="wp-commentary" role="status">{message}</p>
     <div className="wp-controls"><button type="button" onClick={play} disabled={running || evidenceLoading || !!evidenceError}>▶ {minute ? 'Play again' : 'Play match'}</button>{minute > 0 && minute < 90 && <button type="button" onClick={() => setRunning(value => !value)}>{running ? 'Pause' : 'Resume'}</button>}<label>Speed <select value={speed} onChange={event => setSpeed(Number(event.target.value))}><option value="1">Normal</option><option value="3">Fast</option></select></label></div>
-    {goals.length > 0 && <div className="wp-simulated-goals"><h3>Simulated scorers &amp; assists</h3><ul>{goals.map(event => <li key={event.minute}><b>{event.minute}′</b> {event.scorer ? person(event.scorer) : 'Unnamed scorer'} — {event.side === 'home' ? fixture.home_team.name : fixture.away_team.name}{event.assist ? <> · Assist: {person(event.assist)}</> : ' · Unassisted'}</li>)}</ul></div>}
+
     {seen.length > 0 && <details><summary>Match highlights ({seen.length})</summary><ol className="wp-highlights">{seen.map(event => <li key={event.minute}><b>{event.minute}′</b> {event.side === 'home' ? fixture.home_team.name : fixture.away_team.name} — {event.goal ? <>⚽ {event.scorer ? person(event.scorer) : 'Goal'}{event.assist ? <> (assist: {person(event.assist)})</> : ' (unassisted)'}</> : <>{event.actor ? <>{person(event.actor)}: </> : ''}{['Shot saved', 'Attack cleared', 'Shot wide'][event.kind]}</>}</li>)}</ol></details>}
 
   </section>
