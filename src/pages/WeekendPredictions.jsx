@@ -45,6 +45,21 @@ function Simulator({ fixture }) {
   const goals = seen.filter(event => event.goal)
   const home = goals.filter(event => event.side === 'home').length
   const away = goals.length - home
+  const motm = useMemo(() => {
+    const performances = new Map()
+    const add = (player, side, points, kind) => {
+      if (!player) return
+      const record = performances.get(player.id) || { player, side, points: 0, goals: 0, assists: 0 }
+      record.points += points
+      if (kind) record[kind] += 1
+      performances.set(player.id, record)
+    }
+    for (const event of story) {
+      if (event.goal) { add(event.scorer, event.side, 3, 'goals'); add(event.assist, event.side, 2, 'assists') }
+      else add(event.actor, event.side, 0.25)
+    }
+    return [...performances.values()].sort((a, b) => b.points - a.points || b.goals - a.goals || a.player.name.localeCompare(b.player.name))[0] || null
+  }, [story])
   const latest = seen.at(-1)
   const name = latest?.side === 'home' ? fixture.home_team.name : fixture.away_team.name
   const person = player => player ? <Link to={`/players/${player.id}`}>{player.name}</Link> : null
@@ -66,6 +81,7 @@ function Simulator({ fixture }) {
       </div>)}
       <strong style={{gridColumn:2,gridRow:1}}>{home} : {away}<small>{minute === 90 ? 'FT' : `${minute}′`}</small></strong>
     </div>
+    {minute === 90 && motm && <div className="wp-motm" role="status"><b>⭐ Man of the Match</b><span>{person(motm.player)} · {motm.side === 'home' ? fixture.home_team.name : fixture.away_team.name}</span><small>{motm.goals > 0 && `${motm.goals} ${motm.goals === 1 ? 'goal' : 'goals'}`}{motm.goals > 0 && motm.assists > 0 && ' · '}{motm.assists > 0 && `${motm.assists} ${motm.assists === 1 ? 'assist' : 'assists'}`}{!motm.goals && !motm.assists && 'Standout performance'}</small></div>}
     {evidenceLoading && <p role="status">Preparing the match…</p>}
     {evidenceError && <p role="alert">Could not prepare the match. <button type="button" onClick={() => setEvidenceRetry(value=>value+1)}>Retry</button></p>}
     <div className="wp-stadium">
