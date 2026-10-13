@@ -4,6 +4,7 @@ import { supabase } from '../supabaseClient'
 import { inWeekend, londonDay, weekendKey, predictionOpen, validScore, makeHighlights } from '../utils/weekendPredictions'
 import './WeekendPredictions.css'
 import { simulatorKits } from '../utils/simulatorKits'
+import { MATCH_MINUTE_MS } from '../utils/matchMotion'
 const MatchScene3D = lazy(() => import('../components/MatchScene3D'))
 
 function Badge({ team }) {
@@ -25,7 +26,7 @@ function Simulator({ fixture }) {
   const [cameraMode, setCameraMode] = useState('broadcast')
   useEffect(() => {
     if (!running) return
-    const timer = setInterval(() => setMinute(value => Math.min(90, value + 1)), 350 / speed)
+    const timer = setInterval(() => setMinute(value => Math.min(90, value + 1)), MATCH_MINUTE_MS / speed)
     return () => clearInterval(timer)
   }, [running, speed])
   useEffect(() => { if (minute === 90) setRunning(false) }, [minute])

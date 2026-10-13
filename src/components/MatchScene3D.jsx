@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import * as THREE from 'three'
 import { SVGRenderer } from 'three/addons/renderers/SVGRenderer.js'
-import { matchMotion } from '../utils/matchMotion'
+import { matchMotion, MATCH_MINUTE_MS } from '../utils/matchMotion'
 
 export default function MatchScene3D({ kits, minute, running, speed, story, cameraMode }) {
   const host = useRef(null)
@@ -106,7 +106,7 @@ export default function MatchScene3D({ kits, minute, running, speed, story, came
       const time=performance.now(),state=playback.current,dt=Math.min(.08,(time-lastTime)/1000);lastTime=time
       if(document.hidden)return
       if(!state.running && state.minute===lastMinute && state.cameraMode===lastMode && !lastRunning)return
-      const clock=state.minute+(state.running ? Math.min(.999,(time-state.updated)/350*state.speed) : 0)
+      const clock=state.minute+(state.running ? Math.min(.999,(time-state.updated)/MATCH_MINUTE_MS*state.speed) : 0)
       const motion=matchMotion(Math.min(90,clock),state.story)
       const snap=state.minute===0 || !state.running && lastRunning
       for(let i=0;i<players.length;i++){
@@ -122,11 +122,11 @@ export default function MatchScene3D({ kits, minute, running, speed, story, came
       }
       ball.position.set(motion.ball.x,motion.ball.y,motion.ball.z);ball.rotation.z=clock*2;ball.rotation.x=clock*1.6;ballShadow.position.set(motion.ball.x,.13,motion.ball.z)
       if(state.cameraMode==='goal'){
-        camera.position.set(92,48,58);camera.lookAt(4,0,0)
+        camera.position.set(78,41,49);camera.lookAt(4,0,0)
       }else{
         // The broadcast camera gently tracks play; phones keep the whole pitch visible.
         const portrait=camera.aspect<1.3
-        camera.position.set(portrait ? 62 : 30,portrait ? 110 : 76,portrait ? 135 : 99)
+        camera.position.set(portrait ? 54 : 25,portrait ? 96 : 64,portrait ? 118 : 84)
         camera.lookAt(portrait ? 0 : motion.ball.x*.13,0,0)
       }
       renderer.render(scene,camera)

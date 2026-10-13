@@ -1,3 +1,4 @@
+export const MATCH_MINUTE_MS = 700
 const clamp = (value, min, max) => Math.min(max, Math.max(min, value))
 const lerp = (a, b, t) => a + (b - a) * t
 // World coordinates in metres: x runs between goals; z runs between touchlines.
