@@ -7,6 +7,7 @@ import Footer from './components/Footer'
 import ManagerGate from './components/ManagerGate'
 import ProtectedRoute from './components/ProtectedRoute'
 import Home from './pages/Home'
+import WeekendPredictions from './pages/WeekendPredictions'
 import News from './pages/News'
 import NewsAdmin from './pages/NewsAdmin'
 import CompetitionsIndex from './pages/CompetitionsIndex'
@@ -68,6 +69,7 @@ export default function App() {
       <main className={isAdminArea ? 'site-main site-main--admin' : 'site-main site-main--public'} style={{ flex: 1 }}>
         <Routes>
           <Route path="/" element={<Home key={location.key} />} />
+          <Route path="/predictions" element={<WeekendPredictions />} />
           <Route path="/news" element={<News key={location.key} />} />
           <Route path="/competitions" element={<CompetitionsIndex key={location.key} />} />
           <Route path="/standings" element={<StandingsPage key={location.key} />} />

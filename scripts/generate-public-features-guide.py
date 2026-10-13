@@ -98,7 +98,7 @@ cover = Table([[p('ECFA WEBSITE', 'CoverSub')], [p('Public Features Guide', 'Cov
               ]))
 story += [Spacer(1, 35*mm), cover, Spacer(1, 18*mm)]
 story.append(Table([[p('WEBSITE', 'Smallx'), p('https://ecfa-website.vercel.app', 'CardTitle')],
-                    [p('GUIDE UPDATED', 'Smallx'), p('10 October 2026', 'CardTitle')]],
+                    [p('GUIDE UPDATED', 'Smallx'), p('13 October 2026', 'CardTitle')]],
                    colWidths=[35*mm, 125*mm], style=TableStyle([
                        ('BOX', (0,0), (-1,-1), 0.7, LINE), ('INNERGRID', (0,0), (-1,-1), 0.5, LINE),
                        ('BACKGROUND', (0,0), (0,-1), PALE), ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
@@ -239,6 +239,14 @@ story.append(Table([[p('Privacy note', 'CardTitle'), p('Public pages display lea
 story.append(PageBreak())
 
 # quick start
+story += section_title('13. Weekend Predictions', 'A fun weekend activity using the real scheduled ECFA fixtures.')
+story.append(card_grid([
+    ('Watch a fictional match', 'Choose a weekend and a confirmed fixture. Play a short animated computer vs computer match with team badges, a scoreboard, random goals, commentary and highlights. Pause, resume or choose Fast speed. Fictional results do not change real records.'),
+    ('Submit your scores', 'Below the simulation, enter home and away scores for every open game and submit them together without an account. Entries are final and lock at each game’s kick-off. This browser remembers your picks. Cup predictions are for 90 minutes.'),
+    ('See community picks', 'Each fixture shows the crowd’s home-win, draw and away-win percentages and number of picks. This is an informal anonymous poll. Real results appear when recorded.'),
+    ('Find the page', 'Use Predictions in the top navigation or Weekend Predictions on the Match Hub. Team names and match details link to their usual pages.'),
+]))
+story += [Spacer(1, 18)]
 story += section_title('Quick-start guide', 'Four common journeys for first-time visitors.')
 steps = [
     ('1', 'Find this weekend’s games', 'Open Match Hub, select the relevant date and tap a fixture for more detail.'),

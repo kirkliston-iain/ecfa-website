@@ -5,6 +5,7 @@ import { useSiteLogos } from '../contexts/SiteLogos'
 
 const TABS = [
   { to: '/', label: 'Match Hub', end: true },
+  { to: '/predictions', label: 'Predictions' },
   { to: '/news', label: 'News' },
   { to: '/standings', label: 'Competitions' },
   { to: '/teams', label: 'Teams' },
