@@ -1,9 +1,10 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { supabase } from '../supabaseClient'
 import { inWeekend, londonDay, weekendKey, predictionOpen, validScore, makeHighlights } from '../utils/weekendPredictions'
 import './WeekendPredictions.css'
 import { simulatorKits } from '../utils/simulatorKits'
+const MatchScene3D = lazy(() => import('../components/MatchScene3D'))
 
 function Badge({ team }) {
   return team?.logo_url ? <img className="wp-badge" src={team.logo_url} alt="" /> : <span className="wp-badge wp-badge-fallback" aria-hidden="true">⚽</span>
@@ -16,11 +17,12 @@ function readEntry() {
   return { id: crypto.randomUUID() }
 }
 function Simulator({ fixture }) {
-  const kits = simulatorKits(fixture.home_team, fixture.away_team)
+  const kits = useMemo(() => simulatorKits(fixture.home_team, fixture.away_team), [fixture.home_team.name, fixture.away_team.name])
   const [story, setStory] = useState([])
   const [minute, setMinute] = useState(0)
   const [running, setRunning] = useState(false)
   const [speed, setSpeed] = useState(1)
+  const [cameraMode, setCameraMode] = useState('broadcast')
   useEffect(() => {
     if (!running) return
     const timer = setInterval(() => setMinute(value => Math.min(90, value + 1)), 350 / speed)
@@ -39,12 +41,12 @@ function Simulator({ fixture }) {
   function play() { setStory(makeHighlights()); setMinute(0); setRunning(true) }
   return <section className="wp-simulator" aria-label="Fictional match simulator">
     <div className="wp-scoreboard"><span><Badge team={fixture.home_team} />{fixture.home_team.name}<small className="wp-kit-label"><i style={{ background: kits[0].colour, borderColor: kits[0].trim }} />{kits[0].name}</small></span><strong>{home} : {away}<small>{minute === 90 ? 'FT' : `${minute}′`}</small></strong><span><Badge team={fixture.away_team} />{fixture.away_team.name}<small className="wp-kit-label"><i style={{ background: kits[1].colour, borderColor: kits[1].trim }} />{kits[1].name}</small></span></div>
-    <div className={`wp-pitch ${running ? 'wp-playing' : ''}`} aria-hidden="true">
-      <div className="wp-pitch-lines"><div className="wp-centre" /><div className="wp-box wp-box-home" /><div className="wp-box wp-box-away" /></div>
-      {[0,1].flatMap(side => Array.from({ length: 11 }, (_, index) => <span key={`${side}-${index}`} className={`wp-player wp-player-${side}`} style={{ background: kits[side].colour, color: kits[side].text, borderColor: kits[side].trim, left: `${side ? 96 - (index ? 17 + (index % 4) * 9 : 0) : 4 + (index ? 17 + (index % 4) * 9 : 0)}%`, top: `${index === 0 ? 50 : 14 + (index % 5) * 18}%`, animationDelay: `${index * -.3}s` }}>{index + 1}</span>))}
-      <span className="wp-ball" style={{ left: `${latest?.goal && minute - latest.minute < 3 ? latest.side === 'home' ? 97 : 3 : 50 + Math.sin(minute * .9) * 28}%`, top: `${50 + Math.cos(minute * .7) * 26}%` }}>⚽</span>
+    <div className="wp-stadium">
+      <Suspense fallback={<div className="wp-scene3d wp-scene-loading" role="status">Preparing the 3D pitch…</div>}><MatchScene3D kits={kits} minute={minute} running={running} speed={speed} story={story} cameraMode={cameraMode} /></Suspense>
+      <span className="wp-camera-tag">3D • {cameraMode === 'goal' ? 'Behind goal' : 'Broadcast'}</span>
       {latest?.goal && minute - latest.minute < 3 && <span className="wp-goal">GOAL!</span>}
     </div>
+    <div className="wp-camera-controls" aria-label="Camera angle"><button type="button" aria-pressed={cameraMode === 'broadcast'} onClick={() => setCameraMode('broadcast')}>Broadcast</button><button type="button" aria-pressed={cameraMode === 'goal'} onClick={() => setCameraMode('goal')}>Behind goal</button></div>
     <p className="wp-commentary" role="status">{message}</p>
     <div className="wp-controls"><button type="button" onClick={play} disabled={running}>▶ {minute ? 'Play again' : 'Play match'}</button>{minute > 0 && minute < 90 && <button type="button" onClick={() => setRunning(value => !value)}>{running ? 'Pause' : 'Resume'}</button>}<label>Speed <select value={speed} onChange={event => setSpeed(Number(event.target.value))}><option value="1">Normal</option><option value="3">Fast</option></select></label></div>
     {seen.length > 0 && <details><summary>Match highlights ({seen.length})</summary><ol className="wp-highlights">{seen.map(event => <li key={event.minute}><b>{event.minute}′</b> {event.side === 'home' ? fixture.home_team.name : fixture.away_team.name} — {event.goal ? '⚽ Goal!' : ['Shot saved', 'Attack cleared', 'Shot wide'][event.kind]}</li>)}</ol></details>}
@@ -117,7 +119,7 @@ export default function WeekendPredictions() {
     <div className="wp-intro"><span className="wp-kicker">ECFA • JUST FOR FUN</span><h1>Weekend Predictions</h1><p>A little matchday magic. Watch a fictional match, then have your say on the real games.</p></div>
     <label className="wp-week">Weekend <select value={week} onChange={event => { setWeek(event.target.value); setSelected(''); setMessage('') }}>{weekends.map(value => <option key={value} value={value}>{new Date(`${value}T12:00:00Z`).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year:'numeric' })}</option>)}</select></label>
     {loading ? <p role="status">Loading fixtures…</p> : error ? <p role="alert">{error} <button onClick={loadFixtures}>Retry</button></p> : <>
-      <h2>Play the weekend</h2><p className="wp-muted">An arcade-style, computer vs computer simulation with random highlights. Fictional results only; real match records stay as they are. Cup predictions are for 90 minutes.</p>
+      <h2>Play the weekend</h2><p className="wp-muted">A 3D, computer vs computer match with passing, attacking runs and defending. Choose a broadcast or behind-goal camera. Fictional results only; real match records stay as they are. Cup predictions are for 90 minutes.</p>
       {active ? <><label className="wp-match-picker">Choose a match <select value={active.id} onChange={event => setSelected(event.target.value)}>{simulatable.map(f => <option key={f.id} value={f.id}>{f.home_team.name} v {f.away_team.name}</option>)}</select></label><Simulator key={`${week}-${active.id}`} fixture={active} /><Link to={`/fixtures/${active.id}`} className="wp-detail-link">View real match details →</Link></> : <p>No confirmed matches to simulate this weekend.</p>}
       <section className="wp-predictions"><h2>Your weekend picks</h2><p className="wp-muted">Enter scores for every open game and submit them together. No account needed. Entries are final and lock at each game's kick-off. This browser remembers your submitted scores. Community picks are an informal poll.</p>
       {pollError && <p role="alert">{pollError} <button type="button" onClick={loadPolls}>Retry</button></p>}

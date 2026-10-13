@@ -241,7 +241,7 @@ story.append(PageBreak())
 # quick start
 story += section_title('13. Weekend Predictions', 'A fun weekend activity using the real scheduled ECFA fixtures.')
 story.append(card_grid([
-    ('Watch a fictional match', 'Choose a weekend and a confirmed fixture. Play a short animated computer vs computer match with team badges, badge-inspired colours, confirmed clash kits, a scoreboard, random goals, commentary and highlights. Liberton wear purple. Pause, resume or choose Fast speed. Fictional results do not change real records.'),
+    ('Watch a fictional match', 'Choose a fixture for a 3D match with moving players, passing, runs and defending. Switch Broadcast or Behind goal cameras; pause, resume or select Fast. Badges, confirmed kits (Liberton purple), commentary and highlights accompany random fictional results. Real records stay unchanged.'),
     ('Submit your scores', 'Below the simulation, enter home and away scores for every open game and submit them together without an account. Entries are final and lock at each game’s kick-off. This browser remembers your picks. Cup predictions are for 90 minutes.'),
     ('See community picks', 'Each fixture shows the crowd’s home-win, draw and away-win percentages and number of picks. This is an informal anonymous poll. Real results appear when recorded.'),
     ('Find the page', 'Use Predictions in the top navigation or Weekend Predictions on the Match Hub. Team names and match details link to their usual pages.'),
