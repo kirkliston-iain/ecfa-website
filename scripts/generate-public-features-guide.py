@@ -245,8 +245,7 @@ story.append(card_grid([
     ('Submit your scores', 'Voting opens Monday 5am. Weekend games close Friday 10pm; midweek games close 12 hours before kick-off. Submit all open games without an account. Entries are final and remembered in this browser. Cup picks cover 90 minutes.'),
     ('See community picks', 'Live home/draw/away percentages are visible only after submitting. After each deadline, final percentages replace entry boxes and become public. Future weeks open on Monday. Real results appear when recorded. This is an informal anonymous poll.'),
     ('Find the page', 'Use Predictions in the top navigation or Weekly Predictions on the Match Hub. Team names and match details link to their usual pages.'),
-    ('Three of four form factors', 'Every Play match chooses three factors: the last six meetings, last six current-season games, relevant competition results, and the same period last year (within four weeks). Open Factors used to see the records and omitted factor. Missing history contributes neutrally.'),
-    ('Real player names, fictional highlights', 'Current squads supply named simulated scorers and assists. Current-season scoring records make prolific scorers more likely to score. Transferred players stay with their current squad. Assists are generated, not recorded assist statistics. Player names link to their profiles.'),
+    ('Real player names, fictional highlights', 'Real squad names appear in fictional match commentary, simulated goals and assists. Player names link to their profiles. The match is a fun simulation; its goals and assists are not official records.'),
 ]))
 story.append(PageBreak())
 story += section_title('Quick-start guide', 'Four common journeys for first-time visitors.')
