@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import * as THREE from 'three'
-import { SVGRenderer } from 'three/addons/renderers/SVGRenderer.js'
+import { SVGRenderer, SVGObject } from 'three/addons/renderers/SVGRenderer.js'
+import { supabase } from '../supabaseClient'
 import { matchMotion, MATCH_MINUTE_MS } from '../utils/matchMotion'
 
 export default function MatchScene3D({ kits, minute, running, speed, story, cameraMode }) {
@@ -37,6 +38,7 @@ export default function MatchScene3D({ kits, minute, running, speed, story, came
     scene.add(software ? new THREE.AmbientLight('#ffffff',.8) : new THREE.HemisphereLight('#ffffff','#44623a',2.5))
     const sun=new THREE.DirectionalLight('#fff3d4',software ? .8 : 2.2);sun.position.set(-40,75,30);scene.add(sun)
     const camera=new THREE.PerspectiveCamera(48,1,.1,500)
+    let disposed=false
     const materials=new Set(),geometries=new Set(),textures=new Set()
     const material=(colour)=>{const m=new THREE.MeshLambertMaterial({color:colour});materials.add(m);return m}
     const geometry=(g)=>{geometries.add(g);return g}
@@ -67,7 +69,39 @@ export default function MatchScene3D({ kits, minute, running, speed, story, came
     // Small stadium stands and touchline boards give the scene depth.
     const stand=material('#657781'),seats=material('#233849')
     for(const z of [-45,45]){box(scene,124,3,8,stand,0,1,z);box(scene,124,2,6,stand,0,3,z+Math.sign(z)*3);for(let x=-57;x<58;x+=4)box(scene,2.5,.7,1.6,seats,x,4.4,z+Math.sign(z)*2)}
-    for(let x=-45;x<=45;x+=15)box(scene,12,1.5,.3,x%30===0 ? white:material('#b59025'),x,.8,-37)
+    const boards=[]
+    for(const z of [-37,37])for(let x=-45;x<=45;x+=15){
+      box(scene,12,2.5,.3,white,x,1.3,z)
+      boards.push({x,z})
+    }
+    supabase.from('sponsors').select('id,name,logo_url').eq('is_published',true).order('sort_order').order('name').then(({data})=>{
+      if(disposed || !data?.length)return
+      const sponsors=data.filter(item=>item.logo_url)
+      if(!sponsors.length)return
+      container.dataset.sponsorCount=String(sponsors.length)
+      sponsors.forEach((sponsor,index)=>{
+        const slots=boards.filter((_,i)=>i%sponsors.length===index)
+        if(software){
+          for(const slot of slots){
+            const image=document.createElementNS('http://www.w3.org/2000/svg','image')
+            image.setAttribute('href',sponsor.logo_url);image.setAttribute('x','-35');image.setAttribute('y','-10');image.setAttribute('width','70');image.setAttribute('height','20');image.setAttribute('preserveAspectRatio','xMidYMid meet');image.setAttribute('aria-label',`${sponsor.name} sponsor board`)
+            const label=new SVGObject(image);label.position.set(slot.x,1.4,slot.z-Math.sign(slot.z)*.2);scene.add(label)
+          }
+          lastMinute=-1
+          return
+        }
+        const canvas=document.createElement('canvas');canvas.width=1024;canvas.height=256
+        const ctx=canvas.getContext('2d');ctx.fillStyle='#ffffff';ctx.fillRect(0,0,1024,256)
+        ctx.fillStyle='#14292a';ctx.font='bold 64px sans-serif';ctx.textAlign='center';ctx.fillText(sponsor.name,512,150,960)
+        const texture=new THREE.CanvasTexture(canvas);texture.colorSpace=THREE.SRGBColorSpace;textures.add(texture)
+        const mat=new THREE.MeshBasicMaterial({map:texture,side:THREE.DoubleSide});materials.add(mat)
+        for(const slot of slots){const face=new THREE.Mesh(geometry(new THREE.PlaneGeometry(11.8,2.4)),mat);face.position.set(slot.x,1.3,slot.z-Math.sign(slot.z)*.16);if(slot.z>0)face.rotation.y=Math.PI;scene.add(face)}
+        const image=new Image();image.crossOrigin='anonymous'
+        image.onload=()=>{if(disposed)return;ctx.fillStyle='#ffffff';ctx.fillRect(0,0,1024,256);const scale=Math.min(960/image.width,224/image.height);const w=image.width*scale,h=image.height*scale;ctx.drawImage(image,(1024-w)/2,(256-h)/2,w,h);texture.needsUpdate=true;lastMinute=-1}
+        image.src=sponsor.logo_url
+        lastMinute=-1
+      })
+    }).catch(()=>{/* Plain boards remain if sponsors cannot load. */})
     const sphere=geometry(new THREE.SphereGeometry(.55,12,8)),head=geometry(new THREE.SphereGeometry(.55,8,6))
     const shadowGeo=geometry(new THREE.CircleGeometry(1,12)),shadowMat=new THREE.MeshBasicMaterial({color:'#152819',transparent:true,opacity:.28,depthWrite:false});materials.add(shadowMat)
     const players=[]
@@ -134,7 +168,7 @@ export default function MatchScene3D({ kits, minute, running, speed, story, came
       renderer.render(scene,camera)
       lastMinute=state.minute;lastMode=state.cameraMode;lastRunning=state.running
     })
-    return ()=>{observer.disconnect();renderer.setAnimationLoop(null);renderer.domElement.removeEventListener('webglcontextlost',lost);geometries.forEach(g=>g.dispose());materials.forEach(m=>m.dispose());textures.forEach(t=>t.dispose());renderer.dispose?.();renderer.forceContextLoss?.();renderer.domElement.remove()}
+    return ()=>{disposed=true;observer.disconnect();renderer.setAnimationLoop(null);renderer.domElement.removeEventListener('webglcontextlost',lost);geometries.forEach(g=>g.dispose());materials.forEach(m=>m.dispose());textures.forEach(t=>t.dispose());renderer.dispose?.();renderer.forceContextLoss?.();renderer.domElement.remove()}
   },[])
   return <div className="wp-scene3d" ref={host}>{failed && <p className="wp-3d-error" role="status">This browser could not display the 3D pitch. Try enabling hardware acceleration or another browser. You can still run the match and enter your predictions.</p>}</div>
 }
