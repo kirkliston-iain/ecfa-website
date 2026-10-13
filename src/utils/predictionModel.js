@@ -1,3 +1,4 @@
+import { disciplineEvidence, addSimulatedCards } from './simulatedDiscipline.js'
 import { historicTeamName, HISTORIC_TEAM_ALIASES } from './historicTeams.js'
 import { londonDay } from './weekendPredictions.js'
 
@@ -31,7 +32,11 @@ export async function loadPredictionEvidence(client,fixture,now=new Date()) {
     fetchPages(()=>client.from('fixtures').select('id,fixture_date,home_team_id,away_team_id,home_score,away_score,stage:stage_id(competition:competition_id(name,slug,season))').eq('status','played').eq('hidden_from_public',false).lt('fixture_date',asOf.toISOString()).or(teamFilter).order('fixture_date',{ascending:false}).order('id')),
     fetchPages(()=>client.from('historic_fixtures').select('id,source_fixture_id,season,fixture_date,competition_name,home_team_id,away_team_id,home_team_name,away_team_name,home_goals,away_goals').not('fixture_date','is',null).lte('fixture_date',londonDay(asOf)).or(historyFilter).order('fixture_date',{ascending:false}).order('id')),
   ])
-  return buildEvidence(fixture,{players,scorers,live,archive},asOf)
+  const [cards,refereeGames]=await Promise.all([
+    fetchPages(()=>client.from('discipline_records').select('player_id,card_type,card_count,fixture:fixture_id!inner(fixture_date,status,hidden_from_public,referee_name)').eq('fixture.status','played').eq('fixture.hidden_from_public',false).lt('fixture.fixture_date',asOf.toISOString()).order('id')),
+    fixture.referee_name ? fetchPages(()=>client.from('fixtures').select('id,fixture_date,status,hidden_from_public').eq('referee_name',fixture.referee_name).eq('status','played').eq('hidden_from_public',false).lt('fixture_date',asOf.toISOString()).order('id')) : [],
+  ])
+  return buildEvidence(fixture,{players,scorers,live,archive,cards,refereeGames},asOf)
 }
 export function buildEvidence(fixture,data,asOf=new Date()) {
   const teams=[fixture.home_team,fixture.away_team]
@@ -64,7 +69,7 @@ export function buildEvidence(fixture,data,asOf=new Date()) {
     {key:'competition',label:'Competition performance',home:teamStats(competitions[0].rows,teams[0]),away:teamStats(competitions[1].rows,teams[1]),note:`${fixture.stage?.competition?.name || 'This competition'}; ${teams[0].name}: ${competitions[0].note}; ${teams[1].name}: ${competitions[1].note}`},
     {key:'last-year',label:'Same period last year',home:teamStats(matches.filter(f=>includesTeam(f,teams[0])&&Math.abs(f.date-yearAgo.getTime())<=window),teams[0]),away:teamStats(matches.filter(f=>includesTeam(f,teams[1])&&Math.abs(f.date-yearAgo.getTime())<=window),teams[1]),note:'Games within four weeks either side of the same match date last year'},
   ]
-  return {factors,squads,season,asOf:asOf.toISOString()}
+  return {factors,squads,season,asOf:asOf.toISOString(),discipline:disciplineEvidence(fixture,data.cards || [],data.refereeGames || [],asOf)}
 }
 export function teamStats(matches,team) {
   let won=0,drawn=0,lost=0,gf=0,ga=0
@@ -96,5 +101,6 @@ export function simulatePrediction(evidence,random=Math.random) {
     events.push({minute:takeMinute(),side:side ? 'away':'home',goal:true,kind:0,scorer,assist})
   }
   for(let i=0;i<7;i++){const side=random()<means[0]/(means[0]+means[1]) ? 0:1;events.push({minute:takeMinute(),side:side ? 'away':'home',goal:false,kind:Math.floor(random()*3),actor:pickWeighted(evidence.squads[side],random)})}
-  return {events:events.sort((a,b)=>a.minute-b.minute),selected,omitted,scores,means}
+  const timeline=addSimulatedCards(events,evidence.squads,evidence.discipline,random,takeMinute)
+  return {events:timeline.sort((a,b)=>a.minute-b.minute),selected,omitted,scores:[timeline.filter(e=>e.goal&&e.side==='home').length,timeline.filter(e=>e.goal&&e.side==='away').length],means}
 }

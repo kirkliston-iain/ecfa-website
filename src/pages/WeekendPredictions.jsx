@@ -56,6 +56,7 @@ function Simulator({ fixture }) {
     }
     for (const event of story) {
       if (event.goal) { add(event.scorer, event.side, 3, 'goals'); add(event.assist, event.side, 2, 'assists') }
+      else if(event.card) add(event.player,event.side,event.card==='red' ? -3 : -1)
       else add(event.actor, event.side, 0.25)
     }
     return [...performances.values()].sort((a, b) => b.points - a.points || b.goals - a.goals || a.player.name.localeCompare(b.player.name))[0] || null
@@ -64,7 +65,7 @@ function Simulator({ fixture }) {
   const name = latest?.side === 'home' ? fixture.home_team.name : fixture.away_team.name
   const person = player => player ? <Link to={`/players/${player.id}`}>{player.name}</Link> : null
   const message = minute === 90 ? 'Full time! Your fictional match prediction is in.' : latest
-    ? latest.goal ? <>GOAL! {latest.scorer ? person(latest.scorer) : name}{latest.scorer ? ` for ${name}` : ''}.{latest.assist ? <> Assist: {person(latest.assist)}.</> : ' Unassisted.'}</>
+    ? latest.card ? <>{latest.card === 'red' ? '🟥' : '🟨'} {person(latest.player)} — {latest.secondYellow ? 'second yellow, sent off' : `${latest.card} card`} from {fixture.referee_name}.</> : latest.goal ? <>GOAL! {latest.scorer ? person(latest.scorer) : name}{latest.scorer ? ` for ${name}` : ''}.{latest.assist ? <> Assist: {person(latest.assist)}.</> : ' Unassisted.'}</>
     : <>{latest.actor ? person(latest.actor) : name}{latest.actor ? ` (${name})` : ''}: {['a shot saved by the keeper.', 'a dangerous attack cleared away.', 'a strike just wide of the post.'][latest.kind]}</>
     : minute ? 'Kick-off! Both sides settle into the game.' : 'The teams are ready. Press Play match to generate a prediction and kick off.'
   function play() {
@@ -81,11 +82,13 @@ function Simulator({ fixture }) {
       </div>)}
       <strong style={{gridColumn:2,gridRow:1}}>{home} : {away}<small>{minute === 90 ? 'FT' : `${minute}′`}</small></strong>
     </div>
+    {fixture.referee_name && <p className="wp-referee">Referee: <Link to={`/referees?ref=${encodeURIComponent(fixture.referee_name)}`}>{fixture.referee_name}</Link></p>}
+    {seen.some(event=>event.card) && <ul className="wp-sim-cards" aria-label="Simulated cards">{seen.filter(event=>event.card).map(event=><li key={event.minute}>{event.card==='red' ? '🟥' : '🟨'} {person(event.player)} <b>{event.minute}′</b> · {event.side==='home' ? fixture.home_team.name : fixture.away_team.name}{event.secondYellow && ' · Second yellow'}</li>)}</ul>}
     {minute === 90 && motm && <div className="wp-motm" role="status"><b>⭐ Man of the Match</b><span>{person(motm.player)} · {motm.side === 'home' ? fixture.home_team.name : fixture.away_team.name}</span><small>{motm.goals > 0 && `${motm.goals} ${motm.goals === 1 ? 'goal' : 'goals'}`}{motm.goals > 0 && motm.assists > 0 && ' · '}{motm.assists > 0 && `${motm.assists} ${motm.assists === 1 ? 'assist' : 'assists'}`}{!motm.goals && !motm.assists && 'Standout performance'}</small></div>}
     {evidenceLoading && <p role="status">Preparing the match…</p>}
     {evidenceError && <p role="alert">Could not prepare the match. <button type="button" onClick={() => setEvidenceRetry(value=>value+1)}>Retry</button></p>}
     <div className="wp-stadium">
-      <Suspense fallback={<div className="wp-scene3d wp-scene-loading" role="status">Preparing the 3D pitch…</div>}><MatchScene3D kits={kits} minute={minute} running={running} speed={speed} story={story} cameraMode={cameraMode} /></Suspense>
+      <Suspense fallback={<div className="wp-scene3d wp-scene-loading" role="status">Preparing the 3D pitch…</div>}><MatchScene3D referee={fixture.referee_name} kits={kits} minute={minute} running={running} speed={speed} story={story} cameraMode={cameraMode} /></Suspense>
       <span className="wp-camera-tag">3D • {cameraMode === 'goal' ? 'Behind goal' : 'Broadcast'}</span>
       {latest?.goal && minute - latest.minute < 3 && <span className="wp-goal">GOAL!</span>}
     </div>
@@ -93,7 +96,7 @@ function Simulator({ fixture }) {
     <p className="wp-commentary" role="status">{message}</p>
     <div className="wp-controls"><button type="button" onClick={play} disabled={running || evidenceLoading || !!evidenceError}>▶ {minute ? 'Play again' : 'Play match'}</button>{(running || minute > 0) && minute < 90 && <><button type="button" onClick={() => setRunning(value => !value)}>{running ? 'Pause' : 'Resume'}</button><button type="button" onClick={() => { setRunning(false); setMinute(90) }}>End game</button></>}<label>Speed <select value={speed} onChange={event => setSpeed(Number(event.target.value))}><option value="1">Normal</option><option value="3">Fast</option></select></label></div>
 
-    {seen.length > 0 && <details><summary>Match highlights ({seen.length})</summary><ol className="wp-highlights">{seen.map(event => <li key={event.minute}><b>{event.minute}′</b> {event.side === 'home' ? fixture.home_team.name : fixture.away_team.name} — {event.goal ? <>⚽ {event.scorer ? person(event.scorer) : 'Goal'}{event.assist ? <> (assist: {person(event.assist)})</> : ' (unassisted)'}</> : <>{event.actor ? <>{person(event.actor)}: </> : ''}{['Shot saved', 'Attack cleared', 'Shot wide'][event.kind]}</>}</li>)}</ol></details>}
+    {seen.length > 0 && <details><summary>Match highlights ({seen.length})</summary><ol className="wp-highlights">{seen.map(event => <li key={event.minute}><b>{event.minute}′</b> {event.side === 'home' ? fixture.home_team.name : fixture.away_team.name} — {event.card ? <>{event.card==='red' ? '🟥' : '🟨'} {person(event.player)} — {event.secondYellow ? 'Second yellow, sent off' : `${event.card} card`}</> : event.goal ? <>⚽ {event.scorer ? person(event.scorer) : 'Goal'}{event.assist ? <> (assist: {person(event.assist)})</> : ' (unassisted)'}</> : <>{event.actor ? <>{person(event.actor)}: </> : ''}{['Shot saved', 'Attack cleared', 'Shot wide'][event.kind]}</>}</li>)}</ol></details>}
 
   </section>
 }
@@ -121,7 +124,7 @@ export default function WeekendPredictions() {
   useEffect(() => { const timer = setInterval(() => setNow(Date.now()), 1000); return () => clearInterval(timer) }, [])
   async function loadFixtures() {
     setLoading(true); setError('')
-    const { data, error: failure } = await supabase.from('fixtures').select('id,fixture_date,status,home_score,away_score,home_team:home_team_id(id,name,logo_url),away_team:away_team_id(id,name,logo_url),stage:stage_id(competition:competition_id(id,name,slug,season))').eq('hidden_from_public', false).gte('fixture_date', `${activePredictionWeek()}T00:00:00Z`).order('fixture_date').order('id').range(0, 9999)
+    const { data, error: failure } = await supabase.from('fixtures').select('id,fixture_date,referee_name,status,home_score,away_score,home_team:home_team_id(id,name,logo_url),away_team:away_team_id(id,name,logo_url),stage:stage_id(competition:competition_id(id,name,slug,season))').eq('hidden_from_public', false).gte('fixture_date', `${activePredictionWeek()}T00:00:00Z`).order('fixture_date').order('id').range(0, 9999)
     if (failure) setError('Could not load the weekend fixtures. Please try again.')
     else setFixtures(data || [])
     setLoading(false)

@@ -4,11 +4,11 @@ import { SVGRenderer, SVGObject } from 'three/addons/renderers/SVGRenderer.js'
 import { supabase } from '../supabaseClient'
 import { matchMotion, MATCH_MINUTE_MS } from '../utils/matchMotion'
 
-export default function MatchScene3D({ kits, minute, running, speed, story, cameraMode }) {
+export default function MatchScene3D({ referee, kits, minute, running, speed, story, cameraMode }) {
   const host = useRef(null)
-  const playback = useRef({ kits, minute, running, speed, story, cameraMode, updated:performance.now() })
+  const playback = useRef({ referee, kits, minute, running, speed, story, cameraMode, updated:performance.now() })
   const [failed,setFailed]=useState(false)
-  useEffect(()=>{playback.current={kits,minute,running,speed,story,cameraMode,updated:performance.now()}},[kits,minute,running,speed,story,cameraMode])
+  useEffect(()=>{playback.current={referee,kits,minute,running,speed,story,cameraMode,updated:performance.now()}},[referee,kits,minute,running,speed,story,cameraMode])
   useEffect(()=>{
     const container=host.current
     let renderer,software=false,fallbackFrame=0,fallbackLast=0
@@ -128,6 +128,11 @@ export default function MatchScene3D({ kits, minute, running, speed, story, came
         players.push({group,shadow,legs,arms,body,index,team})
       }
     }
+    const refereeFigure=new THREE.Group();scene.add(refereeFigure)
+    box(refereeFigure,1.1,1.3,.65,dark,0,2.2,0);box(refereeFigure,1,.55,.6,dark,0,1.3,0)
+    const refereeHead=new THREE.Mesh(head,skin[0]);refereeHead.position.y=3.2;refereeFigure.add(refereeHead)
+    for(const sign of [-1,1])box(refereeFigure,.3,1.1,.3,dark,sign*.3,.6,0)
+    const refereeCard=box(refereeFigure,.6,.8,.1,material('#ffdd22'),.9,3.7,0)
     const ball=new THREE.Mesh(sphere,white);scene.add(ball)
     const ballPatch=new THREE.Mesh(geometry(new THREE.IcosahedronGeometry(.56,0)),new THREE.MeshBasicMaterial({color:'#15212a',wireframe:true}));materials.add(ballPatch.material);ball.add(ballPatch)
     const ballShadow=new THREE.Mesh(shadowGeo,shadowMat);ballShadow.renderOrder=-70;ballShadow.rotation.x=-Math.PI/2;ballShadow.scale.setScalar(.6);ballShadow.position.y=.13;scene.add(ballShadow)
@@ -144,7 +149,9 @@ export default function MatchScene3D({ kits, minute, running, speed, story, came
       const motion=matchMotion(Math.min(90,clock),state.story)
       const snap=state.minute===0 || !state.running && lastRunning
       for(let i=0;i<players.length;i++){
-        const p=players[i],target=motion.players[i],before=p.group.position.clone()
+        const p=players[i],dismissals=state.story.filter(e=>e.card==='red' && e.minute<=clock && e.side===(p.team ? 'away':'home')).length
+        p.group.visible=p.index<11-dismissals;p.shadow.visible=p.group.visible
+        const target=motion.players[i],before=p.group.position.clone()
         p.group.position.lerp(new THREE.Vector3(target.x,0,target.z),snap ? 1 : 1-Math.exp(-dt*7))
         const dx=p.group.position.x-before.x,dz=p.group.position.z-before.z
         const moving=state.running && Math.hypot(dx,dz)>.005
@@ -154,6 +161,11 @@ export default function MatchScene3D({ kits, minute, running, speed, story, came
         p.body.position.y=2.3+(moving ? Math.abs(Math.sin(clock*6+p.index))*.07 : 0)
         p.shadow.position.set(p.group.position.x,.13,p.group.position.z)
       }
+      refereeFigure.visible=!!state.referee
+      refereeFigure.position.set(THREE.MathUtils.clamp(motion.ball.x*.65,-40,40),0,THREE.MathUtils.clamp(motion.ball.z+7,-27,27))
+      const recentCard=[...state.story].reverse().find(e=>e.card && e.minute<=clock)
+      refereeCard.visible=!!recentCard && clock-recentCard.minute<2
+      if(recentCard)refereeCard.material.color.set(recentCard.card==='red' ? '#f02323' : '#ffdd22')
       ball.position.set(motion.ball.x,motion.ball.y,motion.ball.z);ball.rotation.z=clock*2;ball.rotation.x=clock*1.6;ballShadow.position.set(motion.ball.x,.13,motion.ball.z)
       if(state.cameraMode==='goal'){
         camera.position.set(72,27,12);camera.lookAt(18,1,0)
