@@ -85,7 +85,7 @@ export default function MatchScene3D({ kits, minute, running, speed, story, came
           for(const slot of slots){
             const image=document.createElementNS('http://www.w3.org/2000/svg','image')
             image.setAttribute('href',sponsor.logo_url);image.setAttribute('x','-42');image.setAttribute('y','-17');image.setAttribute('width','84');image.setAttribute('height','34');image.setAttribute('preserveAspectRatio','xMidYMid meet');image.setAttribute('aria-label',`${sponsor.name} sponsor board`)
-            const label=new SVGObject(image);label.position.set(slot.x,2.1,slot.z-Math.sign(slot.z)*.2);scene.add(label)
+            const label=new SVGObject(image);label.renderOrder=100;label.position.set(slot.x,2.1,slot.z-Math.sign(slot.z)*.2);scene.add(label)
           }
           lastMinute=-1
           return
