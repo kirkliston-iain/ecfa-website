@@ -71,7 +71,7 @@ export default function MatchScene3D({ kits, minute, running, speed, story, came
     for(const z of [-45,45]){box(scene,124,3,8,stand,0,1,z);box(scene,124,2,6,stand,0,3,z+Math.sign(z)*3);for(let x=-57;x<58;x+=4)box(scene,2.5,.7,1.6,seats,x,4.4,z+Math.sign(z)*2)}
     const boards=[]
     for(const z of [-37,37])for(let x=-45;x<=45;x+=15){
-      box(scene,12,2.5,.3,white,x,1.3,z)
+      box(scene,13.5,4,.3,white,x,2.05,z)
       boards.push({x,z})
     }
     supabase.from('sponsors').select('id,name,logo_url').eq('is_published',true).order('sort_order').order('name').then(({data})=>{
@@ -84,20 +84,20 @@ export default function MatchScene3D({ kits, minute, running, speed, story, came
         if(software){
           for(const slot of slots){
             const image=document.createElementNS('http://www.w3.org/2000/svg','image')
-            image.setAttribute('href',sponsor.logo_url);image.setAttribute('x','-35');image.setAttribute('y','-10');image.setAttribute('width','70');image.setAttribute('height','20');image.setAttribute('preserveAspectRatio','xMidYMid meet');image.setAttribute('aria-label',`${sponsor.name} sponsor board`)
-            const label=new SVGObject(image);label.position.set(slot.x,1.4,slot.z-Math.sign(slot.z)*.2);scene.add(label)
+            image.setAttribute('href',sponsor.logo_url);image.setAttribute('x','-42');image.setAttribute('y','-17');image.setAttribute('width','84');image.setAttribute('height','34');image.setAttribute('preserveAspectRatio','xMidYMid meet');image.setAttribute('aria-label',`${sponsor.name} sponsor board`)
+            const label=new SVGObject(image);label.position.set(slot.x,2.1,slot.z-Math.sign(slot.z)*.2);scene.add(label)
           }
           lastMinute=-1
           return
         }
-        const canvas=document.createElement('canvas');canvas.width=1024;canvas.height=256
-        const ctx=canvas.getContext('2d');ctx.fillStyle='#ffffff';ctx.fillRect(0,0,1024,256)
-        ctx.fillStyle='#14292a';ctx.font='bold 64px sans-serif';ctx.textAlign='center';ctx.fillText(sponsor.name,512,150,960)
+        const canvas=document.createElement('canvas');canvas.width=1024;canvas.height=384
+        const ctx=canvas.getContext('2d');ctx.fillStyle='#ffffff';ctx.fillRect(0,0,1024,384)
+        ctx.fillStyle='#14292a';ctx.font='bold 64px sans-serif';ctx.textAlign='center';ctx.fillText(sponsor.name,512,210,990)
         const texture=new THREE.CanvasTexture(canvas);texture.colorSpace=THREE.SRGBColorSpace;textures.add(texture)
         const mat=new THREE.MeshBasicMaterial({map:texture,side:THREE.DoubleSide});materials.add(mat)
-        for(const slot of slots){const face=new THREE.Mesh(geometry(new THREE.PlaneGeometry(11.8,2.4)),mat);face.position.set(slot.x,1.3,slot.z-Math.sign(slot.z)*.16);if(slot.z>0)face.rotation.y=Math.PI;scene.add(face)}
+        for(const slot of slots){const face=new THREE.Mesh(geometry(new THREE.PlaneGeometry(13.3,3.9)),mat);face.position.set(slot.x,2.05,slot.z-Math.sign(slot.z)*.16);if(slot.z>0)face.rotation.y=Math.PI;scene.add(face)}
         const image=new Image();image.crossOrigin='anonymous'
-        image.onload=()=>{if(disposed)return;ctx.fillStyle='#ffffff';ctx.fillRect(0,0,1024,256);const scale=Math.min(960/image.width,224/image.height);const w=image.width*scale,h=image.height*scale;ctx.drawImage(image,(1024-w)/2,(256-h)/2,w,h);texture.needsUpdate=true;lastMinute=-1}
+        image.onload=()=>{if(disposed)return;ctx.fillStyle='#ffffff';ctx.fillRect(0,0,1024,384);const scale=Math.min(990/image.width,350/image.height);const w=image.width*scale,h=image.height*scale;ctx.drawImage(image,(1024-w)/2,(384-h)/2,w,h);texture.needsUpdate=true;lastMinute=-1}
         image.src=sponsor.logo_url
         lastMinute=-1
       })
