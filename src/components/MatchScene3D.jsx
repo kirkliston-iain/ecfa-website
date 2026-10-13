@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import * as THREE from 'three'
+import { SVGRenderer } from 'three/addons/renderers/SVGRenderer.js'
 import { matchMotion } from '../utils/matchMotion'
 
 export default function MatchScene3D({ kits, minute, running, speed, story, cameraMode }) {
@@ -9,18 +10,32 @@ export default function MatchScene3D({ kits, minute, running, speed, story, came
   useEffect(()=>{playback.current={kits,minute,running,speed,story,cameraMode,updated:performance.now()}},[kits,minute,running,speed,story,cameraMode])
   useEffect(()=>{
     const container=host.current
-    let renderer
-    try { renderer=new THREE.WebGLRenderer({antialias:true,alpha:false,powerPreference:'low-power'}) }
-    catch { setFailed(true);return }
+    let renderer,software=false,fallbackFrame=0,fallbackLast=0
+    try {
+      const canvas=document.createElement('canvas')
+      const context=canvas.getContext('webgl2',{antialias:true,alpha:false,powerPreference:'low-power'})
+      if(!context)throw new Error('Graphics acceleration unavailable')
+      renderer=new THREE.WebGLRenderer({canvas,context,antialias:true,alpha:false,powerPreference:'low-power'})
+    } catch {
+      software=true;renderer=new SVGRenderer();renderer.setQuality('high')
+      // Project the same 3D geometry with the CPU when WebGL is unavailable.
+      renderer.setAnimationLoop=(callback)=>{
+        cancelAnimationFrame(fallbackFrame)
+        if(!callback)return
+        const frame=(time)=>{fallbackFrame=requestAnimationFrame(frame);if(time-fallbackLast>=40){fallbackLast=time;callback()}}
+        fallbackFrame=requestAnimationFrame(frame)
+      }
+    }
     renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1,1.5))
     renderer.setClearColor('#8bbecb')
     renderer.outputColorSpace=THREE.SRGBColorSpace
     container.appendChild(renderer.domElement)
     renderer.domElement.setAttribute('aria-label','3D football pitch with moving players')
+    renderer.domElement.setAttribute('data-renderer',software ? 'software-3d' : 'webgl-3d')
     const scene=new THREE.Scene()
     scene.fog=new THREE.Fog('#8bbecb',160,330)
-    scene.add(new THREE.HemisphereLight('#ffffff','#44623a',2.5))
-    const sun=new THREE.DirectionalLight('#fff3d4',2.2);sun.position.set(-40,75,30);scene.add(sun)
+    scene.add(software ? new THREE.AmbientLight('#ffffff',.8) : new THREE.HemisphereLight('#ffffff','#44623a',2.5))
+    const sun=new THREE.DirectionalLight('#fff3d4',software ? .8 : 2.2);sun.position.set(-40,75,30);scene.add(sun)
     const camera=new THREE.PerspectiveCamera(48,1,.1,500)
     const materials=new Set(),geometries=new Set(),textures=new Set()
     const material=(colour)=>{const m=new THREE.MeshLambertMaterial({color:colour});materials.add(m);return m}
@@ -69,10 +84,12 @@ export default function MatchScene3D({ kits, minute, running, speed, story, came
           const arm=new THREE.Group();arm.position.set(sign*.8,2.7,0);group.add(arm);box(arm,.3,.8,.3,jersey,0,-.3,0);arms.push(arm)
         }
         // Shirt number on both front and back; same material colour as the kit label.
+        if(!software){
         const numberCanvas=document.createElement('canvas');numberCanvas.width=64;numberCanvas.height=64;const ctx=numberCanvas.getContext('2d');ctx.fillStyle=playback.current.kits[team].text;ctx.font='bold 50px sans-serif';ctx.textAlign='center';ctx.fillText(String(index+1),32,53)
         const numberTex=new THREE.CanvasTexture(numberCanvas);textures.add(numberTex)
         const numberMat=new THREE.MeshBasicMaterial({map:numberTex,transparent:true,side:THREE.DoubleSide});materials.add(numberMat)
         for(const sign of [-1,1]){const number=new THREE.Mesh(geometry(new THREE.PlaneGeometry(.8,.85)),numberMat);number.position.set(0,2.3,sign*.335);group.add(number)}
+        }
         const shadow=new THREE.Mesh(shadowGeo,shadowMat);shadow.rotation.x=-Math.PI/2;shadow.position.y=.13;scene.add(shadow)
         players.push({group,shadow,legs,arms,body,index,team})
       }
@@ -115,7 +132,7 @@ export default function MatchScene3D({ kits, minute, running, speed, story, came
       renderer.render(scene,camera)
       lastMinute=state.minute;lastMode=state.cameraMode;lastRunning=state.running
     })
-    return ()=>{observer.disconnect();renderer.setAnimationLoop(null);renderer.domElement.removeEventListener('webglcontextlost',lost);geometries.forEach(g=>g.dispose());materials.forEach(m=>m.dispose());textures.forEach(t=>t.dispose());renderer.dispose();renderer.forceContextLoss();renderer.domElement.remove()}
+    return ()=>{observer.disconnect();renderer.setAnimationLoop(null);renderer.domElement.removeEventListener('webglcontextlost',lost);geometries.forEach(g=>g.dispose());materials.forEach(m=>m.dispose());textures.forEach(t=>t.dispose());renderer.dispose?.();renderer.forceContextLoss?.();renderer.domElement.remove()}
   },[])
   return <div className="wp-scene3d" ref={host}>{failed && <p className="wp-3d-error" role="status">This browser could not display the 3D pitch. Try enabling hardware acceleration or another browser. You can still run the match and enter your predictions.</p>}</div>
 }
