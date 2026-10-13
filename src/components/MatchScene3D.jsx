@@ -122,12 +122,14 @@ export default function MatchScene3D({ kits, minute, running, speed, story, came
       }
       ball.position.set(motion.ball.x,motion.ball.y,motion.ball.z);ball.rotation.z=clock*2;ball.rotation.x=clock*1.6;ballShadow.position.set(motion.ball.x,.13,motion.ball.z)
       if(state.cameraMode==='goal'){
-        camera.position.set(78,41,49);camera.lookAt(4,0,0)
+        camera.position.set(72,27,12);camera.lookAt(18,1,0)
       }else{
-        // The broadcast camera gently tracks play; phones keep the whole pitch visible.
+        // A close touchline view follows the action rather than fitting the stadium.
         const portrait=camera.aspect<1.3
-        camera.position.set(portrait ? 54 : 25,portrait ? 96 : 64,portrait ? 118 : 84)
-        camera.lookAt(portrait ? 0 : motion.ball.x*.13,0,0)
+        const focusX=THREE.MathUtils.clamp(motion.ball.x*.8,-36,36)
+        const focusZ=motion.ball.z*.35
+        camera.position.set(focusX+7,portrait ? 34 : 38,focusZ+(portrait ? 44 : 50))
+        camera.lookAt(focusX,1,focusZ)
       }
       renderer.render(scene,camera)
       lastMinute=state.minute;lastMode=state.cameraMode;lastRunning=state.running
