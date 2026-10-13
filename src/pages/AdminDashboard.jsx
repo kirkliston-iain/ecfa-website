@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { supabase } from '../supabaseClient'
+import { fixtureMatchesFilters, fixtureStatusForSave } from '../utils/adminFixtureEditing'
 
 export default function AdminDashboard() {
   const [competitions, setCompetitions] = useState([])
@@ -11,6 +12,7 @@ export default function AdminDashboard() {
   const [dateFilter, setDateFilter] = useState('')
   const [statusFilter, setStatusFilter] = useState('scheduled')
   const [fixtures, setFixtures] = useState([])
+  const editFilterKey = JSON.stringify([competitionId, stageId, teamFilter, dateFilter, statusFilter])
   const [weekOffRequests, setWeekOffRequests] = useState([])
   const [rescheduleOpportunities, setRescheduleOpportunities] = useState([])
   const [rescheduleCheckError, setRescheduleCheckError] = useState('')
@@ -276,7 +278,7 @@ export default function AdminDashboard() {
         if (f.id !== id) return f
         const d = part === 'date' ? value : dateOnly(f.fixture_date)
         const t = part === 'time' ? value : timeOnly(f.fixture_date) || '00:00'
-        return { ...f, fixture_date: `${d}T${t}:00` }
+        return { ...f, fixture_date: `${d}T${t}:00`, _editFilterKey: editFilterKey }
       })
     )
   }
@@ -285,7 +287,8 @@ export default function AdminDashboard() {
     setFixtures((prev) =>
       prev.map((f) => {
         if (f.id !== id) return f
-        const updated = { ...f, [field]: value }
+        const updated = { ...f, [field]: value, _editFilterKey: editFilterKey }
+        if (field === 'status') updated._statusEdited = true
         if (field === 'status' && value === 'postponed') {
           updated.hidden_from_public = true
         } else if (field === 'status' && f.status === 'postponed') {
@@ -309,9 +312,7 @@ export default function AdminDashboard() {
       setFixtureSaveStatus((current) => ({ ...current, [fixture.id]: 'A penalty shootout must have a winner.' }))
       return
     }
-    const hasResult = fixture.home_score !== '' && fixture.home_score != null && fixture.away_score !== '' && fixture.away_score != null
-    const fixtureHasStarted = fixture.fixture_date && new Date(fixture.fixture_date).getTime() <= Date.now()
-    const savedStatus = fixture.status === 'scheduled' && hasResult && fixtureHasStarted ? 'played' : fixture.status
+    const savedStatus = fixtureStatusForSave(fixture)
     setSaving(fixture.id)
     setFixtureSaveStatus((current) => ({ ...current, [fixture.id]: '' }))
     const { data, error } = await supabase
@@ -355,7 +356,7 @@ export default function AdminDashboard() {
       return
     }
 
-    setFixtures((current) => current.map((item) => item.id === fixture.id ? { ...item, updated_at: data.updated_at } : item))
+    setFixtures((current) => current.map((item) => item.id === fixture.id ? { ...item, status: savedStatus, updated_at: data.updated_at } : item))
     setFixtureSaveStatus((current) => ({
       ...current,
       [fixture.id]: savedStatus !== fixture.status ? 'Saved as Played.' : 'Saved.',
@@ -559,10 +560,7 @@ export default function AdminDashboard() {
     window.location.href = '/admin'
   }
 
-  const visibleFixtures = fixtures
-    .filter((fixture) => !teamFilter || fixture.home_team?.id === teamFilter || fixture.away_team?.id === teamFilter)
-    .filter((fixture) => !dateFilter || (fixture.fixture_date ? fixture.fixture_date.slice(0, 10) : 'tbc') === dateFilter)
-    .filter((fixture) => !statusFilter || fixture.status === statusFilter)
+  const visibleFixtures = fixtures.filter((fixture) => fixtureMatchesFilters(fixture, {team:teamFilter,date:dateFilter,status:statusFilter}, editFilterKey))
   const currentSeason = competitions[0]?.season || ''
   const currentSeasonWeekOffRequests = weekOffRequests.filter((request) => request.season === currentSeason)
 
