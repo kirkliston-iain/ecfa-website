@@ -172,10 +172,10 @@ export default function WeekendPredictions() {
     setSaving(false)
   }
   return <div className="container wp-page">
-    <div className="wp-intro"><span className="wp-kicker">ECFA • JUST FOR FUN</span><h1>Weekly Predictions</h1><p>A little matchday magic. Watch a fictional match, then have your say on the week’s real games.</p></div>
+    <div className="wp-intro"><span className="wp-kicker">ECFA • JUST FOR FUN</span><h1>Weekly Predictions</h1><p>Watch the games, then make your weekly picks.</p></div>
     <label className="wp-week">Week beginning <select value={week} onChange={event => { setWeek(event.target.value); setSelected(''); setMessage('') }}>{weekends.map(value => <option key={value} value={value}>{new Date(`${value}T12:00:00Z`).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year:'numeric' })}</option>)}</select></label>
     {loading ? <p role="status">Loading fixtures…</p> : error ? <p role="alert">{error} <button onClick={loadFixtures}>Retry</button></p> : <>
-      <h2>Play the week’s games</h2><p className="wp-muted">Watch a fun 3D match featuring real squad names and fictional goals and assists. Choose a broadcast or behind-goal camera. Fictional results only; real match records stay as they are. Cup predictions are for 90 minutes.</p>
+      <h2>Play the week’s games</h2><p className="wp-muted">Fun 3D games with real squad names. All simulated results, goals and cards are fictional. Cup picks cover 90 minutes.</p>
       {active ? <><label className="wp-match-picker">Choose a match <select value={active.id} onChange={event => setSelected(event.target.value)}>{simulatable.map(f => <option key={f.id} value={f.id}>{f.home_team.name} v {f.away_team.name}</option>)}</select></label><Simulator key={`${week}-${active.id}`} fixture={active} /><Link to={`/fixtures/${active.id}`} className="wp-detail-link">View real match details →</Link></> : <p>No confirmed matches to simulate this week.</p>}
       <section className="wp-predictions"><h2>Your weekly picks</h2><p className="wp-muted">Predictions open Monday at 5am. Weekend entries close Friday at 10pm; midweek entries close 12 hours before kick-off. All times are UK time. Submit every open game to reveal its live community percentages. After each deadline, final percentages are public. This browser remembers your entries; submitted scores are final.</p>
       {pollError && <p role="alert">{pollError} <button type="button" onClick={() => loadPolls()}>Retry</button></p>}

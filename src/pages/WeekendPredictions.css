@@ -19,3 +19,5 @@
 .wp-motm{display:grid;gap:3px;padding:9px 12px;margin:0 0 12px;border:1px solid #b5902566;border-radius:6px;background:#b5902515;font-size:12px;text-align:center}.wp-motm>b{color:#ffe19a}.wp-motm small{font-size:11px;color:#c6d6ce}@media(max-width:600px){.wp-motm{padding:7px;margin-bottom:8px;font-size:11px}.wp-motm small{font-size:10px}}
 
 .wp-referee{text-align:center;font-size:11px;margin:0 0 8px;color:#c6d6ce}.wp-sim-cards{list-style:none;padding:0;margin:0 0 10px;font-size:11px;line-height:1.5;text-align:center}
+
+@media(max-width:600px){.wp-page{padding:14px 16px 30px}.wp-intro h1{font-size:23px;line-height:1.15;margin:5px 0}.wp-kicker{font-size:10px;letter-spacing:1px}.wp-intro p,.wp-page>.wp-muted{font-size:12px;line-height:1.4;margin:7px 0}.wp-page h2{font-size:19px;margin:14px 0 6px}.wp-week,.wp-match-picker{font-size:12px;gap:6px;margin:12px 0}.wp-week select{padding:7px;font-size:12px}.wp-match-picker{display:grid;grid-template-columns:1fr}.wp-match-picker select{padding:8px;font-size:12px;width:100%;min-width:0}.wp-predictions>.wp-muted{font-size:12px;line-height:1.4}}
