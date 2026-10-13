@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { supabase } from '../supabaseClient'
 import { inWeekend, londonDay, weekendKey, predictionOpen, validScore, makeHighlights } from '../utils/weekendPredictions'
 import './WeekendPredictions.css'
+import { simulatorKits } from '../utils/simulatorKits'
 
 function Badge({ team }) {
   return team?.logo_url ? <img className="wp-badge" src={team.logo_url} alt="" /> : <span className="wp-badge wp-badge-fallback" aria-hidden="true">⚽</span>
@@ -15,6 +16,7 @@ function readEntry() {
   return { id: crypto.randomUUID() }
 }
 function Simulator({ fixture }) {
+  const kits = simulatorKits(fixture.home_team, fixture.away_team)
   const [story, setStory] = useState([])
   const [minute, setMinute] = useState(0)
   const [running, setRunning] = useState(false)
@@ -36,10 +38,10 @@ function Simulator({ fixture }) {
     : minute ? 'Kick-off! Both sides settle into the game.' : 'The teams are ready. Press Play match to kick off.'
   function play() { setStory(makeHighlights()); setMinute(0); setRunning(true) }
   return <section className="wp-simulator" aria-label="Fictional match simulator">
-    <div className="wp-scoreboard"><span><Badge team={fixture.home_team} />{fixture.home_team.name}</span><strong>{home} : {away}<small>{minute === 90 ? 'FT' : `${minute}′`}</small></strong><span><Badge team={fixture.away_team} />{fixture.away_team.name}</span></div>
+    <div className="wp-scoreboard"><span><Badge team={fixture.home_team} />{fixture.home_team.name}<small className="wp-kit-label"><i style={{ background: kits[0].colour, borderColor: kits[0].trim }} />{kits[0].name}</small></span><strong>{home} : {away}<small>{minute === 90 ? 'FT' : `${minute}′`}</small></strong><span><Badge team={fixture.away_team} />{fixture.away_team.name}<small className="wp-kit-label"><i style={{ background: kits[1].colour, borderColor: kits[1].trim }} />{kits[1].name}</small></span></div>
     <div className={`wp-pitch ${running ? 'wp-playing' : ''}`} aria-hidden="true">
       <div className="wp-pitch-lines"><div className="wp-centre" /><div className="wp-box wp-box-home" /><div className="wp-box wp-box-away" /></div>
-      {[0,1].flatMap(side => Array.from({ length: 11 }, (_, index) => <span key={`${side}-${index}`} className={`wp-player wp-player-${side}`} style={{ left: `${side ? 96 - (index ? 17 + (index % 4) * 9 : 0) : 4 + (index ? 17 + (index % 4) * 9 : 0)}%`, top: `${index === 0 ? 50 : 14 + (index % 5) * 18}%`, animationDelay: `${index * -.3}s` }}>{index + 1}</span>))}
+      {[0,1].flatMap(side => Array.from({ length: 11 }, (_, index) => <span key={`${side}-${index}`} className={`wp-player wp-player-${side}`} style={{ background: kits[side].colour, color: kits[side].text, borderColor: kits[side].trim, left: `${side ? 96 - (index ? 17 + (index % 4) * 9 : 0) : 4 + (index ? 17 + (index % 4) * 9 : 0)}%`, top: `${index === 0 ? 50 : 14 + (index % 5) * 18}%`, animationDelay: `${index * -.3}s` }}>{index + 1}</span>))}
       <span className="wp-ball" style={{ left: `${latest?.goal && minute - latest.minute < 3 ? latest.side === 'home' ? 97 : 3 : 50 + Math.sin(minute * .9) * 28}%`, top: `${50 + Math.cos(minute * .7) * 26}%` }}>⚽</span>
       {latest?.goal && minute - latest.minute < 3 && <span className="wp-goal">GOAL!</span>}
     </div>
