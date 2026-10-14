@@ -12,7 +12,7 @@ export const TEAM_KITS = {
   'Ladywell Baptist Church': kit('Yellow', '#f2e400', '#17232b', '#17232b', 'yellow', kit('Dark blue', '#172d64', '#ffffff', '#f2e400', 'navy')),
   'North Berwick Abbey Church': kit('Gold', '#c3a45b', '#17232b', '#b32632', 'yellow'),
   'Liberton Church': kit('Purple', '#7c36ac', '#ffffff', '#ffffff', 'purple'),
-  'Murrayburn Church': kit('Navy blue', '#142d50', '#ffffff', '#d6b550', 'navy'),
+  'Murrayburn Church': kit('Grey', '#8b9098', '#17232b', '#ffffff', 'grey'),
   'St Marys Metropolitan Church': kit('Light blue', '#9ed5eb', '#102735', '#172d64', 'light-blue'),
 }
 export function simulatorKits(homeTeam, awayTeam) {
