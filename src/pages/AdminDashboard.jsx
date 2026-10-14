@@ -17,6 +17,9 @@ export default function AdminDashboard() {
   const fixtureLoadRequest = useRef(0)
   const editFilterKey = JSON.stringify([competitionId, stageId, teamFilter, dateFilter, statusFilter])
   const [weekOffRequests, setWeekOffRequests] = useState([])
+  const [requestForm, setRequestForm] = useState({ teamId: '', season: '', date: '', description: '' })
+  const [requestSaving, setRequestSaving] = useState(false)
+  const [requestMessage, setRequestMessage] = useState('')
   const [rescheduleOpportunities, setRescheduleOpportunities] = useState([])
   const [rescheduleCheckError, setRescheduleCheckError] = useState('')
   const [checkingReschedules, setCheckingReschedules] = useState(false)
@@ -160,14 +163,35 @@ export default function AdminDashboard() {
   }
 
   async function loadWeekOffRequests() {
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from('team_week_off_requests')
       .select(
-        'id, season, source_fixture_id, original_fixture_date, recorded_at, team:team_id(id, name), fixture:source_fixture_id(id, status, fixture_date, home_team:home_team_id(name), away_team:away_team_id(name))'
+        'id, season, source_fixture_id, original_fixture_date, request_description, recorded_at, team:team_id(id, name)'
       )
       .order('season', { ascending: false })
       .order('recorded_at')
+    if (error) { setRequestMessage(`Could not load requests: ${error.message}`); return false }
     setWeekOffRequests(data || [])
+    return true
+  }
+
+  async function addWeekOffRequest(event) {
+    event.preventDefault()
+    setRequestSaving(true)
+    setRequestMessage('')
+    const { error } = await supabase.from('team_week_off_requests').insert({
+      season: requestForm.season || currentSeason,
+      team_id: requestForm.teamId,
+      original_fixture_date: requestForm.date ? `${requestForm.date}T12:00:00Z` : null,
+      request_description: requestForm.description.trim(),
+    })
+    setRequestSaving(false)
+    if (error) {
+      setRequestMessage(error.code === '23505' ? 'This team has already used its request for this season.' : `Could not save request: ${error.message}`)
+      return
+    }
+    setRequestForm({ teamId: '', season: requestForm.season, date: '', description: '' })
+    if (await loadWeekOffRequests()) setRequestMessage('Request saved. It will remain recorded when the game is rearranged.')
   }
 
   useEffect(() => {
@@ -592,8 +616,9 @@ export default function AdminDashboard() {
   }
 
   const visibleFixtures = fixtures.filter((fixture) => fixture.id === rearrangingFixtureId || fixtureMatchesFilters(fixture, {team:teamFilter,date:dateFilter,status:statusFilter}, editFilterKey))
-  const currentSeason = competitions[0]?.season || ''
-  const currentSeasonWeekOffRequests = weekOffRequests.filter((request) => request.season === currentSeason)
+  const currentSeason = [...new Set(competitions.map((c) => c.season).filter(Boolean))].sort().at(-1) || ''
+  const requestSeason = requestForm.season || currentSeason
+  const selectedSeasonWeekOffRequests = weekOffRequests.filter((request) => request.season === requestSeason)
 
   return (
     <div className="container" style={{ padding: '24px 16px', maxWidth: 480 }}>
@@ -838,21 +863,43 @@ export default function AdminDashboard() {
       <section style={{ ...cardStyle, marginTop: 20, marginBottom: 20 }}>
         <h2 style={{ fontSize: 17, color: 'var(--pitch)', margin: '0 0 4px' }}>Week-off request tracker</h2>
         <p style={{ fontSize: 13, color: '#8A8570', margin: '0 0 12px' }}>
-          {currentSeason ? currentSeason.replace('-', '/') : 'Current season'} · one request allowed per team
+          {requestSeason ? requestSeason.replace('-', '/') : 'Current season'} · one request allowed per team
         </p>
-        {currentSeasonWeekOffRequests.length === 0 ? (
+        <form onSubmit={addWeekOffRequest} style={{ display: 'grid', gap: 8, marginBottom: 16 }}>
+          <label>Season
+            <select aria-label="Request season" value={requestSeason} onChange={(e) => setRequestForm({ ...requestForm, season: e.target.value })} style={fullSelectStyle}>
+              {[...new Set(competitions.map((c) => c.season).filter(Boolean))].sort().reverse().map((season) => <option key={season} value={season}>{season.replace('-', '/')}</option>)}
+            </select>
+          </label>
+          <label>Requesting team
+            <select required value={requestForm.teamId} onChange={(e) => setRequestForm({ ...requestForm, teamId: e.target.value })} style={fullSelectStyle}>
+              <option value="">Select team…</option>
+              {allTeams.map((team) => <option key={team.id} value={team.id} disabled={selectedSeasonWeekOffRequests.some((r) => r.team?.id === team.id)}>{team.name}{selectedSeasonWeekOffRequests.some((r) => r.team?.id === team.id) ? ' — already used' : ''}</option>)}
+            </select>
+          </label>
+          <label>Original game date (optional)
+            <input type="date" value={requestForm.date} onChange={(e) => setRequestForm({ ...requestForm, date: e.target.value })} style={fullSelectStyle} />
+          </label>
+          <label>Match / request details
+            <textarea required maxLength={1000} placeholder="e.g. White Lightning v North Berwick, cup — rearranged at North Berwick’s request" value={requestForm.description} onChange={(e) => setRequestForm({ ...requestForm, description: e.target.value })} style={{ ...fullSelectStyle, minHeight: 70 }} />
+          </label>
+          <button type="submit" disabled={requestSaving || !requestSeason} style={saveButtonStyle}>{requestSaving ? 'Saving…' : 'Record week-off request'}</button>
+          <small style={{ color: 'var(--muted)' }}>Requests stay on this list after games are rearranged. You can also record a request for a game that already has a new date.</small>
+          {requestMessage && <div role="status">{requestMessage}</div>}
+        </form>
+        {selectedSeasonWeekOffRequests.length === 0 ? (
           <div style={{ color: '#8A8570', fontSize: 13 }}>No teams have used their request.</div>
         ) : (
           <div style={{ display: 'grid', gap: 10 }}>
-            {currentSeasonWeekOffRequests.map((request) => (
+            {selectedSeasonWeekOffRequests.map((request) => (
               <div key={request.id} style={{ borderTop: '1px solid var(--line)', paddingTop: 10 }}>
                 <div style={{ fontWeight: 700 }}>{request.team?.name}</div>
                 <div style={{ color: '#8A8570', fontSize: 12, lineHeight: 1.45 }}>
-                  Used for {request.fixture?.home_team?.name || 'Home team TBC'} v {request.fixture?.away_team?.name || 'Away team TBC'}
+                  {request.request_description || 'Week-off request recorded'}
                   {request.original_fixture_date
                     ? ` · ${new Date(request.original_fixture_date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}`
                     : ''}
-                  {request.fixture?.status ? ` · Now ${request.fixture.status}` : ''}
+                  {request.source_fixture_id && <> · <Link to={`/fixtures/${request.source_fixture_id}`}>View fixture</Link></>}
                 </div>
               </div>
             ))}
@@ -1229,7 +1276,8 @@ export default function AdminDashboard() {
                       >
                         <option value="">Which team asked?</option>
                         {allTeams.map((team) => {
-                          const existingRequest = currentSeasonWeekOffRequests.find((request) => request.team?.id === team.id)
+                          const fixtureSeason = competitions.find((c) => c.id === competitionId)?.season || currentSeason
+                          const existingRequest = weekOffRequests.find((request) => request.season === fixtureSeason && request.team?.id === team.id)
                           const alreadyUsedElsewhere = existingRequest && existingRequest.source_fixture_id !== f.id
                           return (
                             <option key={team.id} value={team.id} disabled={alreadyUsedElsewhere}>

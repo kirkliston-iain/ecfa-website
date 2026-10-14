@@ -507,7 +507,8 @@ export default function TeamDetail() {
                 <Link
                   to={`/fixtures/${f.id}`}
                   style={{
-                    display: 'flex',
+                    display: 'grid',
+                    gridTemplateColumns: '20px 20px minmax(0, 1fr) auto auto',
                     alignItems: 'center',
                     gap: 10,
                     padding: '10px 4px',
@@ -541,15 +542,15 @@ export default function TeamDetail() {
                       Venue: {f.venue && f.venue.trim().toUpperCase() !== 'N/A' ? f.venue : 'Not recorded'}
                     </span>
                   </span>
-                  <span style={{ fontWeight: 800, color: 'var(--ink)' }}>
+                  <span style={{ fontWeight: 800, color: 'var(--ink)', whiteSpace: 'nowrap' }}>
                     {displayedScore(f)}
-                    {outcomeNote(f) && <div style={{ fontSize: 10, color: 'var(--muted)', fontWeight: 500 }}>{outcomeNote(f)}</div>}
                   </span>
                   <span style={{ color: 'var(--muted)', fontSize: 12, minWidth: 60, textAlign: 'right' }}>
                     {f.fixture_date
                       ? new Date(f.fixture_date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })
                       : ''}
                   </span>
+                  {outcomeNote(f) && <span style={{ gridColumn: '3 / -1', fontSize: 11, color: 'var(--muted)', lineHeight: 1.5, overflowWrap: 'anywhere' }}>{outcomeNote(f)}</span>}
                 </Link>
               </li>
             )
