@@ -35,3 +35,10 @@
   .ref-profile-heading h2 { font-size: 17px; }
   .ref-panel { padding: 10px; }
 }
+
+.ref-card-table-wrap { overflow-x: auto; margin: 10px 0 20px; }
+.ref-card-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+.ref-card-table th, .ref-card-table td { padding: 8px 6px; border-bottom: 1px solid var(--line); text-align: right; }
+.ref-card-table th:first-child, .ref-card-table td:first-child { text-align: left; min-width: 130px; }
+.ref-card-table th { color: var(--muted); font-size: 11px; }
+.ref-card-table small { color: var(--muted); }

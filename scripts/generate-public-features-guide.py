@@ -175,7 +175,7 @@ story.append(card_grid([
     ('Venue and team breakdowns', 'Open clubs and venues from referee breakdowns. Select an appointment count to review that official’s matching games for the selected season, then open match details.'),
     ('About the referee', 'Profiles have space for a photograph, an introduction and SurveyMonkey questions and answers added by the league.'),
     ('Season selection', 'Choose the current season, last season or all available seasons.'),
-    ('Private referee login', 'Referees use their own league-issued login code to view their current-season yellow and red card totals, cards per game and linked match breakdown. The profile page includes a login link.'),
+    ('Private referee login', 'Referees sign in with the league portal code to view all referees’ yellow and red card totals, averages, player and team breakdowns and match details from last season onwards where records are available. Card summaries require login.'),
 ]))
 story += [PageBreak()] + section_title('8. Sponsors')
 story.append(p('The sponsors page groups sponsors beneath the competitions they support. Each entry includes a short summary, an optional logo badge, a link to the sponsor’s website and a direct route to the sponsored competition.'))
@@ -188,9 +188,9 @@ download_rows = [
     ['Historical scorers', 'Player, team, season and recorded goals', 'CSV / Excel'],
     ['Current fixtures and results', 'Dates, teams, scores, venues, referees and competition details', 'CSV / Excel'],
     ['Previous-season results', 'The available historical fixture and result archive', 'CSV / Excel'],
-    ['Referee statistics', 'Games, teams, venues, results and recorded cards', 'CSV / Excel'],
+    ['Referee match statistics', 'Games, teams, venues and results; card summaries require login', 'CSV / Excel'],
     ['Player scoring report', 'Selected player, current team, fixture-linked goals and season totals', 'PDF / Word'],
-    ['Referee report', 'Selected referee’s games, venues, teams, results and cards', 'PDF / Word'],
+    ['Private referee card dashboard', 'Code-protected card totals, averages and player, team and match breakdowns', 'Referee login'],
     ['Published league files', 'Handbooks, guides and other documents uploaded by ECFA administrators', 'View / Download'],
     ['Large public-data export', 'A broad collection of relevant public ECFA records', 'CSV / Excel'],
 ]

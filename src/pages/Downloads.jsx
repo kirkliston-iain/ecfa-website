@@ -149,13 +149,6 @@ async function refereeStats() {
     'id, fixture_date, round_name, venue, referee_name, home_score, away_score, status, home_team:home_team_id(name), away_team:away_team_id(name), stage:stage_id(name, competition:competition_id(name, season))'
   )
   const played = fixtures.filter((fixture) => fixture.status === 'played' && fixture.referee_name)
-  const fixtureIds = new Set(played.map((fixture) => fixture.id))
-  const cards = await fetchAll('discipline_records', 'fixture_id, card_count')
-  const cardsByFixture = {}
-  for (const card of cards) {
-    if (!fixtureIds.has(card.fixture_id)) continue
-    cardsByFixture[card.fixture_id] = (cardsByFixture[card.fixture_id] || 0) + Number(card.card_count || 0)
-  }
   return played.map((fixture) => ({
     referee: fixture.referee_name,
     season: fixture.stage?.competition?.season || '',
@@ -167,7 +160,6 @@ async function refereeStats() {
     away_team: fixture.away_team?.name || '',
     score: `${fixture.home_score ?? ''}-${fixture.away_score ?? ''}`,
     venue: fixture.venue || '',
-    cards: cardsByFixture[fixture.id] || 0,
   }))
 }
 
@@ -218,7 +210,7 @@ const DOWNLOADS = [
   },
   {
     title: 'Referee match statistics',
-    description: 'Games, teams, venues, results and total cards for each referee.',
+    description: 'Games, teams, venues and results for each referee. Card statistics require referee login.',
     filename: 'ecfa-referee-statistics.csv',
     load: refereeStats,
   },
@@ -396,12 +388,12 @@ export default function Downloads() {
         <h2 style={{ fontSize: 18, marginBottom: 10 }}>Referee reports</h2>
         <div style={cardStyle}>
           <div style={{ flex: 1, minWidth: 220 }}>
-            <div style={{ fontWeight: 700, marginBottom: 4 }}>Individual referee report</div>
+            <div style={{ fontWeight: 700, marginBottom: 4 }}>Private referee card dashboard</div>
             <div style={{ fontSize: 13, color: 'var(--muted)' }}>
-              Search for a referee and view current, previous or all-season games, venues, teams, results and available player-level card details.
+              Sign in with the referee portal code to view card totals, averages and player and team breakdowns for all referees.
             </div>
           </div>
-          <Link to="/downloads/referee-report" style={{ ...buttonStyle, textDecoration: 'none' }}>
+          <Link to="/referees/login" style={{ ...buttonStyle, textDecoration: 'none' }}>
             Create report
           </Link>
         </div>
