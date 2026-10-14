@@ -2,3 +2,18 @@
 
 /* Keep faces visible in the supplied portrait photographs. */
 .ref-avatar[src*="/images/referees/"], .ref-portrait[src*="/images/referees/"] { object-position: 50% 15%; }
+
+/* Compact directory rows while retaining generous tap targets. */
+.ref-directory { margin: 12px 0; }
+.ref-person { gap: 12px; padding: 9px 0; min-height: 62px; }
+.ref-person .ref-avatar { width: 44px; height: 44px; font-size: 16px; }
+.ref-person strong { font-size: 15px; }
+.ref-person small { font-size: 12px; margin-top: 3px; }
+@media (max-width: 600px) {
+  .ref-area { padding: 14px 18px 32px; }
+  .ref-area h1 { font-size: 25px; margin: 8px 0 6px; }
+  .ref-area > p { font-size: 13px; margin: 6px 0 14px; line-height: 1.45; }
+  .ref-actions { font-size: 14px; }
+  .ref-person { min-height: 58px; padding: 7px 0; gap: 10px; }
+  .ref-person .ref-avatar { width: 40px; height: 40px; }
+}
