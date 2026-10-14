@@ -17,3 +17,21 @@
   .ref-person { min-height: 58px; padding: 7px 0; gap: 10px; }
   .ref-person .ref-avatar { width: 40px; height: 40px; }
 }
+
+/* Match the compact typography used in team and fixture pages. */
+.ref-area { font-family: inherit; font-size: 13px; }
+.ref-intro { font-size: 13px; margin: 6px 0 14px; line-height: 1.45; }
+.ref-area h1 { font-size: 25px; }
+.ref-profile-heading { gap: 12px; margin: 16px 0; }
+.ref-profile-heading .ref-avatar { width: 60px; height: 60px; font-size: 18px; }
+.ref-profile-heading h2 { font-size: 18px; }
+.ref-panel { padding: 12px; margin: 12px 0; }
+.ref-panel h2 { font-size: 16px; margin: 0 0 8px; }
+.ref-about { font-size: 13px; line-height: 1.5; margin: 8px 0 0; }
+.ref-actions { font-size: 13px; }
+@media (max-width: 600px) {
+  .ref-profile-heading .ref-avatar { width: 54px; height: 54px; }
+  .ref-profile-heading { margin: 14px 0; }
+  .ref-profile-heading h2 { font-size: 17px; }
+  .ref-panel { padding: 10px; }
+}
