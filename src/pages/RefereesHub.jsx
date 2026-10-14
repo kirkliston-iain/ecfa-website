@@ -4,6 +4,7 @@ import { useRememberedState, useRememberedScroll } from '../hooks/usePageMemory'
 import { useEffect } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { supabase } from '../supabaseClient'
+import './RefereeProfiles.css'
 import { historicDisplayedScore } from '../utils/historicFixtureOutcome'
 
 const CURRENT_SEASON_FALLBACK = ''
@@ -38,6 +39,7 @@ export default function RefereesHub() {
   const [searchParams, setSearchParams] = useSearchParams()
   const [referees, setReferees] = useRememberedState('referees', [])
   const [refName, setRefName] = useRememberedState('refName', searchParams.get('ref') || '')
+  const [loadError, setLoadError] = useRememberedState('loadError', '')
   const [loading, setLoading] = useRememberedState('loading', false)
   const [currentSeason, setCurrentSeason] = useRememberedState('currentSeason', CURRENT_SEASON_FALLBACK)
   const [signedIn, setSignedIn] = useRememberedState('signedIn', false)
@@ -51,9 +53,6 @@ export default function RefereesHub() {
   useRememberedScroll(!loading)
 
   useEffect(() => {
-  }, [])
-
-  useEffect(() => {
     supabase.auth.getSession().then(({ data }) => setSignedIn(!!data.session))
     const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
       setSignedIn(!!session)
@@ -64,13 +63,14 @@ export default function RefereesHub() {
   useEffect(() => {
     supabase
       .from('referees')
-      .select('id, name')
+      .select('id, name, photo_url, about, survey_answers')
       .order('name')
-      .then(({ data }) => setReferees(data || []))
+      .then(({ data, error }) => { if (error) setLoadError('Could not load referee profiles. Please refresh to try again.'); else setReferees(data || []) })
 
     supabase
       .from('competitions')
       .select('season')
+      .order('season', { ascending: false })
       .limit(1)
       .then(({ data }) => {
         const s = data?.[0]?.season || ''
@@ -106,22 +106,28 @@ export default function RefereesHub() {
       setLastGame(null)
       setNextGame(null)
       setAllGames([])
+      if (cancelled) return
+      if (historyError) { setLoadError('Historical matches could not be loaded.'); setLoading(false); return }
       setHistoricGames([])
       return
     }
+    let cancelled = false
     setLoading(true)
+    setLoadError('')
 
     async function load() {
-      const { data: live } = await supabase
+      const { data: live, error: liveError } = await supabase
         .from('fixtures')
         .select(
-          'id, fixture_date, venue, round_name, status, home_score, away_score, home_team:home_team_id(name), away_team:away_team_id(name), stage:stage_id(name, competition:competition_id(name))'
+          'id, fixture_date, venue, round_name, status, home_score, away_score, home_team:home_team_id(name), away_team:away_team_id(name), stage:stage_id(name, competition:competition_id(name, season))'
         )
         .eq('referee_name', refName)
         .eq('hidden_from_public', false)
         .order('fixture_date')
 
-      const shaped = (live || []).map((f) => ({
+      if (cancelled) return
+      if (liveError) { setLoadError('Could not load match history. Please refresh to try again.'); setLoading(false); return }
+      const shaped = (live || []).filter((f) => f.stage?.competition?.season === currentSeason).map((f) => ({
         id: f.id,
         fixture_date: f.fixture_date,
         venue: f.venue,
@@ -144,12 +150,14 @@ export default function RefereesHub() {
       setNextGame(upcoming[0] || null)
       setAllGames(played)
 
-      const { data: hist } = await supabase
+      const { data: hist, error: historyError } = await supabase
         .from('historic_fixtures')
         .select('id, season, competition_name, fixture_date, home_team_name, home_goals, away_team_name, away_goals, comment, penalty_winner_name')
         .eq('referee_name', refName)
         .order('fixture_date', { ascending: false })
 
+      if (cancelled) return
+      if (historyError) { setLoadError('Historical matches could not be loaded.'); setLoading(false); return }
       setHistoricGames(
         (hist || []).map((h) => ({
           id: h.id,
@@ -174,6 +182,7 @@ export default function RefereesHub() {
       setLoading(false)
     }
     load()
+    return () => { cancelled = true }
   }, [refName, currentSeason])
 
   const seasonOptions = [currentSeason, ...Array.from(new Set(historicGames.map((h) => h.season)))].filter(Boolean)
@@ -201,20 +210,30 @@ export default function RefereesHub() {
   const selectedMobile = selectedReferee ? refereeContacts[selectedReferee.id] : ''
 
   return (
-    <div className="container" style={{ padding: '32px 20px 48px' }}>
+    <div className="container ref-area">
       <h1 style={{ fontSize: 30, marginBottom: 4 }}>Referees</h1>
       <p style={{ color: 'var(--muted)', marginBottom: 24 }}>
         Fixture history for each match official.
       </p>
 
-      <select value={refName} onChange={(e) => { setRefName(e.target.value); const next = new URLSearchParams(searchParams); next.set('ref', e.target.value); setSearchParams(next, { replace: true }) }} style={{ ...selectStyle, marginBottom: 16 }}>
-        <option value="">Select a referee…</option>
-        {referees.map((r) => (
-          <option key={r.id} value={r.name}>
-            {r.name}
-          </option>
-        ))}
-      </select>
+      <div className="ref-actions"><Link to="/referees/login">Referee login →</Link>{refName && <Link to="/referees">← All referees</Link>}</div>
+      {!refName && <div className="ref-directory">
+        {referees.map((ref) => <Link className="ref-person" key={ref.id} to={`/referees?ref=${encodeURIComponent(ref.name)}`}>
+          {ref.photo_url ? <img className="ref-avatar" src={ref.photo_url} alt={ref.name} /> : <span className="ref-avatar" aria-hidden="true">{ref.name.split(' ').map((part) => part[0]).slice(0,2).join('')}</span>}
+          <span><strong>{ref.name}</strong><small>View profile &amp; match history →</small></span>
+        </Link>)}
+        {!referees.length && <p className="ref-muted">Referee profiles will appear here when available.</p>}
+      </div>}
+      {refName && <>
+        <div className="ref-profile-heading">
+          {selectedReferee?.photo_url ? <img className="ref-avatar" src={selectedReferee.photo_url} alt={refName} /> : <span className="ref-avatar" aria-hidden="true">{refName.split(' ').map((part) => part[0]).slice(0,2).join('')}</span>}
+          <div><h2 style={{ margin: '0 0 6px' }}>{refName}</h2><span className="ref-muted">ECFA referee</span></div>
+        </div>
+        <section className="ref-panel"><h2>About the referee</h2>
+          {selectedReferee?.about ? <p className="ref-about">{selectedReferee.about}</p> : <p className="ref-muted">Profile details coming soon.</p>}
+          {(selectedReferee?.survey_answers || []).map((row, index) => <div key={index}><h3 style={{ fontSize: 15 }}>{row.question}</h3><p className="ref-about">{row.answer}</p></div>)}
+        </section>
+      </>}
 
       {signedIn && refName && selectedMobile && (
         <section style={{ ...cardStyle, marginBottom: 24, background: '#fff8df', borderColor: 'var(--brass)' }}>
@@ -234,9 +253,10 @@ export default function RefereesHub() {
         </section>
       )}
 
+      {loadError && <p role="alert">{loadError}</p>}
       {loading && <p style={{ color: 'var(--muted)' }}>Loading…</p>}
 
-      {!loading && refName && (
+      {!loading && !loadError && refName && (
         <>
           <div style={{ display: 'flex', gap: 10, marginBottom: 28, flexWrap: 'wrap' }}>
             <div style={{ flex: '1 1 200px' }}>
@@ -303,7 +323,7 @@ export default function RefereesHub() {
             </>
           )}
 
-          <h2 style={sectionHeaderStyle}>All Games</h2>
+          <h2 style={sectionHeaderStyle}>Games — {seasonFilter}</h2>
           {gamesForSeason.length === 0 ? (
             <p style={{ color: 'var(--muted)', fontSize: 14 }}>No games recorded for this season.</p>
           ) : (

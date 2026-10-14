@@ -30,6 +30,8 @@ import TeamsHub from './pages/TeamsHub'
 import PreviousTeam from './pages/PreviousTeam'
 import SeasonAdmin from './pages/SeasonAdmin'
 import RefereesHub from './pages/RefereesHub'
+import RefereeProfilesAdmin from './pages/RefereeProfilesAdmin'
+import RefereeLogin from './pages/RefereeLogin'
 import FixtureTracker from './pages/FixtureTracker'
 import Downloads from './pages/Downloads'
 import PlayerReportDownload from './pages/PlayerReportDownload'
@@ -86,6 +88,8 @@ export default function App() {
           <Route path="/history" element={<HistoricalSeason key={location.key} />} />
           <Route path="/teams" element={<TeamsHub key={location.key} />} />
           <Route path="/teams/previous/:teamName" element={<PreviousTeam key={location.key} />} />
+          <Route path="/referees/login" element={<RefereeLogin />} />
+          <Route path="/admin/referee-profiles" element={<ProtectedRoute requireAdmin><RefereeProfilesAdmin /></ProtectedRoute>} />
           <Route path="/referees" element={<RefereesHub key={location.key} />} />
           <Route path="/downloads" element={<Downloads />} />
           <Route path="/downloads/player-report" element={<PlayerReportDownload />} />

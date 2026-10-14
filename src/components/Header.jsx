@@ -9,6 +9,7 @@ const TABS = [
   { to: '/news', label: 'News' },
   { to: '/standings', label: 'Competitions' },
   { to: '/teams', label: 'Teams' },
+  { to: '/referees', label: 'Referees' },
   { to: '/stats', label: 'Stats' },
   { to: '/goalscorers', label: 'Goalscorers' },
   { to: '/honours', label: 'Honours' },

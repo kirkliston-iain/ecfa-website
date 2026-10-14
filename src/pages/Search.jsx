@@ -15,7 +15,7 @@ const SITE_PAGES = [
   { label: 'Archive', description: 'Past seasons, results, tables, honours and historical scorers', to: '/archive' },
   { label: 'Teams', description: 'Team pages, squads, managers and fixtures', to: '/teams' },
   { label: 'Stats', description: 'Current-season team records and player scoring', to: '/stats' },
-  { label: 'Referees', description: 'Officials, games, teams and venues', to: '/referees' },
+  { label: 'Referees', description: 'Referee profiles, games, teams and venues', to: '/referees' },
   { label: 'Sponsors', description: 'ECFA competition sponsors', to: '/sponsors' },
   { label: 'Charity', description: 'League and team charity events by season', to: '/charity' },
   { label: 'Downloads', description: 'Download ECFA statistics and the league handbook', to: '/downloads' },

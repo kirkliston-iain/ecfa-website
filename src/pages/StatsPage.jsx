@@ -266,8 +266,8 @@ export default function StatsPage() {
             <span style={linkDescriptionStyle}>All recorded goals, with League and Cup views and season-by-season history.</span>
           </Link>
           <Link to="/referees" style={linkCardStyle}>
-            <strong>Referee history</strong>
-            <span style={linkDescriptionStyle}>Appointments, teams, venues and match history.</span>
+            <strong>Referee profiles</strong>
+            <span style={linkDescriptionStyle}>Meet the referees and explore their appointments, teams, venues and match history.</span>
           </Link>
           <Link to="/standings" style={linkCardStyle}>
             <strong>Competition tables</strong>

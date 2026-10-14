@@ -86,6 +86,7 @@ export default function ListsAdmin() {
         &larr; Back to admin
       </Link>
       <h1 style={{ fontSize: 22, color: 'var(--pitch)', marginBottom: 20 }}>Referees & Venues</h1>
+      <Link to="/admin/referee-profiles" style={{ display: 'block', marginBottom: 24 }}>Manage referee photos, profiles &amp; login codes →</Link>
       <ListSection title="Referees" table="referees" isAdmin={isAdmin} />
       <ListSection title="Venues" table="venues" isAdmin={isAdmin} />
     </div>

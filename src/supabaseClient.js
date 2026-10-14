@@ -18,3 +18,10 @@ export function createPredictionClient(entryId) {
     auth: { storageKey: 'ecfa-predictions-auth', persistSession: false, autoRefreshToken: false, detectSessionInUrl: false },
   })
 }
+
+export function createRefereeClient(token) {
+  return createClient(supabaseUrl, supabaseAnonKey, {
+    global: { headers: { 'x-ecfa-referee-session': token } },
+    auth: { storageKey: 'ecfa-referee-private-auth', persistSession: false, autoRefreshToken: false, detectSessionInUrl: false },
+  })
+}

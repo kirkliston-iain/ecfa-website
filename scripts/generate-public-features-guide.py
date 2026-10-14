@@ -98,7 +98,7 @@ cover = Table([[p('ECFA WEBSITE', 'CoverSub')], [p('Public Features Guide', 'Cov
               ]))
 story += [Spacer(1, 35*mm), cover, Spacer(1, 18*mm)]
 story.append(Table([[p('WEBSITE', 'Smallx'), p('https://ecfa-website.vercel.app', 'CardTitle')],
-                    [p('GUIDE UPDATED', 'Smallx'), p('13 October 2026', 'CardTitle')]],
+                    [p('GUIDE UPDATED', 'Smallx'), p('14 October 2026', 'CardTitle')]],
                    colWidths=[35*mm, 125*mm], style=TableStyle([
                        ('BOX', (0,0), (-1,-1), 0.7, LINE), ('INNERGRID', (0,0), (-1,-1), 0.5, LINE),
                        ('BACKGROUND', (0,0), (0,-1), PALE), ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
@@ -116,7 +116,7 @@ story.append(card_grid([
     ('Goalscorers', 'All goals, League and Cup views with season history and player links.'),
     ('Stats', 'Current-season team goals, clean sheets, wins and streak records across all competitions, League or Cup.'),
     ('Honours and History', 'Past winners, team honours and previous-season records.'),
-    ('Teams and Referees', 'Dedicated statistical views for clubs, players and match officials.'),
+    ('Teams and Referees', 'Explore clubs, player records and referee profiles. Referees has its own main navigation tab.'),
     ('Downloads and Search', 'Export public data or search names, teams, competitions and pages.'),
 ]))
 story += [Spacer(1, 8), p('<b>Tip:</b> On a phone, swipe the top navigation left or right to reveal additional sections.', 'Bodyx')]
@@ -170,14 +170,14 @@ story.append(card_grid([
 ]))
 story += [Spacer(1, 10)] + section_title('7. Referee information', 'The referee section links match officials to their recorded appointments and fixture history.')
 story.append(card_grid([
-    ('Officials list', 'Search and select a referee to view recorded information.'),
+    ('Officials directory', 'Open Referees in the main navigation. Select a referee’s name or photo to view their profile and recorded games.'),
     ('Games officiated', 'Review matches, dates, teams, scores, competitions and venues.'),
     ('Venue and team breakdowns', 'Open clubs and venues from referee breakdowns. Select an appointment count to review that official’s matching games for the selected season, then open match details.'),
-    ('Fixture links', 'Open recorded appointments to view the match details and continue into related teams, competitions and venues.'),
+    ('About the referee', 'Profiles have space for a photograph, an introduction and SurveyMonkey questions and answers added by the league.'),
     ('Season selection', 'Choose the current season, last season or all available seasons.'),
-    ('Referee reports', 'Create a referee report and download it in PDF or Word format.'),
+    ('Private referee login', 'Referees use their own league-issued login code to view their current-season yellow and red card totals, cards per game and linked match breakdown. The profile page includes a login link.'),
 ]))
-story += [Spacer(1, 10)] + section_title('8. Sponsors')
+story += [PageBreak()] + section_title('8. Sponsors')
 story.append(p('The sponsors page groups sponsors beneath the competitions they support. Each entry includes a short summary, an optional logo badge, a link to the sponsor’s website and a direct route to the sponsored competition.'))
 
 # downloads

@@ -860,6 +860,7 @@ export default function AdminDashboard() {
         </>
       )}
 
+      <Link to="/admin/referee-profiles" style={{ ...linkButtonStyle, display: 'block', marginBottom: 12 }}>Manage referee profiles &amp; login codes →</Link>
       <section style={{ ...cardStyle, marginTop: 20, marginBottom: 20 }}>
         <h2 style={{ fontSize: 17, color: 'var(--pitch)', margin: '0 0 4px' }}>Week-off request tracker</h2>
         <p style={{ fontSize: 13, color: '#8A8570', margin: '0 0 12px' }}>
