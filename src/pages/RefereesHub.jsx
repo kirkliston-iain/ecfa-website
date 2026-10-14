@@ -106,9 +106,9 @@ export default function RefereesHub() {
       setLastGame(null)
       setNextGame(null)
       setAllGames([])
-      if (cancelled) return
-      if (historyError) { setLoadError('Historical matches could not be loaded.'); setLoading(false); return }
       setHistoricGames([])
+      setLoading(false)
+      setLoadError('')
       return
     }
     let cancelled = false
