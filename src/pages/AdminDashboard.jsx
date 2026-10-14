@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { supabase } from '../supabaseClient'
 import { fixtureMatchesFilters, fixtureStatusForSave } from '../utils/adminFixtureEditing'
@@ -12,6 +12,9 @@ export default function AdminDashboard() {
   const [dateFilter, setDateFilter] = useState('')
   const [statusFilter, setStatusFilter] = useState('scheduled')
   const [fixtures, setFixtures] = useState([])
+  const [rearrangingFixtureId, setRearrangingFixtureId] = useState(null)
+  const pendingFixtureScroll = useRef(false)
+  const fixtureLoadRequest = useRef(0)
   const editFilterKey = JSON.stringify([competitionId, stageId, teamFilter, dateFilter, statusFilter])
   const [weekOffRequests, setWeekOffRequests] = useState([])
   const [rescheduleOpportunities, setRescheduleOpportunities] = useState([])
@@ -253,6 +256,7 @@ export default function AdminDashboard() {
   }, [competitionId, stageId])
 
   async function loadFixtures() {
+    const request = ++fixtureLoadRequest.current
     let query = supabase
       .from('fixtures')
       .select(
@@ -261,8 +265,35 @@ export default function AdminDashboard() {
       .order('fixture_date')
     if (stageId) query = query.eq('stage_id', stageId)
     const { data } = await query
+    if (request !== fixtureLoadRequest.current) return
     setFixtures(data || [])
   }
+
+  function openPostponedFixture(fixture) {
+    setRearrangingFixtureId(fixture.id)
+    pendingFixtureScroll.current = true
+    setCompetitionId('')
+    setStageId('')
+    setTeamFilter('')
+    setDateFilter('')
+    setStatusFilter('postponed')
+    // Also support clicking the same fixture again after scrolling away.
+    const editor = document.getElementById(`admin-fixture-${fixture.id}`)
+    if (editor) {
+      editor.scrollIntoView({ behavior: 'smooth', block: 'start' })
+      editor.focus({ preventScroll: true })
+      pendingFixtureScroll.current = false
+    }
+  }
+
+  useEffect(() => {
+    if (!pendingFixtureScroll.current || !rearrangingFixtureId) return
+    const editor = document.getElementById(`admin-fixture-${rearrangingFixtureId}`)
+    if (!editor) return
+    editor.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    editor.focus({ preventScroll: true })
+    pendingFixtureScroll.current = false
+  }, [fixtures, rearrangingFixtureId])
 
   function dateOnly(iso) {
     if (!iso) return ''
@@ -560,7 +591,7 @@ export default function AdminDashboard() {
     window.location.href = '/admin'
   }
 
-  const visibleFixtures = fixtures.filter((fixture) => fixtureMatchesFilters(fixture, {team:teamFilter,date:dateFilter,status:statusFilter}, editFilterKey))
+  const visibleFixtures = fixtures.filter((fixture) => fixture.id === rearrangingFixtureId || fixtureMatchesFilters(fixture, {team:teamFilter,date:dateFilter,status:statusFilter}, editFilterKey))
   const currentSeason = competitions[0]?.season || ''
   const currentSeasonWeekOffRequests = weekOffRequests.filter((request) => request.season === currentSeason)
 
@@ -614,9 +645,15 @@ export default function AdminDashboard() {
           <div style={{ display: 'grid', gap: 10 }}>
             {rescheduleOpportunities.map((fixture) => (
               <article key={fixture.id} style={{ paddingTop: 10, borderTop: '1px solid var(--line)' }}>
-                <div style={{ fontWeight: 800, lineHeight: 1.35 }}>
+                <button
+                  type="button"
+                  onClick={() => openPostponedFixture(fixture)}
+                  aria-label={`Rearrange ${fixture.home_team.name} v ${fixture.away_team.name}`}
+                  style={{ ...linkButtonStyle, display: 'block', width: '100%', padding: 0, textAlign: 'left', fontFamily: 'inherit', fontSize: 'inherit', fontWeight: 800, lineHeight: 1.35, color: 'var(--pitch)' }}
+                >
                   {fixture.home_team.name} v {fixture.away_team.name}
-                </div>
+                </button>
+                <div style={{ color: 'var(--brass)', fontSize: 12, marginTop: 3 }}>Click fixture to rearrange &rarr;</div>
                 <div style={{ color: 'var(--muted)', fontSize: 12, margin: '3px 0 7px' }}>
                   Postponed {formatShortDate(fixture.fixture_date?.slice(0, 10))}
                 </div>
@@ -1017,7 +1054,13 @@ export default function AdminDashboard() {
             const disciplineSideSquad = disciplineForm.side === 'home' ? squads?.home : squads?.away
 
             return (
-              <div key={f.id} style={cardStyle}>
+              <div key={f.id} id={`admin-fixture-${f.id}`} tabIndex={-1} style={{ ...cardStyle, scrollMarginTop: 20, ...(rearrangingFixtureId === f.id ? { border: '2px solid var(--brass)' } : {}) }}>
+                {rearrangingFixtureId === f.id && (
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8, marginBottom: 10 }}>
+                    <span style={{ fontSize: 12, fontWeight: 700 }}>Selected fixture — edit below and Save</span>
+                    <button type="button" onClick={() => setRearrangingFixtureId(null)} style={smallOutlineButtonStyle}>Done</button>
+                  </div>
+                )}
                 <div style={{ fontSize: 11, color: 'var(--brass)', fontWeight: 700, textTransform: 'uppercase', marginBottom: 4 }}>
                   {f.stage?.competition?.name || 'Competition'}{f.stage?.name ? ` — ${f.stage.name}` : ''}
                 </div>
