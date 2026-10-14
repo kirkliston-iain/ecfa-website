@@ -8,24 +8,6 @@ import { historicDisplayedScore } from '../utils/historicFixtureOutcome'
 
 const CURRENT_SEASON_FALLBACK = ''
 
-const TEAM_CODES = {
-  'Barclay Viewforth Church': 'BAR',
-  'Carrubbers Church': 'CAR',
-  'Gorgie United Salvation Army': 'GOR',
-  'Kirkliston Community Church': 'KCC',
-  'Ladywell Baptist Church': 'LAD',
-  'Liberton Church': 'LIB',
-  'Murrayburn Church': 'MUR',
-  'North Berwick Abbey Church': 'NBK',
-  'South East Saints': 'SES',
-  'St Marys Metropolitan Church': 'STM',
-  'The Mission': 'MIS',
-  'White Lightning Bruntsfield Church': 'WLB',
-}
-function teamCode(name) {
-  return TEAM_CODES[name] || (name ? name.slice(0, 3).toUpperCase() : '???')
-}
-
 function GameRow({ f, showResult }) {
   return (
     <Link
@@ -58,9 +40,7 @@ export default function RefereesHub() {
   const [refName, setRefName] = useRememberedState('refName', searchParams.get('ref') || '')
   const [loading, setLoading] = useRememberedState('loading', false)
   const [currentSeason, setCurrentSeason] = useRememberedState('currentSeason', CURRENT_SEASON_FALLBACK)
-  const [isAdmin, setIsAdmin] = useRememberedState('isAdmin', false)
   const [signedIn, setSignedIn] = useRememberedState('signedIn', false)
-  const [leagueTable, setLeagueTable] = useRememberedState('leagueTable', [])
   const [refereeContacts, setRefereeContacts] = useRememberedState('refereeContacts', {})
 
   const [lastGame, setLastGame] = useRememberedState('lastGame', null)
@@ -68,7 +48,6 @@ export default function RefereesHub() {
   const [allGames, setAllGames] = useRememberedState('allGames', []) // current season, played, from live fixtures
   const [historicGames, setHistoricGames] = useRememberedState('historicGames', []) // from historic_fixtures
   const [seasonFilter, setSeasonFilter] = useRememberedState('seasonFilter', '')
-  const [cardStats, setCardStats] = useRememberedState('cardStats', null)
   useRememberedScroll(!loading)
 
   useEffect(() => {
@@ -83,12 +62,6 @@ export default function RefereesHub() {
   }, [])
 
   useEffect(() => {
-    supabase
-      .from('admin_profiles')
-      .select('id')
-      .maybeSingle()
-      .then(({ data }) => setIsAdmin(!!data))
-
     supabase
       .from('referees')
       .select('id, name')
@@ -129,86 +102,11 @@ export default function RefereesHub() {
   }, [signedIn])
 
   useEffect(() => {
-    if (!isAdmin || referees.length === 0) {
-      setLeagueTable([])
-      return
-    }
-    let cancelled = false
-    async function load() {
-      const { data: playedFixtures } = await supabase
-        .from('fixtures')
-        .select('id, referee_name, home_team:home_team_id(id, name), away_team:away_team_id(id, name)')
-        .eq('status', 'played')
-        .not('referee_name', 'is', null)
-
-      const gamesByRef = {}
-      const teamsByRef = {}
-      for (const f of playedFixtures || []) {
-        gamesByRef[f.referee_name] = (gamesByRef[f.referee_name] || 0) + 1
-        teamsByRef[f.referee_name] = teamsByRef[f.referee_name] || {}
-        if (f.home_team?.name) {
-          teamsByRef[f.referee_name][f.home_team.name] = (teamsByRef[f.referee_name][f.home_team.name] || 0) + 1
-        }
-        if (f.away_team?.name) {
-          teamsByRef[f.referee_name][f.away_team.name] = (teamsByRef[f.referee_name][f.away_team.name] || 0) + 1
-        }
-      }
-
-      const fixtureIds = (playedFixtures || []).map((f) => f.id)
-      const cardsByRef = {}
-      const cardsByRefTeam = {}
-      if (fixtureIds.length > 0) {
-        const { data: cards } = await supabase
-          .from('discipline_records')
-          .select('card_count, fixture_id, team_id')
-          .in('fixture_id', fixtureIds)
-        const fixtureToRef = {}
-        const teamNamesById = {}
-        for (const f of playedFixtures || []) {
-          fixtureToRef[f.id] = f.referee_name
-          if (f.home_team?.id) teamNamesById[f.home_team.id] = f.home_team.name
-          if (f.away_team?.id) teamNamesById[f.away_team.id] = f.away_team.name
-        }
-        for (const card of cards || []) {
-          const ref = fixtureToRef[card.fixture_id]
-          if (!ref) continue
-          const count = card.card_count || 0
-          cardsByRef[ref] = (cardsByRef[ref] || 0) + count
-          const teamName = teamNamesById[card.team_id]
-          if (teamName) {
-            cardsByRefTeam[ref] = cardsByRefTeam[ref] || {}
-            cardsByRefTeam[ref][teamName] = (cardsByRefTeam[ref][teamName] || 0) + count
-          }
-        }
-      }
-
-      const table = referees
-        .map((r) => {
-          const games = gamesByRef[r.name] || 0
-          const cards = cardsByRef[r.name] || 0
-          const teams = Object.entries(teamsByRef[r.name] || {})
-            .sort((a, b) => b[1] - a[1])
-            .map(([name, count]) => `${teamCode(name)}:${count}G/${cardsByRefTeam[r.name]?.[name] || 0}C`)
-          return { name: r.name, games, cards, rate: games ? cards / games : 0, teams }
-        })
-        .filter((r) => r.games > 0)
-        .sort((a, b) => b.rate - a.rate)
-
-      if (!cancelled) setLeagueTable(table)
-    }
-    load()
-    return () => {
-      cancelled = true
-    }
-  }, [isAdmin, referees])
-
-  useEffect(() => {
     if (!refName) {
       setLastGame(null)
       setNextGame(null)
       setAllGames([])
       setHistoricGames([])
-      setCardStats(null)
       return
     }
     setLoading(true)
@@ -273,25 +171,6 @@ export default function RefereesHub() {
         }))
       )
 
-      // Card stats for the current season only — discipline records don't
-      // survive a season archive, so this can't be computed for past seasons.
-      if (played.length > 0) {
-        const fixtureIds = played.map((f) => f.id)
-        const { data: cards } = await supabase
-          .from('discipline_records')
-          .select('card_count, fixture_id')
-          .in('fixture_id', fixtureIds)
-        const totalCards = (cards || []).reduce((sum, c) => sum + (c.card_count || 0), 0)
-        setCardStats({
-          season: currentSeason,
-          games: played.length,
-          cards: totalCards,
-          rate: played.length ? (totalCards / played.length).toFixed(2) : '0.00',
-        })
-      } else {
-        setCardStats(null)
-      }
-
       setLoading(false)
     }
     load()
@@ -325,40 +204,8 @@ export default function RefereesHub() {
     <div className="container" style={{ padding: '32px 20px 48px' }}>
       <h1 style={{ fontSize: 30, marginBottom: 4 }}>Referees</h1>
       <p style={{ color: 'var(--muted)', marginBottom: 24 }}>
-        Fixture history and card stats for each match official.
+        Fixture history for each match official.
       </p>
-
-      {isAdmin && leagueTable.length > 0 && (
-        <section style={{ marginBottom: 32 }}>
-          <h2 style={sectionHeaderStyle}>Cards League Table — {currentSeason} (Admin only)</h2>
-          <div style={{ overflowX: 'auto' }}>
-            <table style={tableStyle}>
-              <thead>
-                <tr>
-                  <th style={thStyle}>Referee</th>
-                  <th style={{ ...thStyle, textAlign: 'center' }}>Games</th>
-                  <th style={{ ...thStyle, textAlign: 'center' }}>Cards</th>
-                  <th style={{ ...thStyle, textAlign: 'center' }}>Rate</th>
-                  <th style={thStyle}>Teams (games/cards)</th>
-                </tr>
-              </thead>
-              <tbody>
-                {leagueTable.map((r, i) => (
-                  <tr key={r.name}>
-                    <td style={tdStyle}>
-                      {i + 1}. {r.name}
-                    </td>
-                    <td style={{ ...tdStyle, textAlign: 'center' }}>{r.games}</td>
-                    <td style={{ ...tdStyle, textAlign: 'center' }}>{r.cards}</td>
-                    <td style={{ ...tdStyle, textAlign: 'center', fontWeight: 700 }}>{r.rate.toFixed(2)}</td>
-                    <td style={{ ...tdStyle, color: 'var(--muted)' }}>{r.teams.join(', ')}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </section>
-      )}
 
       <select value={refName} onChange={(e) => { setRefName(e.target.value); const next = new URLSearchParams(searchParams); next.set('ref', e.target.value); setSearchParams(next, { replace: true }) }} style={{ ...selectStyle, marginBottom: 16 }}>
         <option value="">Select a referee…</option>
@@ -412,26 +259,6 @@ export default function RefereesHub() {
             </div>
           </div>
 
-          {cardStats && (
-            <>
-              <h2 style={sectionHeaderStyle}>Cards Given — {cardStats.season}</h2>
-              <div style={{ ...cardStyle, marginBottom: 28, display: 'flex', gap: 20 }}>
-                <div>
-                  <div style={statLabelStyle}>Games</div>
-                  <Link to={matchHistoryUrl({ referee: refName, season: cardStats.season, status: 'played' })} style={statValueStyle}>{cardStats.games}</Link>
-                </div>
-                <div>
-                  <div style={statLabelStyle}>Total cards</div>
-                  <div style={statValueStyle}>{cardStats.cards}</div>
-                </div>
-                <div>
-                  <div style={statLabelStyle}>Cards per game</div>
-                  <div style={statValueStyle}>{cardStats.rate}</div>
-                </div>
-              </div>
-            </>
-          )}
-
           {seasonOptions.length > 1 && (
             <select value={seasonFilter} onChange={(e) => setSeasonFilter(e.target.value)} style={{ ...selectStyle, marginBottom: 20 }}>
               {seasonOptions.map((s) => (
@@ -446,7 +273,7 @@ export default function RefereesHub() {
             <>
               <h2 style={sectionHeaderStyle}>Teams Officiated — {seasonFilter}</h2>
               <p style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 10 }}>
-                How many times this referee has taken charge of each team this season — useful context for the card rate above.
+                How many times this referee has taken charge of each team this season — with links to the matching games.
               </p>
               <div style={{ marginBottom: 28 }}>
                 {teamCountsList.map(([team, count]) => (
@@ -523,35 +350,4 @@ const sectionHeaderStyle = {
   marginBottom: 12,
   paddingBottom: 8,
   borderBottom: '2px solid var(--line)',
-}
-const statLabelStyle = {
-  fontSize: 11,
-  color: 'var(--muted)',
-  textTransform: 'uppercase',
-  letterSpacing: 0.3,
-}
-const statValueStyle = {
-  fontSize: 22,
-  fontWeight: 800,
-}
-const tableStyle = {
-  width: '100%',
-  borderCollapse: 'collapse',
-  fontSize: 12,
-  minWidth: 480,
-}
-const thStyle = {
-  textAlign: 'left',
-  fontSize: 11,
-  textTransform: 'uppercase',
-  letterSpacing: 0.3,
-  color: 'var(--muted)',
-  padding: '6px 8px',
-  borderBottom: '1px solid var(--line)',
-  whiteSpace: 'nowrap',
-}
-const tdStyle = {
-  padding: '6px 8px',
-  borderBottom: '1px solid var(--line)',
-  verticalAlign: 'top',
 }

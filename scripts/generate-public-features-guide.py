@@ -168,12 +168,12 @@ story.append(card_grid([
     ('Historical seasons', 'Open a season and switch between League table, Competitions and Scorers. Table history lets you select a recorded match date, including 2025/26; the official final table remains the default where held. Archived tables use the current-table layout with club badges where available and the same position, played, won, drawn, lost, goals for, goals against, goal difference and points columns. Earlier tables are calculated from recorded results and exclude historical points adjustments. Compact competition rows open their match history, with an option to view all season results. Select a result score to open the recorded match details, including match-linked scorers for 2025/26. Filter each season’s fixtures by the teams recorded in that season, including clubs no longer active.'),
     ('Linked team records', 'Team names in honours and historical areas link back to current team pages when a match is available.'),
 ]))
-story += [Spacer(1, 10)] + section_title('7. Referee information', 'The referee section builds a public statistical picture from recorded appointments and discipline data.')
+story += [Spacer(1, 10)] + section_title('7. Referee information', 'The referee section links match officials to their recorded appointments and fixture history.')
 story.append(card_grid([
     ('Officials list', 'Search and select a referee to view recorded information.'),
     ('Games officiated', 'Review matches, dates, teams, scores, competitions and venues.'),
     ('Venue and team breakdowns', 'Open clubs and venues from referee breakdowns. Select an appointment count to review that official’s matching games for the selected season, then open match details.'),
-    ('Cards summary', 'Recorded yellow and red cards can be reviewed by match and player where the source data is available.'),
+    ('Fixture links', 'Open recorded appointments to view the match details and continue into related teams, competitions and venues.'),
     ('Season selection', 'Choose the current season, last season or all available seasons.'),
     ('Referee reports', 'Create a referee report and download it in PDF or Word format.'),
 ]))
