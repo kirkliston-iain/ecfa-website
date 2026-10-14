@@ -20,7 +20,7 @@ function GameRow({ f, showResult }) {
         {f.compName}
         {f.round_name ? ` — ${f.round_name}` : ''}
       </div>
-      <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 4 }}>
+      <div style={{ fontWeight: 700, fontSize: 13, marginBottom: 3 }}>
         {f.home_name} v {f.away_name}
         {showResult && f.home_score != null && f.away_score != null
           ? ` (${f.isHistoric ? historicDisplayedScore(f) : `${f.home_score}-${f.away_score}`})`
@@ -211,8 +211,8 @@ export default function RefereesHub() {
 
   return (
     <div className="container ref-area">
-      <h1 style={{ fontSize: 30, marginBottom: 4 }}>Referees</h1>
-      <p style={{ color: 'var(--muted)', marginBottom: 24 }}>
+      <h1>Referees</h1>
+      <p className="ref-intro" style={{ color: 'var(--muted)' }}>
         Fixture history for each match official.
       </p>
 
@@ -258,7 +258,7 @@ export default function RefereesHub() {
 
       {!loading && !loadError && refName && (
         <>
-          <div style={{ display: 'flex', gap: 10, marginBottom: 28, flexWrap: 'wrap' }}>
+          <div style={{ display: 'flex', gap: 8, marginBottom: 18, flexWrap: 'wrap' }}>
             <div style={{ flex: '1 1 200px' }}>
               <div style={sectionLabelStyle}>Next Game</div>
               {nextGame ? (
@@ -295,7 +295,7 @@ export default function RefereesHub() {
               <p style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 10 }}>
                 How many times this referee has taken charge of each team this season — with links to the matching games.
               </p>
-              <div style={{ marginBottom: 28 }}>
+              <div style={{ marginBottom: 18 }}>
                 {teamCountsList.map(([team, count]) => (
                   <div key={team} style={{ display: 'flex', justifyContent: 'space-between', padding: '5px 0', borderBottom: '1px solid var(--line)', fontSize: 13 }}>
                     <TeamHistoryLink name={team} />
@@ -312,7 +312,7 @@ export default function RefereesHub() {
               <p style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 10 }}>
                 How many times this referee has been at each venue this season.
               </p>
-              <div style={{ marginBottom: 28 }}>
+              <div style={{ marginBottom: 18 }}>
                 {venueCountsList.map(([venue, count]) => (
                   <div key={venue} style={{ display: 'flex', justifyContent: 'space-between', padding: '5px 0', borderBottom: '1px solid var(--line)', fontSize: 13 }}>
                     <VenueHistoryLink name={venue} />
@@ -327,7 +327,7 @@ export default function RefereesHub() {
           {gamesForSeason.length === 0 ? (
             <p style={{ color: 'var(--muted)', fontSize: 14 }}>No games recorded for this season.</p>
           ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
               {gamesForSeason.map((f) => (
                 <GameRow key={f.id} f={f} showResult={true} />
               ))}
@@ -352,7 +352,7 @@ const selectStyle = {
 const cardStyle = {
   border: '1px solid var(--line)',
   borderRadius: 8,
-  padding: 12,
+  padding: 9,
 }
 const sectionLabelStyle = {
   fontSize: 11,
@@ -363,11 +363,11 @@ const sectionLabelStyle = {
   marginBottom: 6,
 }
 const sectionHeaderStyle = {
-  fontSize: 15,
+  fontSize: 14,
   textTransform: 'uppercase',
   letterSpacing: 0.4,
   color: 'var(--brass)',
-  marginBottom: 12,
-  paddingBottom: 8,
+  marginBottom: 8,
+  paddingBottom: 6,
   borderBottom: '2px solid var(--line)',
 }
