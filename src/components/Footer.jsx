@@ -123,6 +123,7 @@ export default function Footer() {
             </button>
           )}
           <Link to="/admin">Admin</Link>
+          <Link to="/referees/login">Referee login</Link>
           {signOutError && <span role="alert" style={{ color: '#B3261E' }}>{signOutError}</span>}
         </div>
       </div>

@@ -175,7 +175,7 @@ story.append(card_grid([
     ('Venue and team breakdowns', 'Open clubs and venues from referee breakdowns. Select an appointment count to review that official’s matching games for the selected season, then open match details.'),
     ('About the referee', 'Profiles have space for a photograph, an introduction and SurveyMonkey questions and answers added by the league.'),
     ('Season selection', 'Choose the current season, last season or all available seasons.'),
-    ('Private referee login', 'Referees sign in with the league portal code to view all referees’ yellow and red card totals, averages, player and team breakdowns and match details from last season onwards where records are available. Card summaries require login.'),
+    ('Private referee login', 'Use Referee login in the page footer, alongside Admin and Manager sign in. Referees sign in with the league portal code to view all referees’ yellow and red card totals, averages, player and team breakdowns and match details from last season onwards where records are available. Card summaries require login.'),
 ]))
 story += [PageBreak()] + section_title('8. Sponsors')
 story.append(p('The sponsors page groups sponsors beneath the competitions they support. Each entry includes a short summary, an optional logo badge, a link to the sponsor’s website and a direct route to the sponsored competition.'))

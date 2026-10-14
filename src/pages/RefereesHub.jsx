@@ -216,7 +216,7 @@ export default function RefereesHub() {
         Fixture history for each match official.
       </p>
 
-      <div className="ref-actions"><Link to="/referees/login">Referee login →</Link>{refName && <Link to="/referees">← All referees</Link>}</div>
+      {refName && <div className="ref-actions"><Link to="/referees">← All referees</Link></div>}
       {!refName && <div className="ref-directory">
         {referees.map((ref) => <Link className="ref-person" key={ref.id} to={`/referees?ref=${encodeURIComponent(ref.name)}`}>
           {ref.photo_url ? <img className="ref-avatar" src={ref.photo_url} alt={ref.name} /> : <span className="ref-avatar" aria-hidden="true">{ref.name.split(' ').map((part) => part[0]).slice(0,2).join('')}</span>}

@@ -384,21 +384,6 @@ export default function Downloads() {
         </div>
       </section>
 
-      <section style={{ marginBottom: 28 }}>
-        <h2 style={{ fontSize: 18, marginBottom: 10 }}>Referee reports</h2>
-        <div style={cardStyle}>
-          <div style={{ flex: 1, minWidth: 220 }}>
-            <div style={{ fontWeight: 700, marginBottom: 4 }}>Private referee card dashboard</div>
-            <div style={{ fontSize: 13, color: 'var(--muted)' }}>
-              Sign in with the referee portal code to view card totals, averages and player and team breakdowns for all referees.
-            </div>
-          </div>
-          <Link to="/referees/login" style={{ ...buttonStyle, textDecoration: 'none' }}>
-            Create report
-          </Link>
-        </div>
-      </section>
-
       <div style={{ display: 'grid', gap: 12 }}>
         {DOWNLOADS.map((item) => (
           <div key={item.title} style={cardStyle}>
