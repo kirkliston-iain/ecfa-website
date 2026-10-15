@@ -1,3 +1,4 @@
+import MatchGraphic from '../components/MatchGraphic'
 import { useRememberedState, useRememberedScroll } from '../hooks/usePageMemory'
 import { historicTeamName } from '../utils/historicTeams'
 import { PlayerHistoryLink, TeamHistoryLink, VenueHistoryLink, CompetitionHistoryLink } from '../components/HistoryLinks'
@@ -76,12 +77,13 @@ export default function FixtureDetail() {
       const { data: liveFixture } = await supabase
         .from('fixtures')
         .select(
-          'id, round_name, fixture_date, venue, referee_name, home_score, away_score, went_to_extra_time, home_extra_time_score, away_extra_time_score, decided_by_penalties, home_penalty_score, away_penalty_score, status, home_team:home_team_id(id, name, logo_url), away_team:away_team_id(id, name, logo_url)'
+          'id, stage:stage_id(competition:competition_id(name, season)), round_name, fixture_date, venue, referee_name, home_score, away_score, went_to_extra_time, home_extra_time_score, away_extra_time_score, decided_by_penalties, home_penalty_score, away_penalty_score, status, home_team:home_team_id(id, name, logo_url), away_team:away_team_id(id, name, logo_url)'
         )
         .eq('id', id)
+        .eq('hidden_from_public', false)
         .maybeSingle()
 
-      let f = liveFixture
+      let f = liveFixture ? { ...liveFixture, competition_name: liveFixture.stage?.competition?.name } : null
       if (!f) {
         const { data: historicFixture } = await supabase
           .from('historic_fixtures')
@@ -420,6 +422,10 @@ export default function FixtureDetail() {
           <Badge logoUrl={fixture.away_team?.logo_url} name={fixture.away_team?.name} />
           <div style={{ marginTop: 8, fontWeight: 700, fontSize: 15 }}>{fixture.away_team?.name}</div>
         </Link>
+      </div>
+
+      <div id="match-graphic" style={{ scrollMarginTop: 20 }}>
+        {location.search.includes('graphic=1') ? <MatchGraphic fixture={fixture} scorers={scorers} /> : <Link to={`?graphic=1#match-graphic`} style={{display:'inline-block',margin:'16px 0',padding:'7px 12px',border:'1px solid var(--brass)',borderRadius:5}}>Share graphic 🖼️</Link>}
       </div>
 
       {played && (

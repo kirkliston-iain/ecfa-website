@@ -132,6 +132,15 @@ story.append(card_grid([
 ]))
 story.append(PageBreak())
 
+story += section_title('On This Day and Matchday Graphics', 'Two compact shortcuts at the top of Match Hub open these public features.')
+story.append(card_grid([
+    ('On This Day', 'Rediscover recorded matches on this calendar date in previous years, across current and historic seasons. A featured match and other results link to match details, teams and competition history.'),
+    ('Explore another date', 'Choose a date or return to Today. When there are no exact-date results, the page clearly switches to This week in ECFA history, using matches within three days of the selected date.'),
+    ('Create a match graphic', 'Search Matchday Graphics by team, date or competition. Open a game and choose Share graphic. Administrators can also open the graphic from a saved fixture.'),
+    ('Share into your chats', 'Choose square or story size. Graphics show ECFA branding, team badges, published sponsors, and fixture details or recorded full-time scores and scorers. Share image opens supported device sharing; Download image and Copy match link are also available. Unavailable badges use initials.'),
+]))
+story.append(PageBreak())
+
 # Competitions and stats
 story += section_title('3. Competitions, tables and cups', 'Competition pages separate the league and cup tournaments while keeping their fixtures and progress easy to follow.')
 story.append(card_grid([

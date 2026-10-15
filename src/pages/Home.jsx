@@ -949,10 +949,9 @@ export default function Home() {
 
   return (
     <div className="container" style={{ padding: '32px 20px 48px' }}>
-      <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 12, marginBottom: 4 }}>
-        <h1 style={{ fontSize: 30 }}>Match Hub</h1>
-        <Link to="/predictions" style={{ padding: '5px 9px', border: '1px solid var(--brass)', borderRadius: 5, fontSize: 12, fontWeight: 700 }}>Weekly Predictions ⚽</Link>
-        <Link to="/news" style={{ display: 'inline-block', padding: '5px 9px', border: '1px solid var(--brass)', borderRadius: 5, color: 'var(--ink)', fontSize: 12, fontWeight: 700, whiteSpace: 'nowrap' }}>Latest News</Link>
+      <h1 style={{ fontSize: 30 }}>Match Hub</h1>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 8, maxWidth: 440, marginBottom: 14 }}>
+        {[["/predictions", "Weekly Predictions ⚽"], ["/news", "Latest News"], ["/on-this-day", "On This Day 📅"], ["/matchday-graphics", "Matchday Graphics 🖼️"]].map(([to, label]) => <Link key={to} to={to} style={{ padding: '7px 9px', border: '1px solid var(--brass)', borderRadius: 5, fontSize: 12, fontWeight: 700, color: 'var(--ink)', textAlign: 'center' }}>{label}</Link>)}
       </div>
       <p style={{ color: 'var(--muted)', marginBottom: 20 }}>
         Results and fixtures across every ECFA competition.

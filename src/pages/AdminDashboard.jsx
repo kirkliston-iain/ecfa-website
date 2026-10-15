@@ -1307,6 +1307,7 @@ export default function AdminDashboard() {
                     {expandedFixture === f.id ? 'Hide details' : 'Scorers & cards'}
                   </button>
                 </div>
+                <a href={`/fixtures/${f.id}?graphic=1#match-graphic`} target="_blank" rel="noopener noreferrer" style={{display:'inline-block',margin:'8px 0',fontSize:12}}>Create graphic from saved match ↗</a>
                 {fixtureSaveStatus[f.id] && (
                   <div
                     role="status"

@@ -1,3 +1,5 @@
+import OnThisDay from './pages/OnThisDay'
+import MatchdayGraphics from './pages/MatchdayGraphics'
 import { useLayoutEffect } from 'react'
 import { Routes, Route, Navigate, useLocation, useNavigationType } from 'react-router-dom'
 import MatchHistory from './pages/MatchHistory'
@@ -70,6 +72,8 @@ export default function App() {
       <main className={isAdminArea ? 'site-main site-main--admin' : 'site-main site-main--public'} style={{ flex: 1 }}>
         <Routes>
           <Route path="/" element={<Home key={location.key} />} />
+          <Route path="/on-this-day" element={<OnThisDay />} />
+          <Route path="/matchday-graphics" element={<MatchdayGraphics />} />
           <Route path="/predictions" element={<WeekendPredictions />} />
           <Route path="/news" element={<News key={location.key} />} />
           <Route path="/competitions" element={<CompetitionsIndex key={location.key} />} />
