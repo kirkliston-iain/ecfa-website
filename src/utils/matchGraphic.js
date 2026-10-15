@@ -45,9 +45,21 @@ export async function renderMatchGraphic(f, scorers, logos, story = false) {
   logo(assets[1],245,465+offset,130,f.home_team?.name || 'Home')
   logo(assets[2],835,465+offset,130,f.away_team?.name || 'Away')
   text(played?displayedScore(f):'v',540,490+offset,310,played?74:50)
-  text(f.home_team?.name,245,573+offset,425,34,'#fff',3)
-  text(f.away_team?.name,835,573+offset,425,34,'#fff',3)
-  let y=710+offset
+  text(f.home_team?.name,245,573+offset,425,34,'#fff',2)
+  text(f.away_team?.name,835,573+offset,425,34,'#fff',2)
+  if(f.form) {
+    for(const [values,x] of [[f.form.home,245],[f.form.away,835]]) {
+      text('LAST 5 · LATEST →',x,638+offset,420,16,'#d9dee2',1)
+      const items=[...Array(Math.max(0,5-values.length)).fill('—'),...values]
+      items.forEach((value,i)=>{
+        const bx=x-116+i*48
+        ctx.fillStyle=({W:'#237747',D:'#a77813',L:'#b33838'})[value] || '#34434f'
+        ctx.fillRect(bx,650+offset,40,36)
+        ctx.fillStyle='#fff';ctx.font='bold 23px Arial';ctx.textAlign='center';ctx.fillText(value,bx+20,676+offset)
+      })
+    }
+  }
+  let y=725+offset
   if (played) {
     const note=fullOutcomeNote(f) || (f.penalty_winner_name ? `${f.penalty_winner_name} won on penalties` : '')
     if(note) y+=text(note,540,y,940,22,'#d5b65d',2)+8
