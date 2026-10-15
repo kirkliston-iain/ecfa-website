@@ -74,7 +74,7 @@ export default function WeekendGraphics({ matches }) {
       if(!navigator.canShare?.({files})){
         setShareMessage(`Your browser cannot share all ${files.length} images together. Use the individual image downloads below.`);return
       }
-      await navigator.share({files,title:`ECFA Saturday round-up · ${shared.displayStart}`,text:`Full Saturday results and league table: ${roundUpUrl}`,url:roundUpUrl})
+      await navigator.share({files,title:`ECFA Saturday round-up · ${shared.displayStart}`,text:'Full Saturday results and league table on the ECFA website',url:roundUpUrl})
       setShareMessage(`Shared ${files.length} graphics. Some apps omit links when sharing images; use Share clickable round-up link to send the website URL.`)
     }catch(e){if(e.name!=='AbortError')setShareMessage('Sharing did not complete. Please try again or download the graphics individually.')}
     finally{setSharing(false)}
