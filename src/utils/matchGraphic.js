@@ -96,8 +96,26 @@ export async function renderWeekendGraphic(report, logos, story = false) {
     report.rows.forEach((row,i)=>{const y=top+44+i*rowHeight;ctx.fillStyle=i%2?'#1d2c38':'#172631';ctx.fillRect(32,y-28,1016,rowHeight-2);fit(String(i+1),48,y,35,22);drawImage(assets[1+logos.sponsors.length+i],94,y-26,32,32);fit(row.teamName,137,y,350,23)
       ;[row.played,row.won,row.drawn,row.lost,row.goalsFor,row.goalsAgainst,row.goalDifference,row.points].forEach((value,j)=>fit(String(value),columns[j],y,50,23,j===7?'#d5b65d':'#fff','center'))})
   } else {
-    const rowHeight=Math.min(story?160:90,space/Math.max(1,report.rows.length))
-    report.rows.forEach((f,i)=>{const y=top+i*rowHeight;ctx.fillStyle=i%2?'#1d2c38':'#172631';ctx.fillRect(32,y-18,1016,rowHeight-5);fit(f.competition_name||'ECFA',540,y+6,900,Math.min(20,rowHeight*.23),'#d5b65d','center');drawImage(assets[1+logos.sponsors.length+i*2],45,y+16,40,40);drawImage(assets[2+logos.sponsors.length+i*2],995,y+16,40,40);fit(f.home_team?.name||'Home',100,y+45,350,Math.min(27,rowHeight*.32));fit(displayedScore(f),540,y+45,160,Math.min(34,rowHeight*.4),'#fff','center');fit(f.away_team?.name||'Away',980,y+45,350,Math.min(27,rowHeight*.32),'#fff','right');const note=fullOutcomeNote(f);if(note)fit(note,540,y+rowHeight-12,900,16,'#d9dee2','center')})
+    const rowHeight=Math.min(report.includeScorers ? (story?360:165) : (story?160:90),space/Math.max(1,report.rows.length))
+    report.rows.forEach((f,i)=>{
+      const y=top+i*rowHeight
+      ctx.fillStyle=i%2?'#1d2c38':'#172631';ctx.fillRect(32,y-18,1016,rowHeight-5)
+      fit(f.competition_name||'ECFA',540,y+6,900,Math.min(20,rowHeight*.23),'#d5b65d','center')
+      drawImage(assets[1+logos.sponsors.length+i*2],45,y+16,40,40);drawImage(assets[2+logos.sponsors.length+i*2],995,y+16,40,40)
+      fit(f.home_team?.name||'Home',100,y+45,350,Math.min(27,rowHeight*.32));fit(displayedScore(f),540,y+45,160,Math.min(34,rowHeight*.4),'#fff','center');fit(f.away_team?.name||'Away',980,y+45,350,Math.min(27,rowHeight*.32),'#fff','right')
+      const note=fullOutcomeNote(f)
+      if(report.includeScorers){
+        for(const [team,x,align] of [[f.home_team,100,'left'],[f.away_team,980,'right']]){
+          const scorers=(f.scorers||[]).filter(s=>s.team_id===team?.id)
+          const text=scorers.length?scorers.map(s=>`${[s.player?.first_name,s.player?.last_name].filter(Boolean).join(' ') || 'Unnamed scorer'}${Number(s.goals)>1?` (${s.goals})`:''}`).join(' · '):'No scorers recorded'
+          const available=rowHeight-95-(note?20:0)
+          let size=20;let wrapped=[]
+          do{ctx.font=`bold ${size}px Arial`;wrapped=lines(ctx,text,385);if(wrapped.length*size*1.2<=available)break;size--}while(size>10)
+          ctx.fillStyle='#d9dee2';ctx.textAlign=align;wrapped.forEach((line,j)=>ctx.fillText(line,x,y+76+j*size*1.2))
+        }
+      }
+      if(note)fit(note,540,y+rowHeight-28,900,16,'#d9dee2','center')
+    })
   }
   ctx.fillStyle='#fff';ctx.fillRect(36,h-155,1008,100)
   logos.sponsors.forEach((s,i)=>{const count=logos.sponsors.length;const x=36+1008/count*i;const img=assets[1+i];if(img)drawImage(img,x+10,h-143,1008/count-20,76);else fit(s.name,x+1008/count/2,h-100,900/count,18,'#131f29','center')})

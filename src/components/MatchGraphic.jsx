@@ -3,7 +3,7 @@ import { useSiteLogos } from '../contexts/SiteLogos'
 import { supabase } from '../supabaseClient'
 import { renderMatchGraphic, renderWeekendGraphic } from '../utils/matchGraphic'
 
-export default function MatchGraphic({ fixture, scorers, report = null }) {
+export default function MatchGraphic({ fixture, scorers, report = null, onReady }) {
   const {siteLogo,sponsorLogo}=useSiteLogos()
   const [sponsors,setSponsors]=useState(null)
   const [format,setFormat]=useState('square')
@@ -26,6 +26,7 @@ export default function MatchGraphic({ fixture, scorers, report = null }) {
     return ()=>{active=false;if(url)URL.revokeObjectURL(url)}
   },[fixture,scorers,report,format,league,sponsorKey,appin])
   const filename=report ? `ecfa-${report.type}-${report.end}-${report.page || 1}-${format}.png` : `ecfa-${fixture.status==='played'?'result':'fixture'}-${fixture.id}-${format}.png`
+  useEffect(() => { onReady?.(output ? { blob: output.blob, filename } : null) }, [output, filename, onReady])
   async function share() {
     if(!output)return
     const file=new File([output.blob],filename,{type:'image/png'})
