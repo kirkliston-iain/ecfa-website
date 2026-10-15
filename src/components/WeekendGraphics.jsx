@@ -5,11 +5,17 @@ import { londonToday } from '../utils/publicMatches'
 import { addDays, previousWeekend, weekendStart, weekendResults } from '../utils/weekendGraphics'
 import { computeStandings } from '../utils/standings'
 import MatchGraphic from './MatchGraphic'
+import { renderWeekendGraphic } from '../utils/matchGraphic'
+import { useSiteLogos } from '../contexts/SiteLogos'
 
 const EMPTY=[]
 const PLACEHOLDER={id:'weekend',status:'played'}
 export default function WeekendGraphics({ matches }) {
   const [params,setParams]=useSearchParams()
+  const {siteLogo,sponsorLogo}=useSiteLogos()
+  const [sponsors,setSponsors]=useState([])
+  const [sharing,setSharing]=useState(false)
+  useEffect(()=>{let active=true;supabase.from('sponsors').select('name,logo_url').eq('is_published',true).order('sort_order').then(({data})=>{if(active)setSponsors(data||[])});return()=>{active=false}},[])
   const [league,setLeague]=useState(null)
   const [error,setError]=useState('')
   const [page,setPage]=useState(0)
@@ -51,10 +57,25 @@ export default function WeekendGraphics({ matches }) {
   },[weekend,pageIndex,perPage,pages,shared,includeScorers,scorerData])
   const tableReport=useMemo(()=>({...shared,type:'table',subtitle:league?.name||'ECFA League',rows:tables,badges:tables.map(r=>r.teamLogo)}),[shared,league?.name,tables])
   async function shareBoth(){
-    if(!resultImage||!tableImage)return
-    const files=[resultImage,tableImage].map(item=>new File([item.blob],item.filename,{type:'image/png'}))
-    if(!navigator.canShare?.({files})){setShareMessage('Sharing two images is unavailable in this browser. Download each graphic and attach both to your chat.');return}
-    try{await navigator.share({files,title:`ECFA Saturday round-up · ${shared.displayEnd}`});setShareMessage('Both graphics shared.')}catch(e){if(e.name!=='AbortError')setShareMessage('Sharing did not complete. You can download each graphic and attach both to your chat.')}
+    if(!resultImage||!tableImage||sharing)return
+    setSharing(true);setShareMessage('Preparing all Saturday results pages…')
+    try{
+      const logos={league:siteLogo('ecfa'),sponsors:sponsors.map(item=>({name:item.name,url:sponsorLogo(item.name)||item.logo_url}))}
+      const files=[]
+      for(let index=0;index<pages;index++){
+        const rows=weekend.slice(index*perPage,(index+1)*perPage).map(f=>({...f,scorers:includeScorers?(scorerData?.rows||[]).filter(row=>row.fixture_id===f.id):[]}))
+        const pageReport={...shared,type:'results',subtitle:`All competitions${pages>1?` · ${index+1} of ${pages}`:''}`,rows,badges:rows.flatMap(f=>[f.home_team?.logo_url,f.away_team?.logo_url]),page:index+1,includeScorers}
+        const image=await renderWeekendGraphic(pageReport,logos,false)
+        files.push(new File([image.blob],`ecfa-saturday-results-${saturday}-${index+1}.png`,{type:'image/png'}))
+      }
+      files.push(new File([tableImage.blob],tableImage.filename,{type:'image/png'}))
+      if(!navigator.canShare?.({files})){
+        setShareMessage(`Your browser cannot share all ${files.length} images together. Use the individual image downloads below.`);return
+      }
+      await navigator.share({files,title:`ECFA Saturday round-up · ${shared.displayEnd}`})
+      setShareMessage(`Shared ${files.length} graphics: ${pages} results ${pages===1?'page':'pages'} and the league table.`)
+    }catch(e){if(e.name!=='AbortError')setShareMessage('Sharing did not complete. Please try again or download the graphics individually.')}
+    finally{setSharing(false)}
   }
   function update(values){const next=new URLSearchParams(params);for(const [key,value] of Object.entries(values))next.set(key,value);setParams(next,{replace:true});setPage(0)}
   const seasonStart=league?.season?.slice(0,4)
@@ -63,11 +84,11 @@ export default function WeekendGraphics({ matches }) {
     <div style={{display:'flex',flexWrap:'wrap',gap:12,alignItems:'center'}}><label>Saturday <input type="date" value={saturday} max={londonToday()} onChange={e=>{if(e.target.value)update({weekend:weekendStart(e.target.value)})}}/></label><label style={{display:'inline-flex',alignItems:'center',gap:6}}><input type="checkbox" checked={includeScorers} onChange={e=>update({scorers:e.target.checked?'1':'0'})}/>Include scorers on results</label><button onClick={()=>update({weekend:previousWeekend(londonToday())})}>Last Saturday</button></div>
     <p style={{fontSize:13}}>Saturday {report.displayStart} · {weekend.length} recorded {weekend.length===1?'result':'results'}</p>
     {outsideSeason?<p>Weekend round-up graphics currently cover the {league.season} season. Select a weekend within that season.</p>:<>
-      <button disabled={!weekend.length||!league||Boolean(error)||!resultImage||!tableImage||(includeScorers&&(!scorerData||scorerData.saturday!==saturday||scorerData.error))} onClick={shareBoth}>Share Saturday results + league table</button>
-      <p style={{fontSize:12,color:'var(--muted)',margin:'7px 0'}}>Shares 2 images: <strong>Saturday results{includeScorers?' with scorers':''}</strong> + <strong>league table</strong>. You can also share or download either graphic separately below.</p><p role="status" style={{fontSize:12}}>{shareMessage}</p>
+      <button disabled={sharing||!weekend.length||!league||Boolean(error)||!resultImage||!tableImage||(includeScorers&&(!scorerData||scorerData.saturday!==saturday||scorerData.error))} onClick={shareBoth}>{sharing?'Preparing graphics…':`Share all ${pages} results ${pages===1?'graphic':'graphics'} + league table`}</button>
+      <p style={{fontSize:12,color:'var(--muted)',margin:'7px 0'}}>Shares {pages+1} images: <strong>Saturday results{includeScorers?' with scorers':''}</strong> + <strong>league table</strong>. You can also share or download either graphic separately below.</p><p role="status" style={{fontSize:12}}>{shareMessage}</p>
       {weekend.length===0?<p>No completed Saturday matches recorded for this date.</p>:includeScorers&&(!scorerData||scorerData.saturday!==saturday)?<p>Loading scorers…</p>:includeScorers&&scorerData.error?<p role="alert">Unable to load scorers. Please turn the option off and on to retry.</p>:<>
         {pages>1&&<div style={{display:'flex',alignItems:'center',gap:12}}><button disabled={pageIndex===0} onClick={()=>setPage(p=>p-1)}>Previous results image</button><span>{pageIndex+1} of {pages}</span><button disabled={pageIndex===pages-1} onClick={()=>setPage(p=>p+1)}>Next results image</button></div>}
-        {pages>1&&<p style={{fontSize:12}}>Saturday results span {pages} images. The share button sends the displayed results image (page {pageIndex+1}) plus the league table. Use the arrows to select another results page.</p>}
+        {pages>1&&<p style={{fontSize:12}}>Saturday results span {pages} images. The main share button sends every results page plus the league table, regardless of which page is shown below.</p>}
         <MatchGraphic fixture={PLACEHOLDER} scorers={EMPTY} report={report} onReady={receiveResults}/>
       </>}
       {error?<p role="alert">{error}</p>:!league?<p>Loading league table…</p>:<>
