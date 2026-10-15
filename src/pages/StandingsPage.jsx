@@ -5,6 +5,7 @@ import { Link } from 'react-router-dom'
 import { useEffect } from 'react'
 import { supabase } from '../supabaseClient'
 import StandingsTable from '../components/StandingsTable'
+import MatchGraphic from '../components/MatchGraphic'
 
 
 const COMPETITIONS = [
@@ -54,6 +55,7 @@ async function loadCompetitionTables(meta) {
 }
 
 export default function StandingsPage() {
+  const [shareTable, setShareTable] = useRememberedState('shareTable', false)
   const [loading, setLoading] = useRememberedState('loading', true)
   const [competitions, setCompetitions] = useRememberedState('competitions', [])
   useRememberedScroll(!loading)
@@ -111,6 +113,7 @@ export default function StandingsPage() {
             </Link>
           </div>
 
+          {comp.slug === 'appin-league' && comp.tables.length > 0 && <div style={{marginBottom:12}}><button type="button" onClick={() => setShareTable(!shareTable)} aria-expanded={shareTable} style={{fontSize:13,padding:'8px 12px',border:'1px solid var(--brass)',borderRadius:5}}>{shareTable?'Hide league table graphic':'Share league table graphic'}</button>{shareTable && comp.tables.map(t => <MatchGraphic key={t.groupId} fixture={{id:'league-table',status:'played'}} scorers={[]} report={{type:'table',subtitle:comp.name+(t.groupName?' · '+t.groupName:''),displayEnd:new Date().toLocaleDateString('en-GB'),season:'Current season',rows:t.rows,badges:t.rows.map(r=>r.teamLogo),sharePath:'/standings'}} />)}</div>}
           {comp.tables.length === 0 ? (
             <p style={{ color: 'var(--muted)', fontSize: 14 }}>No table for this competition (knockout format).</p>
           ) : (
