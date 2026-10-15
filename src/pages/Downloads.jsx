@@ -5,6 +5,8 @@ import { supabase } from '../supabaseClient'
 import { trackInteraction } from '../utils/webAnalytics'
 
 const PAGE_SIZE = 1000
+const FEATURES_GUIDE_FILENAME = 'ECFA-Public-Website-Features-Guide.pdf'
+const FEATURES_GUIDE_URL = '/documents/ECFA-Public-Website-Features-Guide.pdf?v=20261015'
 
 async function fetchAll(table, select = '*') {
   let from = 0
@@ -225,8 +227,9 @@ export default function Downloads() {
     setWorking(`uploaded-${item.id}`)
     setError('')
     try {
-      if (item.public_url) {
-        const response = await fetch(item.public_url)
+      if (item.public_url || item.file_name === FEATURES_GUIDE_FILENAME) {
+        const downloadUrl = item.file_name === FEATURES_GUIDE_FILENAME ? FEATURES_GUIDE_URL : item.public_url
+        const response = await fetch(downloadUrl, { cache: 'no-store' })
         if (!response.ok) throw new Error('The file could not be downloaded.')
         downloadFile(item.file_name, await response.arrayBuffer(), item.mime_type || 'application/octet-stream')
       } else {
@@ -316,7 +319,9 @@ export default function Downloads() {
           <h2 style={{ fontSize: 18, marginBottom: 10 }}>Latest downloads</h2>
           <div style={{ display: 'grid', gap: 12 }}>
             {uploadedDownloads.map((item) => {
-              const publicUrl = item.public_url || supabase.storage.from('website-downloads').getPublicUrl(item.storage_path).data.publicUrl
+              const publicUrl = item.file_name === FEATURES_GUIDE_FILENAME
+                ? FEATURES_GUIDE_URL
+                : (item.public_url || supabase.storage.from('website-downloads').getPublicUrl(item.storage_path).data.publicUrl)
               const isOfficeFile = item.mime_type === 'application/msword'
                 || item.mime_type === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
                 || item.mime_type === 'application/vnd.ms-excel'
