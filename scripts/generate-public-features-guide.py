@@ -98,7 +98,7 @@ cover = Table([[p('ECFA WEBSITE', 'CoverSub')], [p('Public Features Guide', 'Cov
               ]))
 story += [Spacer(1, 35*mm), cover, Spacer(1, 18*mm)]
 story.append(Table([[p('WEBSITE', 'Smallx'), p('https://ecfa-website.vercel.app', 'CardTitle')],
-                    [p('GUIDE UPDATED', 'Smallx'), p('14 October 2026', 'CardTitle')]],
+                    [p('GUIDE UPDATED', 'Smallx'), p('15 October 2026', 'CardTitle')]],
                    colWidths=[35*mm, 125*mm], style=TableStyle([
                        ('BOX', (0,0), (-1,-1), 0.7, LINE), ('INNERGRID', (0,0), (-1,-1), 0.5, LINE),
                        ('BACKGROUND', (0,0), (0,-1), PALE), ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
@@ -126,7 +126,7 @@ story.append(card_grid([
     ('Upcoming fixtures', 'See the competition, home and away teams, badges, kick-off time, venue and appointed referee when available.'),
     ('Results and scores', 'Completed games show the score and link to an individual match page.'),
     ('Match details', 'Follow club names, scores, competitions, scorers, venues and referees into their recorded history. Match previews link to previous meetings. Back restores your selections and position. Venue history supports season filters from 2025/26.'),
-    ('Current standings', 'A league-table snapshot provides a quick view of team positions and performance.'),
+    ('Current standings', 'A league-table snapshot provides a quick view of team positions, performance and recent five-game form, with a shareable table graphic.'),
     ('Competitions this week', 'Compact links below the matchday fixtures open each competition with games scheduled in the selected Monday-to-Sunday week, where you can browse its tables, fixtures and results.'),
     ('Weekend context', 'The front page prioritises upcoming games or recent results depending on the day. On Knockout Cup quarter-final dates, a winner path tree appears below the usual fixtures and results.'),
 ]))
@@ -145,7 +145,7 @@ story.append(PageBreak())
 # Competitions and stats
 story += section_title('3. Competitions, tables and cups', 'Competition pages separate the league and cup tournaments while keeping their fixtures and progress easy to follow.')
 story.append(card_grid([
-    ('League standings', 'View played, won, drawn, lost, goals for, goals against, goal difference and points.'),
+    ('League standings', 'View played, won, drawn, lost, goals for, goals against, goal difference, points and colour-coded last-five form (W/D/L). Share the current league table as a branded graphic.'),
     ('League fixtures and results', 'Open match details from a score or date; club and venue names open their histories. Table figures link to the supporting games, respecting competition, group, result and historical table date. Cup bracket ties open their matches.'),
     ('Cup progress', 'Follow group tables and knockout fixtures. Gold labels in Match Hub previews link to the relevant group, cup draw or league table.'),
     ('Competition switching', 'Move between the Appin Sports League, ECFA Knockout Cup, ECFA League Cup and Brian Latto Cup.'),
@@ -153,7 +153,7 @@ story.append(card_grid([
 story += [Spacer(1, 10)] + section_title('4. Goalscorers and player information')
 story.append(card_grid([
     ('Season scorer tables', 'Choose All goals, League or Cup and select a season. The mobile-friendly table shows name, team, league goals, cup goals and overall goals. Tap any heading to sort; tap again to reverse the order. Earlier seasons are recorded under League.'),
-    ('All-time scorers', 'Combine every recorded ECFA season into an overall career goals table with competition totals.'),
+    ('All-time scorers', 'Combine every recorded ECFA season into an overall career goals table with competition totals. Share a branded top-20 overall scorers graphic with sponsor logo; for an individual season, share its top 10.'),
     ('Goalscorers sponsors', 'Game of Throwing Edinburgh and Escape Edinburgh appear together below the Goalscorers heading.'),
     ('Player profiles', 'View a player’s current team, goals, yellow and red cards, and recorded transfers with dates, previous clubs and new clubs. Club names open their team pages.'),
     ('Scoring history', 'Goals are totalled by season and the club represented in each match. Transferring a player keeps previous goals and cards with their original clubs.'),
@@ -187,6 +187,7 @@ story.append(card_grid([
     ('Season selection', 'Choose the current season, last season or all available seasons.'),
     ('Private referee login', 'Use Referee login in the page footer, alongside Admin and Manager sign in. Referees sign in with the league portal code to view all referees’ yellow and red card totals, averages, player and team breakdowns and match details from last season onwards where records are available. Card summaries require login.'),
 ]))
+story += [Spacer(1, 9), p('<b>Privacy:</b> The referee portal is restricted. Referee card averages and player/team card breakdowns are not shown publicly; only authorised users should be given access.')]
 story += [PageBreak()] + section_title('8. Sponsors')
 story.append(p('The sponsors page groups sponsors beneath the competitions they support. Each entry includes a short summary, an optional logo badge, a link to the sponsor’s website and a direct route to the sponsored competition.'))
 
