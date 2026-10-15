@@ -1,0 +1,33 @@
+name: Publish ECFA league handbook 2026/27
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'scripts/publish-handbook-2026-27.py'
+      - '.github/workflows/publish-handbook-2026-27.yml'
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y libreoffice-writer
+          pip install python-docx pypdf
+      - name: Generate approved Word and PDF handbook
+        run: python scripts/publish-handbook-2026-27.py
+      - name: Commit published handbook files
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add public/documents/ECFA-League-Handbook-2026-27.docx public/documents/ECFA-League-Handbook-2026-27.pdf
+          if ! git diff --cached --quiet; then
+            git commit -m "Publish updated ECFA league handbook 2026/27"
+            git push
+          fi
