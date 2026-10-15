@@ -1,3 +1,4 @@
+import FixtureGraphics from '../components/FixtureGraphics'
 import { TeamHistoryLink, CompetitionHistoryLink } from '../components/HistoryLinks'
 import { useRememberedState, useRememberedScroll } from '../hooks/usePageMemory'
 import ManagedSponsorLogo from '../components/ManagedSponsorLogo'
@@ -757,7 +758,7 @@ export default function Home() {
     const rows = []
     for (const comp of competitions) {
       for (const f of comp.fixtures) {
-        if (dateKey(f.fixture_date) === selectedDate) rows.push(f)
+        if (dateKey(f.fixture_date) === selectedDate) rows.push({...f, competition_name:comp.name})
       }
     }
     return rows
@@ -999,10 +1000,11 @@ export default function Home() {
         </section>
       )}
 
-      <section style={{ marginBottom: 40 }}>
+      <section id="fixtures" style={{ marginBottom: 40, scrollMarginTop:20 }}>
         <h2 style={{ fontSize: 13, textTransform: 'uppercase', letterSpacing: 0.5, color: 'var(--muted)', marginBottom: 12 }}>
           {hasResultsToday ? 'Full Time' : 'Upcoming Fixtures'}
         </h2>
+        <FixtureGraphics key={selectedDate} fixtures={matchesForDate} date={selectedDate}/>
         {matchesForDate.length === 0 ? (
           (() => {
             const events = calendarEvents.filter((ev) => ev.event_date === selectedDate)
