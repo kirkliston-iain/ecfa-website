@@ -1,0 +1,44 @@
+name: Publish ECFA features guide PDF
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'scripts/generate-public-features-guide.py'
+      - '.github/workflows/publish-features-guide.yml'
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install reportlab pypdf
+      - name: Generate guide
+        run: python scripts/generate-public-features-guide.py
+      - name: Verify guide
+        run: |
+          python - <<'PY'
+          from pypdf import PdfReader
+          p='output/pdf/ECFA_Public_Website_Features_Guide.pdf'
+          r=PdfReader(p)
+          text=' '.join(page.extract_text() or '' for page in r.pages)
+          assert len(r.pages)>=5
+          for phrase in ['Weekly Predictions','Match Hub','Referee information','All-time scorers','last-five form']:
+              assert phrase.lower() in text.lower(), phrase
+          print(f'Validated {len(r.pages)} pages')
+          PY
+      - name: Replace public guide
+        run: |
+          mkdir -p public/documents
+          cp output/pdf/ECFA_Public_Website_Features_Guide.pdf public/documents/ECFA-Public-Website-Features-Guide.pdf
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add public/documents/ECFA-Public-Website-Features-Guide.pdf
+          if ! git diff --cached --quiet; then
+            git commit -m "Publish refreshed ECFA public features guide PDF"
+            git push
+          fi
