@@ -81,7 +81,7 @@ export async function renderMatchGraphic(f, scorers, logos, story = false) {
   ctx.fillStyle='#fff'; ctx.fillRect(36,h-155,1008,100)
   const sponsorAssets=assets.slice(3); const count=logos.sponsors.length
   logos.sponsors.forEach((s,i)=> { const x=36+1008/count*(i+0.5); const img=sponsorAssets[i]; if(img) { const scale=Math.min((900/count)/img.width,76/img.height); ctx.drawImage(img,x-img.width*scale/2,h-105-img.height*scale/2,img.width*scale,img.height*scale) } else text(s.name,x,h-100,900/count,18,'#131f29',2) })
-  text(`Full match details: ${window.location.host}`,540,h-27,980,19,'#d5b65d')
+  text(`Full match details: ${'ecfa.co.uk'}`,540,h-27,980,19,'#d5b65d')
   const blob=await new Promise((resolve,reject)=> { try { canvas.toBlob(b=>b?resolve(b):reject(new Error('Unable to create image.')), 'image/png') } catch(e) {reject(e)} })
   return {blob, missing}
 }
@@ -131,7 +131,7 @@ export async function renderWeekendGraphic(report, logos, story = false) {
   }
   ctx.fillStyle='#fff';ctx.fillRect(36,h-155,1008,100)
   logos.sponsors.forEach((s,i)=>{const count=logos.sponsors.length;const x=36+1008/count*i;const img=assets[1+i];if(img)drawImage(img,x+10,h-143,1008/count-20,76);else fit(s.name,x+1008/count/2,h-100,900/count,18,'#131f29','center')})
-  fit(`More ECFA results: ${window.location.host}`,540,h-27,980,19,'#d5b65d','center')
+  fit(`More ECFA results: ${'ecfa.co.uk'}`,540,h-27,980,19,'#d5b65d','center')
   const blob=await new Promise((resolve,reject)=>{try{canvas.toBlob(b=>b?resolve(b):reject(new Error('Unable to create image.')),'image/png')}catch(e){reject(e)}})
   return {blob,missing:[]}
 }
