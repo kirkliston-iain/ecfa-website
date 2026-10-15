@@ -77,7 +77,39 @@ for p in doc.paragraphs:
 # Correct contents labels and provide page references based on revised pagination.
 pages=[3,3,5,5,5,5,5,7,7,9,10,10,10,10,10,11,11,11,12,13,14,15,16,16,18]
 for p in doc.paragraphs:
-    m=re.match(r'^\\s*(\\d{1,2})\\s*[-–]\\s*(.+)$',p.text.strip())
+    m=re.match(r'^\s*(\d{1,2})\s*[-–]\s*(.+)
+    if not m or '···' in p.text:continue
+    i=int(m.group(1))
+    if 1<=i<=25 and not ('Last Updated' in p.text and p.style.name.startswith('Heading')):
+        if p.text.strip().startswith(('1 - Last Updated','2 - Disciplinary','3 - ECFA Honours')) and p.style.name.startswith('Heading'):continue
+        if p.style.name.startswith('Heading'):continue
+        old=p.text
+        for r in p.runs:r.text=''
+        p.add_run(old.strip()+'  ···  '+str(pages[i-1]))
+        if i==25:break
+
+normal=doc.styles['Normal'];normal.font.name='Aptos';normal.font.size=Pt(9.5)
+normal.paragraph_format.space_after=Pt(5)
+normal.paragraph_format.line_spacing=1.12
+for name in ('Heading 1','Heading 2'):
+    s=doc.styles[name];s.font.name='Aptos Display';s.font.bold=True
+    s.font.size=Pt(15 if name=='Heading 1' else 11.5)
+    s.paragraph_format.keep_with_next=True
+
+doc.save(src)
+tmp=root/'handbook-build';tmp.mkdir(exist_ok=True)
+subprocess.run(['libreoffice','-env:UserInstallation=file:///tmp/lo-ecfa-handbook','--headless','--convert-to','pdf','--outdir',str(tmp),str(src)],check=True)
+built=tmp/src.with_suffix('.pdf').name
+assert built.exists()
+pdf.write_bytes(built.read_bytes())
+from pypdf import PdfReader
+reader=PdfReader(str(pdf))
+text=' '.join(p.extract_text() or '' for p in reader.pages)
+assert 'ECFA Appin League Cup' in text
+assert 'Trialist Rule' not in text
+assert 'Four teams receive a bye' in text
+print('Published handbook PDF pages:',len(reader.pages))
+,p.text.strip())
     if not m or '···' in p.text:continue
     i=int(m.group(1))
     if 1<=i<=25 and not ('Last Updated' in p.text and p.style.name.startswith('Heading')):
