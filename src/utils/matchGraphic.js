@@ -56,7 +56,7 @@ export async function renderMatchGraphic(f, scorers, logos, story = false) {
     const label=s=>`${s.player_name || [s.player?.first_name,s.player?.last_name].filter(Boolean).join(' ')}${Number(s.goals)>1?` (${s.goals})`:''}`
     for(const [items,x] of [[home,245],[away,835]]) {
       const value=items.length?items.map(label).join(' · '):'No scorers recorded'
-      let size=24; const available=h-200-y
+      let size=24; const available=h-255-y
       while(size>12) { ctx.font=`bold ${size}px Arial`; if(lines(ctx,value,430).length*size*1.25<=available)break; size-- }
       text(value,x,y,430,size,'#d9dee2',100)
     }
@@ -65,10 +65,43 @@ export async function renderMatchGraphic(f, scorers, logos, story = false) {
     y+=text(date,540,y,940,28,'#fff',2)+10
     text(f.venue || 'Venue to be confirmed',540,y,940,24,'#d9dee2',2)
   }
+  if(f.referee_name) text(`Referee: ${f.referee_name}`,540,h-185,940,23,'#d9dee2',2)
   ctx.fillStyle='#fff'; ctx.fillRect(36,h-155,1008,100)
   const sponsorAssets=assets.slice(3); const count=logos.sponsors.length
   logos.sponsors.forEach((s,i)=> { const x=36+1008/count*(i+0.5); const img=sponsorAssets[i]; if(img) { const scale=Math.min((900/count)/img.width,76/img.height); ctx.drawImage(img,x-img.width*scale/2,h-105-img.height*scale/2,img.width*scale,img.height*scale) } else text(s.name,x,h-100,900/count,18,'#131f29',2) })
   text(window.location.host,540,h-27,980,19,'#d5b65d')
   const blob=await new Promise((resolve,reject)=> { try { canvas.toBlob(b=>b?resolve(b):reject(new Error('Unable to create image.')), 'image/png') } catch(e) {reject(e)} })
   return {blob, missing}
+}
+
+export async function renderWeekendGraphic(report, logos, story = false) {
+  const canvas=document.createElement('canvas');canvas.width=1080;canvas.height=story?1920:1080
+  const ctx=canvas.getContext('2d');const h=canvas.height
+  const assets=await Promise.all([image(logos.league),...logos.sponsors.map(s=>image(s.url)),...report.badges.map(url=>image(url))])
+  ctx.fillStyle='#131f29';ctx.fillRect(0,0,1080,h);ctx.fillStyle='#b48a38';ctx.fillRect(0,0,1080,12);ctx.fillRect(0,h-12,1080,12)
+  function fit(text,x,y,width,size=28,color='#fff',align='left') {ctx.textAlign=align;do{ctx.font=`bold ${size}px Arial`;if(ctx.measureText(text).width<=width)break;size--}while(size>10);ctx.fillStyle=color;ctx.fillText(text,x,y)}
+  function drawImage(img,x,y,w,height) {if(!img)return;const scale=Math.min(w/img.width,height/img.height);ctx.drawImage(img,x+(w-img.width*scale)/2,y+(height-img.height*scale)/2,img.width*scale,img.height*scale)}
+  drawImage(assets[0],475,36,130,125)
+  fit('EDINBURGH CHURCHES FOOTBALL ASSOCIATION',540,195,970,27,'#fff','center')
+  fit(report.type==='results'?'WEEKEND RESULTS':'LEAGUE TABLE',540,251,970,42,'#d5b65d','center')
+  fit(report.subtitle,540,296,970,26,'#d9dee2','center')
+  fit(report.type==='table'?`As at Sunday ${report.displayEnd} · ${report.season}`:`${report.displayStart} – ${report.displayEnd}`,540,336,970,23,'#d9dee2','center')
+  const top=385;const bottom=h-205;const space=bottom-top
+  if(report.type==='table') {
+    const columns=[530,588,646,704,762,820,886,974]
+    const headers=['Pl','W','D','L','GF','GA','GD','Pts']
+    fit('#',45,top,30,21);fit('Team',100,top,370,23)
+    headers.forEach((label,i)=>fit(label,columns[i],top,50,22,'#d5b65d','center'))
+    const rowHeight=Math.min(story?100:48,(space-45)/Math.max(1,report.rows.length))
+    report.rows.forEach((row,i)=>{const y=top+44+i*rowHeight;ctx.fillStyle=i%2?'#1d2c38':'#172631';ctx.fillRect(32,y-28,1016,rowHeight-2);fit(String(i+1),48,y,35,22);drawImage(assets[1+logos.sponsors.length+i],94,y-26,32,32);fit(row.teamName,137,y,350,23)
+      ;[row.played,row.won,row.drawn,row.lost,row.goalsFor,row.goalsAgainst,row.goalDifference,row.points].forEach((value,j)=>fit(String(value),columns[j],y,50,23,j===7?'#d5b65d':'#fff','center'))})
+  } else {
+    const rowHeight=Math.min(story?160:90,space/Math.max(1,report.rows.length))
+    report.rows.forEach((f,i)=>{const y=top+i*rowHeight;ctx.fillStyle=i%2?'#1d2c38':'#172631';ctx.fillRect(32,y-18,1016,rowHeight-5);fit(f.competition_name||'ECFA',540,y+6,900,Math.min(20,rowHeight*.23),'#d5b65d','center');drawImage(assets[1+logos.sponsors.length+i*2],45,y+16,40,40);drawImage(assets[2+logos.sponsors.length+i*2],995,y+16,40,40);fit(f.home_team?.name||'Home',100,y+45,350,Math.min(27,rowHeight*.32));fit(displayedScore(f),540,y+45,160,Math.min(34,rowHeight*.4),'#fff','center');fit(f.away_team?.name||'Away',980,y+45,350,Math.min(27,rowHeight*.32),'#fff','right');const note=fullOutcomeNote(f);if(note)fit(note,540,y+rowHeight-12,900,16,'#d9dee2','center')})
+  }
+  ctx.fillStyle='#fff';ctx.fillRect(36,h-155,1008,100)
+  logos.sponsors.forEach((s,i)=>{const count=logos.sponsors.length;const x=36+1008/count*i;const img=assets[1+i];if(img)drawImage(img,x+10,h-143,1008/count-20,76);else fit(s.name,x+1008/count/2,h-100,900/count,18,'#131f29','center')})
+  fit(window.location.host,540,h-27,980,19,'#d5b65d','center')
+  const blob=await new Promise((resolve,reject)=>{try{canvas.toBlob(b=>b?resolve(b):reject(new Error('Unable to create image.')),'image/png')}catch(e){reject(e)}})
+  return {blob,missing:[]}
 }

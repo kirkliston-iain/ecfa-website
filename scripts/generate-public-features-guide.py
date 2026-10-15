@@ -137,7 +137,8 @@ story.append(card_grid([
     ('On This Day', 'Rediscover recorded matches on this calendar date in previous years, across current and historic seasons. A featured match and other results link to match details, teams and competition history.'),
     ('Explore another date', 'Choose a date or return to Today. When there are no exact-date results, the page clearly switches to This week in ECFA history, using matches within three days of the selected date.'),
     ('Create a match graphic', 'Search Matchday Graphics by team, date or competition. Open a game and choose Share graphic. Administrators can also open the graphic from a saved fixture.'),
-    ('Share into your chats', 'Choose square or story size. Graphics show ECFA branding, team badges, published sponsors, and fixture details or recorded full-time scores and scorers. Share image opens supported device sharing; Download image and Copy match link are also available. Unavailable badges use initials.'),
+    ('Weekend results and league table', 'In Matchday Graphics, select a weekend and choose Weekend results or League table after this weekend. The default is the previous completed Saturday and Sunday. Table snapshots use currently recorded results through that Sunday, excluding later matches. These round-ups cover the current season; large result lists are split across multiple images.'),
+    ('Share into your chats', 'Choose square or story size. Graphics show ECFA branding, team badges, published sponsors, and fixture details, appointed referee, or recorded full-time scores and scorers. Share image opens supported device sharing; Download image and Copy match link are also available. Unavailable badges use initials.'),
 ]))
 story.append(PageBreak())
 

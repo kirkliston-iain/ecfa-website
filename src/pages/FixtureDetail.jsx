@@ -87,7 +87,7 @@ export default function FixtureDetail() {
       if (!f) {
         const { data: historicFixture } = await supabase
           .from('historic_fixtures')
-          .select('id, competition_name, season, fixture_date, home_team_id, home_team_name, home_goals, away_team_id, away_team_name, away_goals, comment, penalty_winner_name, home_team:home_team_id(id, name, logo_url), away_team:away_team_id(id, name, logo_url)')
+          .select('id, competition_name, season, referee_name, fixture_date, home_team_id, home_team_name, home_goals, away_team_id, away_team_name, away_goals, comment, penalty_winner_name, home_team:home_team_id(id, name, logo_url), away_team:away_team_id(id, name, logo_url)')
           .eq('id', id)
           .maybeSingle()
 
@@ -97,7 +97,7 @@ export default function FixtureDetail() {
             round_name: `${historicFixture.competition_name} — ${historicFixture.season}`,
             fixture_date: `${historicFixture.fixture_date}T00:00:00`,
             venue: historicFixture.comment || null,
-            referee_name: null,
+            referee_name: historicFixture.referee_name || null,
             home_score: historicFixture.home_goals,
             away_score: historicFixture.away_goals,
             went_to_extra_time: false,
