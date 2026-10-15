@@ -56,6 +56,8 @@ export default function WeekendGraphics({ matches }) {
     return {...shared,type:'results',subtitle:`All competitions${pages>1?` · ${pageIndex+1} of ${pages}`:''}`,rows,badges:rows.flatMap(f=>[f.home_team?.logo_url,f.away_team?.logo_url]),page:pageIndex+1,includeScorers}
   },[weekend,pageIndex,perPage,pages,shared,includeScorers,scorerData])
   const tableReport=useMemo(()=>({...shared,type:'table',subtitle:league?.name||'ECFA League',rows:tables,badges:tables.map(r=>r.teamLogo)}),[shared,league?.name,tables])
+  const roundUpUrl=`${window.location.origin}/matchday-graphics?weekend=${saturday}&scorers=${includeScorers?'1':'0'}`
+  async function shareRoundUpLink(){try{if(navigator.share)await navigator.share({title:`ECFA Saturday results · ${shared.displayStart}`,text:'See all Saturday results and the league table on ECFA',url:roundUpUrl});else{await navigator.clipboard.writeText(roundUpUrl);setShareMessage('Round-up link copied.')}}catch(e){if(e.name!=='AbortError')setShareMessage('Unable to share the link.')}}
   async function shareBoth(){
     if(!resultImage||!tableImage||sharing)return
     setSharing(true);setShareMessage('Preparing all Saturday results pages…')
@@ -72,8 +74,8 @@ export default function WeekendGraphics({ matches }) {
       if(!navigator.canShare?.({files})){
         setShareMessage(`Your browser cannot share all ${files.length} images together. Use the individual image downloads below.`);return
       }
-      await navigator.share({files,title:`ECFA Saturday round-up · ${shared.displayEnd}`})
-      setShareMessage(`Shared ${files.length} graphics: ${pages} results ${pages===1?'page':'pages'} and the league table.`)
+      await navigator.share({files,title:`ECFA Saturday round-up · ${shared.displayStart}`,text:`Full Saturday results and league table: ${roundUpUrl}`,url:roundUpUrl})
+      setShareMessage(`Shared ${files.length} graphics. Some apps omit links when sharing images; use Share clickable round-up link to send the website URL.`)
     }catch(e){if(e.name!=='AbortError')setShareMessage('Sharing did not complete. Please try again or download the graphics individually.')}
     finally{setSharing(false)}
   }
@@ -85,6 +87,7 @@ export default function WeekendGraphics({ matches }) {
     <p style={{fontSize:13}}>Saturday {report.displayStart} · {weekend.length} recorded {weekend.length===1?'result':'results'}</p>
     {outsideSeason?<p>Weekend round-up graphics currently cover the {league.season} season. Select a weekend within that season.</p>:<>
       <button disabled={sharing||!weekend.length||!league||Boolean(error)||!resultImage||!tableImage||(includeScorers&&(!scorerData||scorerData.saturday!==saturday||scorerData.error))} onClick={shareBoth}>{sharing?'Preparing graphics…':`Share all ${pages} results ${pages===1?'graphic':'graphics'} + league table`}</button>
+      <button style={{marginLeft:8}} onClick={shareRoundUpLink}>Share clickable round-up link</button>
       <p style={{fontSize:12,color:'var(--muted)',margin:'7px 0'}}>Shares {pages+1} images: <strong>Saturday results{includeScorers?' with scorers':''}</strong> + <strong>league table</strong>. You can also share or download either graphic separately below.</p><p role="status" style={{fontSize:12}}>{shareMessage}</p>
       {weekend.length===0?<p>No completed Saturday matches recorded for this date.</p>:includeScorers&&(!scorerData||scorerData.saturday!==saturday)?<p>Loading scorers…</p>:includeScorers&&scorerData.error?<p role="alert">Unable to load scorers. Please turn the option off and on to retry.</p>:<>
         {pages>1&&<div style={{display:'flex',alignItems:'center',gap:12}}><button disabled={pageIndex===0} onClick={()=>setPage(p=>p-1)}>Previous results image</button><span>{pageIndex+1} of {pages}</span><button disabled={pageIndex===pages-1} onClick={()=>setPage(p=>p+1)}>Next results image</button></div>}
