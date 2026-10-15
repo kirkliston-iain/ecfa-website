@@ -114,7 +114,7 @@ export async function renderWeekendGraphic(report, logos, story = false) {
       ctx.fillStyle=i%2?'#1d2c38':'#172631';ctx.fillRect(32,y-18,1016,rowHeight-5)
       fit(f.competition_name||'ECFA',540,y+6,900,Math.min(20,rowHeight*.23),'#d5b65d','center')
       drawImage(assets[1+logos.sponsors.length+i*2],45,y+16,40,40);drawImage(assets[2+logos.sponsors.length+i*2],995,y+16,40,40)
-      fit(f.home_team?.name||'Home',100,y+45,350,Math.min(27,rowHeight*.32));fit(report.type==='fixtures'?(String(f.fixture_date).slice(11,16)||'TBC'):displayedScore(f),540,y+45,160,report.type==='fixtures'?24:Math.min(34,rowHeight*.4),'#fff','center');fit(f.away_team?.name||'Away',980,y+45,350,Math.min(27,rowHeight*.32),'#fff','right')
+      fit(f.home_team?.name||'Home',100,y+(report.type==='fixtures'?35:45),350,Math.min(27,rowHeight*.32));fit(report.type==='fixtures'?(String(f.fixture_date).slice(11,16)||'TBC'):displayedScore(f),540,y+(report.type==='fixtures'?35:45),160,report.type==='fixtures'?24:Math.min(34,rowHeight*.4),'#fff','center');fit(f.away_team?.name||'Away',980,y+(report.type==='fixtures'?35:45),350,Math.min(27,rowHeight*.32),'#fff','right')
       const note=report.type==='fixtures'?[f.venue||'Venue TBC',f.referee_name?`Ref: ${f.referee_name}`:'Referee TBC'].join(' · '):fullOutcomeNote(f)
       if(report.includeScorers){
         for(const [team,x,align] of [[f.home_team,100,'left'],[f.away_team,980,'right']]){
@@ -126,7 +126,7 @@ export async function renderWeekendGraphic(report, logos, story = false) {
           ctx.fillStyle='#d9dee2';ctx.textAlign=align;wrapped.forEach((line,j)=>ctx.fillText(line,x,y+76+j*size*1.2))
         }
       }
-      if(note)fit(note,540,y+rowHeight-(report.type==='fixtures'?12:28),900,16,'#d9dee2','center')
+      if(note)fit(note,540,y+rowHeight-(report.type==='fixtures'?25:28),900,16,'#d9dee2','center')
     })
   }
   ctx.fillStyle='#fff';ctx.fillRect(36,h-155,1008,100)
