@@ -1,3 +1,4 @@
+import ScorersGraphic from '../components/ScorersGraphic'
 import { PlayerHistoryLink, TeamHistoryLink, CompetitionHistoryLink, HistoryBack } from '../components/HistoryLinks'
 import { historicTeamName } from '../utils/historicTeams'
 import { supportsMatchScorers } from '../utils/historyLinks'
@@ -316,6 +317,8 @@ export default function ScorersPage() {
           </select>
         </label>
       </div>
+
+      {!playerSearch && <ScorersGraphic rows={rows} season={season} competition={competition} sponsors={sponsors} />}
 
       {playerSearch && (
         <div style={{ marginBottom: 18, padding: '10px 12px', background: '#f5f8fa', border: '1px solid var(--line)', borderRadius: 6, fontSize: 14 }}>
