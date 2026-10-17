@@ -3,6 +3,24 @@ import { Link } from 'react-router-dom'
 import { supabase } from '../supabaseClient'
 import { fixtureMatchesFilters, fixtureStatusForSave } from '../utils/adminFixtureEditing'
 
+function allowsAssistants(roundName, stage) {
+  return stage?.stage_type === 'knockout' && /^(semi[\s-]*finals?|finals?)$/i.test((roundName || stage?.name || '').trim())
+}
+
+function AssistantSelectors({ refereeName, assistant1, assistant2, referees, onChange }) {
+  return [1, 2].map((number) => (
+    <label key={number} style={{ display: 'block', marginBottom: 10, fontSize: 13 }}>
+      Assistant {number}
+      <select aria-label={`Assistant ${number}`} value={(number === 1 ? assistant1 : assistant2) || ''}
+        onChange={(event) => onChange(number, event.target.value)} style={{ ...fullSelectStyle, marginTop: 4 }}>
+        <option value="">Not assigned (optional)</option>
+        {referees.map((referee) => <option key={referee.id} value={referee.name}
+          disabled={referee.name === refereeName || referee.name === (number === 1 ? assistant2 : assistant1)}>{referee.name}</option>)}
+      </select>
+    </label>
+  ))
+}
+
 export default function AdminDashboard() {
   const [competitions, setCompetitions] = useState([])
   const [competitionId, setCompetitionId] = useState('')
@@ -62,6 +80,8 @@ export default function AdminDashboard() {
     time: '',
     venue: '',
     refereeName: '',
+    assistant1: '',
+    assistant2: '',
     roundName: '',
   })
   const [addingFixture, setAddingFixture] = useState(false)
@@ -212,6 +232,11 @@ export default function AdminDashboard() {
 
   async function addFixture() {
     if (!newFixture.homeTeamId || !newFixture.awayTeamId || !newFixture.date) return
+    const officials = [newFixture.refereeName, ...(allowsAssistants(newFixture.roundName, stages.find((stage) => stage.id === stageId)) ? [newFixture.assistant1, newFixture.assistant2] : [])].filter(Boolean)
+    if (new Set(officials).size !== officials.length) {
+      window.alert('Choose a different official for each appointment.')
+      return
+    }
     setAddingFixture(true)
     const fixture_date = newFixture.time
       ? `${newFixture.date}T${newFixture.time}:00`
@@ -224,6 +249,8 @@ export default function AdminDashboard() {
       fixture_date,
       venue: newFixture.venue || null,
       referee_name: newFixture.refereeName || null,
+      assistant_1_name: allowsAssistants(newFixture.roundName, stages.find((stage) => stage.id === stageId)) ? newFixture.assistant1 || null : null,
+      assistant_2_name: allowsAssistants(newFixture.roundName, stages.find((stage) => stage.id === stageId)) ? newFixture.assistant2 || null : null,
       round_name: newFixture.roundName || null,
       status: 'scheduled',
     })
@@ -237,6 +264,8 @@ export default function AdminDashboard() {
       time: '',
       venue: '',
       refereeName: '',
+      assistant1: '',
+      assistant2: '',
       roundName: '',
     })
     loadFixtures()
@@ -254,7 +283,7 @@ export default function AdminDashboard() {
     setStages([])
     supabase
       .from('stages')
-      .select('id, name')
+      .select('id, name, stage_type')
       .eq('competition_id', competitionId)
       .order('sort_order')
       .then(({ data }) => {
@@ -284,7 +313,7 @@ export default function AdminDashboard() {
     let query = supabase
       .from('fixtures')
       .select(
-        'id, round_name, fixture_date, home_score, away_score, went_to_extra_time, home_extra_time_score, away_extra_time_score, decided_by_penalties, home_penalty_score, away_penalty_score, status, hidden_from_public, venue, referee_name, week_off_requested, week_off_requested_team_id, updated_at, home_team:home_team_id(id, name), away_team:away_team_id(id, name), stage:stage_id(id, name, stage_type, competition:competition_id(id, name))'
+        'id, round_name, fixture_date, home_score, away_score, went_to_extra_time, home_extra_time_score, away_extra_time_score, decided_by_penalties, home_penalty_score, away_penalty_score, status, hidden_from_public, venue, referee_name, assistant_1_name, assistant_2_name, week_off_requested, week_off_requested_team_id, updated_at, home_team:home_team_id(id, name), away_team:away_team_id(id, name), stage:stage_id(id, name, stage_type, competition:competition_id(id, name))'
       )
       .order('fixture_date')
     if (stageId) query = query.eq('stage_id', stageId)
@@ -367,6 +396,11 @@ export default function AdminDashboard() {
       setFixtureSaveStatus((current) => ({ ...current, [fixture.id]: 'A penalty shootout must have a winner.' }))
       return
     }
+    const officials = [fixture.referee_name, ...(allowsAssistants(fixture.round_name, fixture.stage) ? [fixture.assistant_1_name, fixture.assistant_2_name] : [])].filter(Boolean)
+    if (new Set(officials).size !== officials.length) {
+      setFixtureSaveStatus((current) => ({ ...current, [fixture.id]: 'Choose a different official for each appointment.' }))
+      return
+    }
     const savedStatus = fixtureStatusForSave(fixture)
     setSaving(fixture.id)
     setFixtureSaveStatus((current) => ({ ...current, [fixture.id]: '' }))
@@ -385,6 +419,8 @@ export default function AdminDashboard() {
         hidden_from_public: fixture.hidden_from_public,
         venue: fixture.venue || null,
         referee_name: fixture.referee_name || null,
+        assistant_1_name: allowsAssistants(fixture.round_name, fixture.stage) ? fixture.assistant_1_name || null : null,
+        assistant_2_name: allowsAssistants(fixture.round_name, fixture.stage) ? fixture.assistant_2_name || null : null,
         fixture_date: fixture.fixture_date,
         week_off_requested: !!fixture.week_off_requested,
         week_off_requested_team_id: fixture.week_off_requested ? fixture.week_off_requested_team_id || null : null,
@@ -1086,6 +1122,10 @@ export default function AdminDashboard() {
                 onChange={(e) => setNewFixture((f) => ({ ...f, roundName: e.target.value }))}
                 style={{ ...fullSelectStyle, marginBottom: 12 }}
               />
+              {allowsAssistants(newFixture.roundName, stages.find((stage) => stage.id === stageId)) && (
+                <AssistantSelectors refereeName={newFixture.refereeName} assistant1={newFixture.assistant1} assistant2={newFixture.assistant2} referees={referees}
+                  onChange={(number, value) => setNewFixture((current) => ({ ...current, [`assistant${number}`]: value }))} />
+              )}
               <button
                 onClick={addFixture}
                 disabled={addingFixture}
@@ -1249,6 +1289,10 @@ export default function AdminDashboard() {
                     </option>
                   ))}
                 </select>
+                {allowsAssistants(f.round_name, f.stage) && (
+                  <AssistantSelectors refereeName={f.referee_name} assistant1={f.assistant_1_name} assistant2={f.assistant_2_name} referees={referees}
+                    onChange={(number, value) => updateLocal(f.id, `assistant_${number}_name`, value)} />
+                )}
 
                 <label style={{ ...labelStyle, display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
                   <input
