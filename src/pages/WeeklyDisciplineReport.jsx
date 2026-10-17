@@ -407,6 +407,18 @@ export default function WeeklyDisciplineReport() {
   )
 
   const reportData = useMemo(() => {
+    const surnamesByName = new Map(
+      [...records, ...suspensions].map((row) => [
+        normalName(fullName(row.player)),
+        String(row.player?.last_name || '').trim(),
+      ])
+    )
+    const comparePlayers = (a, b) => {
+      const surname = (name) => surnamesByName.get(normalName(name)) || String(name || '').trim().split(/\s+/).at(-1) || ''
+      return surname(a.player).localeCompare(surname(b.player), 'en-GB', { sensitivity: 'base' })
+        || a.player.localeCompare(b.player, 'en-GB', { sensitivity: 'base' })
+        || (a.team || '').localeCompare(b.team || '')
+    }
     const totalsByName = {}
     const teamTotals = {}
     const playerPointMap = new Map()
@@ -475,7 +487,7 @@ export default function WeeklyDisciplineReport() {
         weekend: String(weekend),
         season: String(totalsByName[normalName(row.player)] ?? weekend),
       }
-    }).sort((a, b) => Number(b.weekend) - Number(a.weekend) || a.team.localeCompare(b.team))
+    }).sort(comparePlayers)
 
     const teamRows = teams.map((team) => ({
       team: team.name,
@@ -542,14 +554,14 @@ export default function WeeklyDisciplineReport() {
       const key = `${normalName(ban.player)}::${normalName(ban.team)}`
       if (ban.player && (!newBanMap.has(key) || ban.manual)) newBanMap.set(key, ban)
     }
-    const newBans = Array.from(newBanMap.values())
+    const newBans = Array.from(newBanMap.values()).sort(comparePlayers)
 
     const newBanPlayers = new Set(newBans.map((ban) => normalName(ban.player)))
     const nearThresholds = Array.from(playerPointMap.values()).flatMap((player) => {
       const next = THRESHOLDS.find((threshold) => threshold.points > player.points)
       if (!next || next.points - player.points > 2 || newBanPlayers.has(normalName(player.player))) return []
       return [{ ...player, threshold: next.points, ban: next.ban }]
-    }).sort((a, b) => a.threshold - a.points - (b.threshold - b.points) || b.points - a.points || a.player.localeCompare(b.player))
+    }).sort(comparePlayers)
 
     const activeManual = suspensions.filter((suspension) => {
       if (suspension.status && suspension.status !== 'active') return false
@@ -635,7 +647,7 @@ export default function WeeklyDisciplineReport() {
       const aHasTeam = a.team && a.team !== 'No team'
       const bHasTeam = b.team && b.team !== 'No team'
       if (aHasTeam !== bHasTeam) return aHasTeam ? -1 : 1
-      return a.team.localeCompare(b.team) || a.player.localeCompare(b.player)
+      return comparePlayers(a, b)
     })
 
     return { weekendRows, teamRows, bans, newBans, nearThresholds }
@@ -734,9 +746,7 @@ export default function WeeklyDisciplineReport() {
   async function share() {
     if (!graphicBlob) return
     const file = new File([graphicBlob], `ecfa-weekly-discipline-${reportDate}.png`, { type: 'image/png' })
-    const shareBans = [...reportData.newBans].sort((a, b) =>
-      a.team.localeCompare(b.team) || a.player.localeCompare(b.player)
-    )
+    const shareBans = reportData.newBans
     const newBanText = shareBans.length
       ? `NEW BANS:\n\n${shareBans.map((ban) => [
         `Player: ${ban.player}`,
