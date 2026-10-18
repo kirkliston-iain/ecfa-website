@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { supabase } from '../supabaseClient'
-import { matchReferees } from '../utils/appointmentMatching'
+import { matchReferees, needsAssistants, officialAllowed, proposeAssistants } from '../utils/appointmentMatching'
 
 const today = new Date().toISOString().slice(0, 10)
 const emptyWeekRules = { unavailableReferees: [], refereeTeamBlocks: [], fixedAssignments: [], notes: '' }
@@ -167,7 +167,7 @@ export default function MatchAppointments() {
     setMessage('')
     const [{ data: fixtureRows, error: fixtureError }, { data: week, error: weekError }] = await Promise.all([
       supabase.from('fixtures')
-        .select('id, fixture_date, venue, referee_name, status, home_team:home_team_id(id, name), away_team:away_team_id(id, name)')
+        .select('id, fixture_date, venue, referee_name, assistant_1_name, assistant_2_name, round_name, stage:stage_id(name, stage_type), status, home_team:home_team_id(id, name), away_team:away_team_id(id, name)')
         .in('status', ['scheduled', 'played']).order('fixture_date'),
       supabase.from('appointment_weeks').select('*').eq('week_date', weekDate).maybeSingle(),
     ])
@@ -213,7 +213,9 @@ export default function MatchAppointments() {
         slotKey: slot?.key || '',
         start: slot?.start || '',
         end: slot?.end || '',
-        referee: previous?.referee || fixture.referee_name || '',
+        referee: previous?.referee ?? fixture.referee_name ?? '',
+        assistant1: previous?.assistant1 ?? fixture.assistant_1_name ?? '',
+        assistant2: previous?.assistant2 ?? fixture.assistant_2_name ?? '',
         reason: 'Venue and kickoff pulled from the fixture',
       }
     }))
@@ -242,12 +244,7 @@ export default function MatchAppointments() {
   }
 
   function refereeAllowed(name, fixture, slot) {
-    const teams = fixtureTeams(fixture)
-    if (weekRules.unavailableReferees?.includes(name)) return false
-    if (weekRules.refereeTeamBlocks?.some((rule) => rule.referee === name && teams.includes(rule.team))) return false
-    if (settings.refereeTeamBlocks?.some((rule) => rule.referee === name && teams.includes(rule.team))) return false
-    const only = settings.refereeVenueOnly?.[name]
-    return !only || only.includes(slot.venue)
+    return officialAllowed(name, fixture, slot, settings, weekRules)
   }
 
   async function generate() {
@@ -304,9 +301,10 @@ export default function MatchAppointments() {
         referee: chosenName || '', reason: reasons.join(' · '),
       }
     })
-    setAllocations(fixtures.map((fixture) => generated.find((row) => row.fixtureId === fixture.id)))
+    const withAssistants = proposeAssistants(fixtures, generated, referees, availableReferees, assignedFixtureSlots.byFixture, settings, weekRules)
+    setAllocations(fixtures.map((fixture) => withAssistants.find((row) => row.fixtureId === fixture.id)))
     setStatus('draft')
-    await saveWeek(generated, 'draft')
+    await saveWeek(withAssistants, 'draft')
   }
 
   async function saveWeek(nextAllocations = allocations, nextStatus = status) {
@@ -341,13 +339,18 @@ export default function MatchAppointments() {
   async function confirm() {
     if (allocations.some((row) => !row?.venue || !row?.referee || !row?.start)) return setMessage('Every fixture needs a venue, time and referee before confirmation.')
     const slotValues = allocations.map((row) => row.slotKey)
-    const refereeValues = allocations.map((row) => row.referee)
+    const refereeValues = allocations.flatMap((row) => [row.referee, row.assistant1, row.assistant2].filter(Boolean))
     if (new Set(slotValues).size !== slotValues.length) return setMessage('A venue slot has been used more than once. Choose a different pitch or time.')
-    if (new Set(refereeValues).size !== refereeValues.length) return setMessage('A referee has been assigned more than once this week.')
+    if (new Set(refereeValues).size !== refereeValues.length) return setMessage('An official has been assigned more than once this matchday, including assistant roles.')
     for (const row of allocations) {
       const fixture = fixtures.find((item) => item.id === row.fixtureId)
       const slot = slots.find((item) => item.key === row.slotKey)
       if (!fixture || !slot || !availableReferees.includes(row.referee) || !refereeAllowed(row.referee, fixture, slot)) return setMessage(`The appointment for ${fixture?.home_team?.name || 'a fixture'} breaks the saved availability or referee restrictions.`)
+      const assistants = [row.assistant1, row.assistant2].filter(Boolean)
+      if (assistants.length && !needsAssistants(fixture)) return setMessage('Assistants can only be assigned to semi-finals and finals.')
+      for (const name of assistants) {
+        if (!referees.some((referee) => referee.name === name) || !availableReferees.includes(name) || !officialAllowed(name, fixture, slot, settings, weekRules, true)) return setMessage(`${name} cannot assist: check availability and venue restrictions.`)
+      }
       const fixed = weekRules.fixedAssignments?.find((rule) => rule.fixtureId === row.fixtureId)
       if (fixed && fixed.referee !== row.referee) return setMessage(`The fixed referee for ${fixture.home_team?.name} v ${fixture.away_team?.name} has changed. Update the weekly stipulation first.`)
     }
@@ -358,11 +361,12 @@ export default function MatchAppointments() {
         const { error } = await supabase.from('fixtures').update({
           venue: row.venue,
           referee_name: row.referee,
+          ...(needsAssistants(fixtures.find((fixture) => fixture.id === row.fixtureId)) ? { assistant_1_name: row.assistant1 || null, assistant_2_name: row.assistant2 || null } : {}),
           fixture_date: `${weekDate}T${row.start}:00`,
         }).eq('id', row.fixtureId)
         if (error) throw error
       }
-      await saveWeek(allocations, 'confirmed')
+      if (!await saveWeek(allocations, 'confirmed')) return
       setStatus('confirmed')
       setMessage('Appointments confirmed and the fixtures have been updated.')
     } catch (error) {
@@ -387,7 +391,7 @@ export default function MatchAppointments() {
       {!loading && <>
         <section style={sectionStyle}>
           <h3 style={subheadingStyle}>Standing appointment criteria</h3>
-          <p style={helpStyle}>These rules apply every week. Save changes before generating. Venue and kickoff are taken from each fixture; these rules select the referee.</p>
+          <p style={helpStyle}>These rules apply every week. Save changes before generating. Venue and kickoff are taken from each fixture; these rules select referees and assistants for semi-finals and finals.</p>
           <div style={{ ...helpStyle, padding: 10, borderRadius: 6, background: '#f5f8fa', color: 'var(--ink)' }}>
             {['East', 'West', 'Any'].map((area) => <div key={area} style={{ marginBottom: 5 }}><strong>{area}:</strong> {referees.filter((referee) => (settings.refereePreferences?.[referee.name] || 'Any') === area).map((referee) => referee.name).join(', ') || 'None'}</div>)}
             <div><strong>Cannot take:</strong> {(settings.refereeTeamBlocks || []).map((rule) => `${rule.referee} / ${rule.team}`).join('; ') || 'None'}</div>
@@ -396,7 +400,7 @@ export default function MatchAppointments() {
           <details>
             <summary style={summaryStyle}>How the current suggestions are made</summary>
             <div style={{ ...helpStyle, marginTop: 8 }}>
-              Each selected, eligible referee can receive one game. Matching the fixture's stored area gets 35 points, an “Any” preference gets 12, and a different area gets 0. Each previous appointment involving either team subtracts 24 points; previous overall appointments also lower the score slightly. South East Saints home games are assigned first. Permanent team and venue limits are hard exclusions.
+              Each selected, eligible referee can receive one game. Matching the fixture's stored area gets 35 points, an “Any” preference gets 12, and a different area gets 0. Each previous appointment involving either team subtracts 24 points; previous overall appointments also lower the score slightly. South East Saints home games are assigned first. Team limits apply to referees only. After referees are allocated, remaining available officials are proposed as Assistant 1 and Assistant 2 for semi-finals and finals. Assistants follow venue limits and preferred areas, without team restrictions or repeat-team penalties. Each official receives only one role per matchday.
             </div>
           </details>
           <details style={{ marginTop: 12 }}>
@@ -504,7 +508,7 @@ export default function MatchAppointments() {
         </section>
 
         <section style={sectionStyle}>
-          <h3 style={subheadingStyle}>2. Available referees</h3>
+          <h3 style={subheadingStyle}>2. Available officials (referees and assistants)</h3>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(190px, 1fr))', gap: 7 }}>
             {referees.map((referee) => <label key={referee.id} style={checkStyle}><input type="checkbox" checked={availableReferees.includes(referee.name)} onChange={() => toggle(availableReferees, setAvailableReferees, referee.name)} /> {referee.name} <small style={{ color: 'var(--muted)' }}>({settings.refereePreferences?.[referee.name] || 'Any'})</small></label>)}
           </div>
@@ -534,6 +538,16 @@ export default function MatchAppointments() {
                 <option value="">Unassigned</option>
                 {referees.filter((referee) => availableReferees.includes(referee.name)).map((referee) => <option key={referee.id} value={referee.name}>{referee.name}</option>)}
               </select>
+              {needsAssistants(fixture) && <>
+                {[1, 2].map((number) => <label key={number} style={{ ...labelStyle, marginTop: 9 }}>Assistant {number}
+                  <select value={allocation[`assistant${number}`] || ''} onChange={(event) => updateAllocation(allocation.fixtureId, `assistant${number}`, event.target.value)} style={inputStyle}>
+                    <option value="">Unassigned (optional)</option>
+                    {referees.filter((referee) => availableReferees.includes(referee.name)).map((referee) => <option key={referee.id} value={referee.name}>{referee.name}</option>)}
+                  </select>
+                </label>)}
+                <p style={helpStyle}>Assistants follow availability, venue limits and preferred area. Team restrictions apply to the referee only.</p>
+                {(!allocation.assistant1 || !allocation.assistant2) && <p role="status" style={{ ...helpStyle, color: '#9a6700' }}>Assistant slots remain unfilled. Select another available official or confirm without a full assistant team.</p>}
+              </>}
               <div style={{ color: 'var(--muted)', fontSize: 12, marginTop: 9 }}>{allocation.reason}</div>
             </article>
           })}
