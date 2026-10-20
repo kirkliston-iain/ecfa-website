@@ -45,7 +45,7 @@ export default function NewsAdmin() {
 
   function edit(story) {
     setEditingId(story.id)
-    setForm({ ...story, graphics: story.graphics || [] })
+    setForm({ ...story, body: story.body ?? '', story_url: story.story_url ?? '', graphics: story.graphics || [] })
     setFiles([])
     setError('')
     setMessage('')
@@ -75,15 +75,17 @@ export default function NewsAdmin() {
 
   async function save(event, nextStatus) {
     event.preventDefault()
+    if (working) return
     setError('')
     setMessage('')
-    if (!form.title.trim() || !form.event_date || (!form.body.trim() && !form.story_url.trim())) {
+    const storyUrl = (form.story_url ?? '').trim()
+    if (!form.title.trim() || !form.event_date || (!form.body.trim() && !storyUrl)) {
       setError('Add a headline, date, and either the story text or a story link.')
       return
     }
-    if (form.story_url.trim()) {
+    if (storyUrl) {
       try {
-        const url = new URL(form.story_url.trim())
+        const url = new URL(storyUrl)
         if (!['http:', 'https:'].includes(url.protocol)) throw new Error('Unsupported link')
       } catch {
         setError('Enter a complete http or https story link.')
@@ -92,43 +94,48 @@ export default function NewsAdmin() {
     }
     setWorking(true)
     const uploaded = []
-    for (const file of files) {
-      const path = `${crypto.randomUUID()}-${fileName(file)}`
-      const { error: uploadError } = await supabase.storage.from('news-graphics').upload(path, file, { contentType: file.type })
-      if (uploadError) {
-        await removeUploads(uploaded.map((item) => item.path))
-        setError(`Could not upload ${file.name}: ${uploadError.message}`)
-        setWorking(false)
-        return
+    try {
+      for (const file of files) {
+        const path = `${crypto.randomUUID()}-${fileName(file)}`
+        const { error: uploadError } = await supabase.storage.from('news-graphics').upload(path, file, { contentType: file.type })
+        if (uploadError) {
+          await removeUploads(uploaded.map((item) => item.path))
+          setError(`Could not upload ${file.name}: ${uploadError.message}`)
+          setWorking(false)
+          return
+        }
+        const { data } = supabase.storage.from('news-graphics').getPublicUrl(path)
+        uploaded.push({ path, url: data.publicUrl })
       }
-      const { data } = supabase.storage.from('news-graphics').getPublicUrl(path)
-      uploaded.push({ path, url: data.publicUrl })
-    }
 
-    const previous = stories.find((story) => story.id === editingId)
-    const payload = {
-      title: form.title.trim(),
-      body: form.body.trim(),
-      story_url: form.story_url.trim() || null,
-      event_date: form.event_date,
-      graphics: [...form.graphics, ...uploaded],
-      status: nextStatus,
-      published_at: nextStatus === 'published' ? previous?.published_at || new Date().toISOString() : previous?.published_at || null,
+      const previous = stories.find((story) => story.id === editingId)
+      const payload = {
+        title: form.title.trim(),
+        body: form.body.trim(),
+        story_url: storyUrl || null,
+        event_date: form.event_date,
+        graphics: [...form.graphics, ...uploaded],
+        status: nextStatus,
+        published_at: nextStatus === 'published' ? previous?.published_at || new Date().toISOString() : previous?.published_at || null,
+      }
+      const result = editingId
+        ? await supabase.from('news_stories').update(payload).eq('id', editingId)
+        : await supabase.from('news_stories').insert(payload)
+      if (result.error) {
+        await removeUploads(uploaded.map((item) => item.path))
+        setError(result.error.message)
+      } else {
+        const removed = (previous?.graphics || []).filter((graphic) => !form.graphics.some((item) => item.path === graphic.path)).map((graphic) => graphic.path)
+        const removeError = await removeUploads(removed)
+        startNew()
+        setMessage(removeError ? `Story saved, but some removed graphics could not be deleted: ${removeError.message}` : nextStatus === 'published' ? 'Story published.' : 'Story saved.')
+        await loadStories(0)
+      }
+    } catch (saveError) {
+      setError(`Could not save the story: ${saveError.message || 'Please try again.'}`)
+    } finally {
+      setWorking(false)
     }
-    const result = editingId
-      ? await supabase.from('news_stories').update(payload).eq('id', editingId)
-      : await supabase.from('news_stories').insert(payload)
-    if (result.error) {
-      await removeUploads(uploaded.map((item) => item.path))
-      setError(result.error.message)
-    } else {
-      const removed = (previous?.graphics || []).filter((graphic) => !form.graphics.some((item) => item.path === graphic.path)).map((graphic) => graphic.path)
-      const removeError = await removeUploads(removed)
-      startNew()
-      setMessage(removeError ? `Story saved, but some removed graphics could not be deleted: ${removeError.message}` : nextStatus === 'published' ? 'Story published.' : 'Story saved.')
-      await loadStories(0)
-    }
-    setWorking(false)
   }
 
   async function changeStatus(story, status) {
@@ -195,6 +202,7 @@ export default function NewsAdmin() {
             <button type="button" disabled={working} onClick={() => setFiles(files.filter((_, position) => position !== index))} style={smallButtonStyle}>Remove</button>
           </div>
         ))}
+        {error && <p role="alert" style={{ color: '#B3261E', marginTop: 16 }}>{error}</p>}
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 18 }}>
           <button type="submit" disabled={working} style={primaryButtonStyle}>{working ? 'Saving…' : form.status === 'published' ? 'Save changes' : 'Save draft'}</button>
           {form.status !== 'published' && <button type="button" disabled={working} onClick={(event) => save(event, 'published')} style={primaryButtonStyle}>Publish</button>}
