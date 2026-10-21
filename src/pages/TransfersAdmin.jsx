@@ -4,6 +4,8 @@ import { supabase } from '../supabaseClient'
 import { useRememberedState, useRememberedScroll } from '../hooks/usePageMemory'
 import TransferHistory, { TRANSFER_SELECT } from '../components/TransferHistory'
 import { londonDate, playerName } from '../lib/playerTransfers.mjs'
+import { registrationSummary } from '../lib/registrationSummary.mjs'
+import SquadHistory, { SQUAD_SELECT } from '../components/SquadHistory'
 
 async function allRows(table, select, order) {
   const rows = []
@@ -20,6 +22,7 @@ export default function TransfersAdmin() {
   const [players, setPlayers] = useState([])
   const [teams, setTeams] = useState([])
   const [history, setHistory] = useState([])
+  const [squadHistory, setSquadHistory] = useState([])
   const [playerId, setPlayerId] = useRememberedState('transferPlayer', params.get('player') || '')
   const [search, setSearch] = useRememberedState('transferSearch', '')
   const [newTeamId, setNewTeamId] = useState('')
@@ -40,8 +43,13 @@ export default function TransfersAdmin() {
       allRows('players', 'id, first_name, last_name, team_id', 'last_name'),
       allRows('teams', 'id, name', 'name'),
       allRows('player_transfers', TRANSFER_SELECT, 'transfer_date'),
+      allRows('player_squad_history', SQUAD_SELECT, 'recorded_at'),
+      supabase.from('player_record_aliases').select('previous_player_id'),
     ])
-    setPlayers(results[0]); setTeams(results[1]); setHistory(results[2].reverse())
+    if (results[4].error) throw results[4].error
+    const aliases = new Set(results[4].data.map(row => row.previous_player_id))
+    setPlayers(results[0].filter(row => !aliases.has(row.id))); setTeams(results[1]); setHistory(results[2].reverse())
+    setSquadHistory(results[3].reverse())
   }
   useEffect(() => {
     load().catch((err) => setError(`Could not load transfers: ${err.message}`)).finally(() => setLoading(false))
@@ -49,6 +57,8 @@ export default function TransfersAdmin() {
 
   const teamNames = useMemo(() => new Map(teams.map((team) => [team.id, team.name])), [teams])
   const player = players.find((row) => row.id === playerId)
+  const year = Number(date.slice(0, 4)) - (Number(date.slice(5, 7)) < 7 ? 1 : 0)
+  const summary = registrationSummary(playerId, history, squadHistory, `${year}-07-01`)
   const fromTeamId = historyOnly ? previousTeamId : player?.team_id || ''
   const candidates = players.filter((row) => row.id === playerId || `${playerName(row)} ${teamNames.get(row.team_id) || ''}`.toLowerCase().includes(search.trim().toLowerCase()))
   const filteredHistory = history.filter((row) => playerName(row.player).toLowerCase().includes(filter.trim().toLowerCase()) && (!clubFilter || row.previous_team_id === clubFilter || row.new_team_id === clubFilter))
@@ -78,7 +88,7 @@ export default function TransfersAdmin() {
     <div className="container" style={{ padding: '32px 20px 48px', maxWidth: 900 }}>
       <Link to="/admin/dashboard">← Admin dashboard</Link>
       <h1 style={{ fontSize: 26 }}>Player transfers</h1>
-      <p style={{ color: 'var(--muted)' }}>Move an existing player between ECFA clubs and retain their goals, cards and transfer history.</p>
+      <p style={{ color: 'var(--muted)' }}>Move an existing player between ECFA clubs and retain their squad membership, goals, cards and every transfer, including players with no statistics.</p>
       {error && <p role="alert" style={{ color: '#b3261e' }}>{error}</p>}
       {message && <p role="status" style={{ color: '#176b3a', fontWeight: 700 }}>{message}</p>}
       {loading ? <p>Loading transfers…</p> : <>
@@ -95,6 +105,7 @@ export default function TransfersAdmin() {
               {candidates.map((row) => <option key={row.id} value={row.id}>{playerName(row)} — {teamNames.get(row.team_id) || 'No current club'}</option>)}
             </select>
             <label style={label} htmlFor="transfer-previous">Previous club</label>
+            {player && <p role="status" style={{ fontSize: 13 }}><strong>{year}/{String(year + 1).slice(-2)}: {summary.moves} recorded transfer{summary.moves === 1 ? '' : 's'} · {summary.clubs} recorded squad club{summary.clubs === 1 ? '' : 's'}</strong><br />{summary.moves >= 2 ? 'Two or more moves are already recorded. Check exceptional approval before another move. ' : ''}Squad lists do not prove appearances. Earlier records may be incomplete.{summary.unconfirmed && ' Some dates are website record dates and need confirmation.'}</p>}
             {historyOnly ? <select id="transfer-previous" required value={previousTeamId} onChange={(e) => setPreviousTeamId(e.target.value)} style={input}>
               <option value="">Select previous club</option>{teams.map((team) => <option key={team.id} value={team.id}>{team.name}</option>)}
             </select> : <input id="transfer-previous" readOnly value={teamNames.get(player?.team_id) || (player ? 'No current club — use history-only for a past transfer' : 'Select a player first')} style={input} />}
@@ -108,6 +119,7 @@ export default function TransfersAdmin() {
             <button type="submit" disabled={saving || !player || !fromTeamId || !newTeamId} style={button}>{saving ? 'Saving…' : historyOnly ? 'Save historical transfer' : 'Transfer player & save history'}</button>
           </fieldset>
         </form>
+        {player && <SquadHistory rows={squadHistory.filter(row => row.player_id === playerId)} />}
         <section>
           <h2 style={{ fontSize: 20 }}>Transfer history</h2>
           <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
@@ -126,3 +138,4 @@ export default function TransfersAdmin() {
 const label = { display: 'block', fontWeight: 700, fontSize: 13, marginBottom: 6 }
 const input = { width: '100%', boxSizing: 'border-box', padding: '11px 12px', border: '1px solid var(--line)', borderRadius: 6, margin: '5px 0 16px', font: 'inherit', color: 'var(--ink)', background: '#fff' }
 const button = { background: 'var(--pitch)', color: '#fff', padding: '12px 18px', border: 0, borderRadius: 6, fontWeight: 800, cursor: 'pointer' }
+

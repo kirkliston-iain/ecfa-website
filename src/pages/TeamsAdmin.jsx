@@ -20,6 +20,8 @@ export default function TeamsAdmin() {
   const [newFirstName, setNewFirstName] = useState('')
   const [newLastName, setNewLastName] = useState('')
   const [newDateOfBirth, setNewDateOfBirth] = useState('')
+  const [existingPlayers, setExistingPlayers] = useState([])
+  const [addingPlayer, setAddingPlayer] = useState(false)
   const [editingId, setEditingId] = useState(null)
   const [editFirstName, setEditFirstName] = useState('')
   const [editLastName, setEditLastName] = useState('')
@@ -74,10 +76,22 @@ export default function TeamsAdmin() {
     })))
   }
 
-  async function addPlayer() {
+  async function addPlayer(distinctPerson = false) {
     if (!newFirstName.trim() || !newLastName.trim()) return
+    if (addingPlayer) return
     setPrivateMessage('')
     setPrivateError('')
+    setAddingPlayer(true)
+    if (!distinctPerson) {
+      const existing = await supabase.from('players').select('id, first_name, last_name, team_id, team:team_id(name)')
+        .ilike('first_name', newFirstName.trim()).ilike('last_name', newLastName.trim())
+      if (existing.error) { setPrivateError('Could not check existing player records. Please try again.'); setAddingPlayer(false); return }
+      const aliases = await supabase.from('player_record_aliases').select('previous_player_id')
+      if (aliases.error) { setPrivateError('Could not check linked player records. Please try again.'); setAddingPlayer(false); return }
+      const previousIds = new Set(aliases.data.map(row => row.previous_player_id))
+      const matches = existing.data.filter(row => !previousIds.has(row.id))
+      if (matches.length) { setExistingPlayers(matches); setAddingPlayer(false); return }
+    }
 
     const { data: player, error: playerError } = await supabase
       .from('players')
@@ -88,6 +102,7 @@ export default function TeamsAdmin() {
       })
       .select('id')
       .single()
+    setAddingPlayer(false)
 
     if (playerError || !player) {
       setPrivateError('The player could not be added. Please try again.')
@@ -105,11 +120,24 @@ export default function TeamsAdmin() {
     setNewFirstName('')
     setNewLastName('')
     setNewDateOfBirth('')
+    setExistingPlayers([])
     if (birthDateFailed) {
       setPrivateError('The player was added, but the date of birth could not be saved.')
     } else {
       setPrivateMessage(newDateOfBirth ? 'Player and private date of birth saved.' : 'Player added.')
     }
+    loadSquad(selectedTeamId)
+  }
+
+  async function restorePlayer(player) {
+    if (addingPlayer) return
+    setAddingPlayer(true)
+    setPrivateError('')
+    const result = await supabase.from('players').update({ team_id: selectedTeamId }).eq('id', player.id).is('team_id', null).select('id')
+    setAddingPlayer(false)
+    if (result.error || !result.data?.length) { setPrivateError('Player could not be added. Refresh in case their club has changed.'); return }
+    setExistingPlayers([]); setNewFirstName(''); setNewLastName(''); setNewDateOfBirth('')
+    setPrivateMessage('Existing player added. Previous squad and transfer history retained. Private details can be edited on their squad row.')
     loadSquad(selectedTeamId)
   }
 
@@ -162,7 +190,8 @@ export default function TeamsAdmin() {
   async function removeFromSquad(playerId) {
     // Removing from the squad — not deleting the player record, since they may
     // have historic goals/cards attached. Just detach from this team.
-    await supabase.from('players').update({ team_id: null }).eq('id', playerId)
+    const result = await supabase.from('players').update({ team_id: null }).eq('id', playerId)
+    if (result.error) { setPrivateError('The player could not be removed. Please try again.'); return }
     loadSquad(selectedTeamId)
   }
 
@@ -431,13 +460,13 @@ export default function TeamsAdmin() {
                 <input
                   placeholder="First name"
                   value={newFirstName}
-                  onChange={(e) => setNewFirstName(e.target.value)}
+                  onChange={(e) => { setNewFirstName(e.target.value); setExistingPlayers([]) }}
                   style={{ ...fullSelectStyle, flex: 1 }}
                 />
                 <input
                   placeholder="Last name"
                   value={newLastName}
-                  onChange={(e) => setNewLastName(e.target.value)}
+                  onChange={(e) => { setNewLastName(e.target.value); setExistingPlayers([]) }}
                   style={{ ...fullSelectStyle, flex: 1 }}
                 />
               </div>
@@ -451,8 +480,17 @@ export default function TeamsAdmin() {
                   style={{ ...fullSelectStyle, marginTop: 5 }}
                 />
               </label>
-              <button onClick={addPlayer} style={{ ...smallButtonStyle, width: '100%' }}>
-                Add to squad
+              <p style={{ color: 'var(--muted)', fontSize: 13 }}>Squad additions and removals are dated and retained even without appearances or goals. Use an existing record for returning players.</p>
+              {existingPlayers.length > 0 && <div role="status" style={{ marginBottom: 12 }}>
+                <p>A player with this name already exists. Reuse their record to keep their history.</p>
+                {existingPlayers.map(player => <div key={player.id} style={{ padding: '8px 0' }}>
+                  <Link to={`/players/${player.id}`}>{player.first_name} {player.last_name}</Link> — {player.team?.name || 'No current club'}{' '}
+                  {player.team_id === selectedTeamId ? <span>Already in this squad</span> : player.team_id ? <Link to={`/admin/transfers?player=${player.id}`}>Record transfer</Link> : <button disabled={addingPlayer} onClick={() => restorePlayer(player)}>Add existing player to squad</button>}
+                </div>)}
+                <button disabled={addingPlayer} onClick={() => addPlayer(true)}>This is a different person with the same name — create separately</button>
+              </div>}
+              <button disabled={addingPlayer} onClick={() => addPlayer()} style={{ ...smallButtonStyle, width: '100%' }}>
+                {addingPlayer ? 'Saving…' : 'Add to squad'}
               </button>
             </div>
           )}
@@ -501,3 +539,4 @@ const privateLabelStyle = {
   fontSize: 12,
   fontWeight: 700,
 }
+

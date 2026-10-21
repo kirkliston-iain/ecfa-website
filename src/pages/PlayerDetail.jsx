@@ -1,9 +1,10 @@
 import TransferHistory, { TRANSFER_SELECT } from '../components/TransferHistory'
+import SquadHistory, { SQUAD_SELECT } from '../components/SquadHistory'
 import { goalsBySeasonAndClub } from '../lib/playerTransfers.mjs'
 import { HistoryBack, TeamHistoryLink, PlayerHistoryLink } from '../components/HistoryLinks'
 import { useRememberedState, useRememberedScroll } from '../hooks/usePageMemory'
 import { useEffect, useMemo, useState } from 'react'
-import { Link, useParams } from 'react-router-dom'
+import { Link, useParams, useNavigate } from 'react-router-dom'
 import { supabase } from '../supabaseClient'
 
 const CURRENT_SEASON = '2026/27'
@@ -98,6 +99,9 @@ function hasOpponentLevelScoringData(season) {
 
 export default function PlayerDetail() {
   const { id } = useParams()
+  const navigate = useNavigate()
+  const [squadHistory, setSquadHistory] = useState([])
+  const [squadError, setSquadError] = useState(false)
   const [transfers, setTransfers] = useState([])
   const [transferError, setTransferError] = useState('')
   const [player, setPlayer] = useRememberedState('player', null)
@@ -119,6 +123,16 @@ export default function PlayerDetail() {
       setLoading(true)
       setError('')
 
+      const alias = await supabase.from('player_record_aliases').select('player_id').eq('previous_player_id', id).maybeSingle()
+      if (alias.error) {
+        if (!cancelled) { setError('Player history could not be loaded. Please refresh.'); setLoading(false) }
+        return
+      }
+      if (alias.data) {
+        if (!cancelled) navigate(`/players/${alias.data.player_id}`, { replace: true })
+        return
+      }
+
       const { data: playerRow, error: playerError } = await supabase
         .from('players')
         .select('id, first_name, last_name, team:team_id(id, name, logo_url)')
@@ -134,7 +148,7 @@ export default function PlayerDetail() {
       }
 
       const fullName = `${playerRow.first_name || ''} ${playerRow.last_name || ''}`.trim()
-      const [goalResult, historicResult, historicMatchResult, disciplineResult, transferResult] = await Promise.all([
+      const [goalResult, historicResult, historicMatchResult, disciplineResult, transferResult, squadResult] = await Promise.all([
         supabase
           .from('fixture_scorers')
           .select('id, goals, team:team_id(id, name), fixture:fixture_id(id, fixture_date, home_score, away_score, went_to_extra_time, home_extra_time_score, away_extra_time_score, decided_by_penalties, home_penalty_score, away_penalty_score, home_team:home_team_id(id, name), away_team:away_team_id(id, name), stage:stage_id(competition:competition_id(season)))')
@@ -153,10 +167,13 @@ export default function PlayerDetail() {
           .select('id, card_type, card_count, notes, serious_offence, team:team_id(id, name), fixture:fixture_id(id, fixture_date, home_score, away_score, went_to_extra_time, home_extra_time_score, away_extra_time_score, decided_by_penalties, home_penalty_score, away_penalty_score, home_team:home_team_id(id, name), away_team:away_team_id(id, name), stage:stage_id(competition:competition_id(season)))')
           .eq('player_id', id),
         supabase.from('player_transfers').select(TRANSFER_SELECT).eq('player_id', id).order('transfer_date', { ascending: false }).order('recorded_at', { ascending: false }),
+        supabase.from('player_squad_history').select(SQUAD_SELECT).eq('player_id', id).order('recorded_at', { ascending: false }).order('id'),
       ])
 
       if (!cancelled) {
         setTransfers(transferResult.data || [])
+        setSquadHistory(squadResult.data || [])
+        setSquadError(!!squadResult.error)
         setTransferError(transferResult.error ? 'Transfer history could not be loaded. Please refresh to try again.' : '')
         setPlayer(playerRow)
         setGoals(goalResult.data || [])
@@ -169,7 +186,7 @@ export default function PlayerDetail() {
 
     load()
     return () => { cancelled = true }
-  }, [id])
+  }, [id, navigate])
 
   const yellowTotal = useMemo(
     () => discipline.filter((row) => row.card_type === 'yellow').reduce((sum, row) => sum + Number(row.card_count || 0), 0),
@@ -325,6 +342,8 @@ export default function PlayerDetail() {
         <h2 style={sectionHeadingStyle}>Transfer history</h2>
         {transferError ? <p role="alert">{transferError}</p> : <TransferHistory rows={transfers} />}
       </section>
+
+      <SquadHistory rows={squadHistory} error={squadError} />
 
       <section style={{ marginBottom: 34 }}>
         <h2 style={sectionHeadingStyle}>Cards received</h2>
@@ -530,3 +549,4 @@ const cardRowStyle = {
   padding: '10px 8px',
   borderBottom: '1px solid var(--line)',
 }
+
