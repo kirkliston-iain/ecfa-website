@@ -3,7 +3,7 @@ const kit = (name, colour, text, trim, family, second = null) => ({ name, colour
 const white = kit('White', '#f7f7f2', '#17232b', '#52616b', 'white')
 export const TEAM_KITS = {
   'Barclay Viewforth Church': kit('Red', '#c82e2e', '#ffffff', '#ffffff', 'red'),
-  'White Lightning Bruntsfield Church': kit('Red', '#c82e2e', '#ffffff', '#172747', 'red', white),
+  'White Lightning': kit('Red', '#c82e2e', '#ffffff', '#172747', 'red', white),
   'Carrubbers Church': kit('Dark green', '#096137', '#ffffff', '#cb3030', 'green', white),
   'Gorgie United Salvation Army': kit('Green', '#15833f', '#ffffff', '#ffffff', 'green'),
   'Kirkliston Community Church': kit('Black', '#171b20', '#ffffff', '#ffffff', 'black', white),
@@ -20,7 +20,7 @@ export function simulatorKits(homeTeam, awayTeam) {
   let away = TEAM_KITS[awayTeam?.name] || kit('Blue', '#224bb3', '#ffffff', '#ffffff', 'blue')
   if (home.family === away.family) {
     // Keep Barclay red, Gorgie green and North Berwick gold in either venue order.
-    if (['White Lightning Bruntsfield Church', 'Carrubbers Church', 'Ladywell Baptist Church'].includes(homeTeam?.name) && home.second) home = home.second
+    if (['White Lightning', 'Carrubbers Church', 'Ladywell Baptist Church'].includes(homeTeam?.name) && home.second) home = home.second
     else if (away.second) away = away.second
     else if (home.second) home = home.second
   }

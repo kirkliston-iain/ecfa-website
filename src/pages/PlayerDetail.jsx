@@ -46,8 +46,8 @@ const TEAM_ALIASES = {
   "St Mary's Metropolitan FC": 'St Marys Metropolitan Church',
   'St Marys': 'St Marys Metropolitan Church',
   'The Mission FC': 'The Mission',
-  'White Lightning': 'White Lightning Bruntsfield Church',
-  'White Lightning FC': 'White Lightning Bruntsfield Church',
+  'White Lightning Bruntsfield Church': 'White Lightning',
+  'White Lightning FC': 'White Lightning',
 }
 
 function canonicalTeamName(name) {
