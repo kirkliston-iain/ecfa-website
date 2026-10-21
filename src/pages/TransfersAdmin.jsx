@@ -5,6 +5,7 @@ import { useRememberedState, useRememberedScroll } from '../hooks/usePageMemory'
 import TransferHistory, { TRANSFER_SELECT } from '../components/TransferHistory'
 import { londonDate, playerName } from '../lib/playerTransfers.mjs'
 import { registrationSummary } from '../lib/registrationSummary.mjs'
+import { confirmTransferAgreement } from '../lib/transferAgreement.mjs'
 import SquadHistory, { SQUAD_SELECT } from '../components/SquadHistory'
 
 async function allRows(table, select, order) {
@@ -72,6 +73,12 @@ export default function TransfersAdmin() {
     }
     setSaving(true)
     try {
+      if (!historyOnly) {
+        const agreed = await confirmTransferAgreement(supabase, {
+          playerId, playerName: playerName(player), previousTeamId: fromTeamId, newTeamId, date,
+        }, message => window.confirm(message))
+        if (!agreed) return
+      }
       const result = await supabase.rpc('record_player_transfer', {
         p_player_id: playerId, p_previous_team_id: fromTeamId, p_new_team_id: newTeamId,
         p_transfer_date: date, p_history_only: historyOnly,
@@ -105,7 +112,7 @@ export default function TransfersAdmin() {
               {candidates.map((row) => <option key={row.id} value={row.id}>{playerName(row)} — {teamNames.get(row.team_id) || 'No current club'}</option>)}
             </select>
             <label style={label} htmlFor="transfer-previous">Previous club</label>
-            {player && <p role="status" style={{ fontSize: 13 }}><strong>{year}/{String(year + 1).slice(-2)}: {summary.moves} recorded transfer{summary.moves === 1 ? '' : 's'} · {summary.clubs} recorded squad club{summary.clubs === 1 ? '' : 's'}</strong><br />{summary.moves >= 2 ? 'Two or more moves are already recorded. Check exceptional approval before another move. ' : ''}Squad lists do not prove appearances. Earlier records may be incomplete.{summary.unconfirmed && ' Some dates are website record dates and need confirmation.'}</p>}
+            {player && <p role="status" style={{ fontSize: 13 }}><strong>{year}/{String(year + 1).slice(-2)}: {summary.moves} recorded transfer{summary.moves === 1 ? '' : 's'} · {summary.clubs} recorded squad club{summary.clubs === 1 ? '' : 's'}</strong><br />{summary.moves >= 1 ? 'This player has already moved this season. Another move requires league agreement. ' : ''}Squad lists do not prove appearances. Earlier records may be incomplete.{summary.unconfirmed && ' Some dates are website record dates and need confirmation.'}</p>}
             {historyOnly ? <select id="transfer-previous" required value={previousTeamId} onChange={(e) => setPreviousTeamId(e.target.value)} style={input}>
               <option value="">Select previous club</option>{teams.map((team) => <option key={team.id} value={team.id}>{team.name}</option>)}
             </select> : <input id="transfer-previous" readOnly value={teamNames.get(player?.team_id) || (player ? 'No current club — use history-only for a past transfer' : 'Select a player first')} style={input} />}

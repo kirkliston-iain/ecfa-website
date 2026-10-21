@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { supabase } from '../supabaseClient'
+import { confirmTransferAgreement } from '../lib/transferAgreement.mjs'
+import { londonDate } from '../lib/playerTransfers.mjs'
 import * as XLSX from 'xlsx'
 
 function displayDateOfBirth(value) {
@@ -133,6 +135,13 @@ export default function TeamsAdmin() {
     if (addingPlayer) return
     setAddingPlayer(true)
     setPrivateError('')
+    try {
+      const agreed = await confirmTransferAgreement(supabase, {
+        playerId: player.id, playerName: `${player.first_name} ${player.last_name}`,
+        previousTeamId: player.team_id, newTeamId: selectedTeamId, date: londonDate(),
+      }, message => window.confirm(message))
+      if (!agreed) { setAddingPlayer(false); return }
+    } catch (error) { setPrivateError(error.message); setAddingPlayer(false); return }
     const result = await supabase.from('players').update({ team_id: selectedTeamId }).eq('id', player.id).is('team_id', null).select('id')
     setAddingPlayer(false)
     if (result.error || !result.data?.length) { setPrivateError('Player could not be added. Refresh in case their club has changed.'); return }
