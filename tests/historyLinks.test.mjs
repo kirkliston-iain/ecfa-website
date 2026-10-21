@@ -3,7 +3,8 @@ import assert from 'node:assert/strict'
 import { teamHistoryUrl, matchHistoryUrl, competitionHistoryUrl, supportsMatchScorers, selectStreakMatches } from '../src/utils/historyLinks.js'
 
 test('team links resolve current aliases and retain former club history', () => {
-  assert.equal(teamHistoryUrl('White Lightning FC', null, [{ id: 'live', name: 'White Lightning Bruntsfield Church' }]), '/teams/live')
+  assert.equal(teamHistoryUrl('White Lightning FC', null, [{ id: 'live', name: 'White Lightning' }]), '/teams/live')
+  assert.equal(teamHistoryUrl('White Lightning Bruntsfield Church', null, [{ id: 'live', name: 'White Lightning' }]), '/teams/live')
   assert.equal(teamHistoryUrl("St Columba's FC", null, []), '/teams/previous/St%20Columbas')
   assert.equal(teamHistoryUrl('', null, []), null)
 })

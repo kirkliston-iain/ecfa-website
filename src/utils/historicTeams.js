@@ -27,8 +27,8 @@ export const HISTORIC_TEAM_ALIASES = {
   'St Marys': 'St Marys Metropolitan Church',
   "St Marys Metropolitan Church's FC": 'St Marys Metropolitan Church',
   'The Mission FC': 'The Mission',
-  'White Lightning': 'White Lightning Bruntsfield Church',
-  'White Lightning FC': 'White Lightning Bruntsfield Church',
+  'White Lightning Bruntsfield Church': 'White Lightning',
+  'White Lightning FC': 'White Lightning',
 }
 
 export function historicTeamName(name) {

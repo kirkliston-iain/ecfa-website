@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import { buildEvidence, simulatePrediction, competitionKey } from '../src/utils/predictionModel.js'
 const team=(id,name)=>({id,name})
-const fixture={id:'future',fixture_date:'2026-10-17T10:00:00Z',home_team:team('h','Barclay Viewforth Church'),away_team:team('a','White Lightning Bruntsfield Church'),stage:{competition:{name:'ECFA League Cup',slug:'league-cup',season:'2026-27'}}}
+const fixture={id:'future',fixture_date:'2026-10-17T10:00:00Z',home_team:team('h','Barclay Viewforth Church'),away_team:team('a','White Lightning'),stage:{competition:{name:'ECFA League Cup',slug:'league-cup',season:'2026-27'}}}
 const game=(id,home,away,h,a,date,slug='league-cup')=>({id,home_team_id:home,away_team_id:away,home_score:h,away_score:a,fixture_date:date,stage:{competition:{season:'2026-27',slug}}})
 const players=[{id:'h1',team_id:'h',first_name:'Home',last_name:'Scorer'},{id:'h2',team_id:'h',first_name:'Home',last_name:'Mate'},{id:'a1',team_id:'a',first_name:'Away',last_name:'Scorer'},{id:'a2',team_id:'a',first_name:'Away',last_name:'Mate'},{id:'moved',team_id:'a',first_name:'Transferred',last_name:'Player'}]
 const scorerFixture={fixture_date:'2026-10-03T10:00:00Z',status:'played',hidden_from_public:false,stage:{competition:{season:'2026-27'}}}
