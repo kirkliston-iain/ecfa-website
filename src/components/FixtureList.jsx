@@ -1,3 +1,4 @@
+import AssistantOfficials from './AssistantOfficials'
 import { TeamHistoryLink, VenueHistoryLink } from './HistoryLinks'
 import { Link } from 'react-router-dom'
 import { displayedScore, outcomeNote } from '../utils/fixtureOutcome'
@@ -90,6 +91,7 @@ export default function FixtureList({ fixtures }) {
                 {f.away_team ? <TeamHistoryLink id={f.away_team.id} name={f.away_team.name} /> : f.away_placeholder || 'TBC'}
               </span>
             </div>
+            <AssistantOfficials fixture={f} />
             {(f.venue || (f.fixture_date && f.fixture_date.slice(11, 16) !== '00:00')) && (
               <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 3 }}>
                 {f.fixture_date && f.fixture_date.slice(11, 16) !== '00:00' ? f.fixture_date.slice(11, 16) : ''}

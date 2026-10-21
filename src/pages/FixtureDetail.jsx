@@ -1,3 +1,4 @@
+import AssistantOfficials from '../components/AssistantOfficials'
 import MatchGraphic from '../components/MatchGraphic'
 import { useRememberedState, useRememberedScroll } from '../hooks/usePageMemory'
 import { historicTeamName } from '../utils/historicTeams'
@@ -77,7 +78,7 @@ export default function FixtureDetail() {
       const { data: liveFixture } = await supabase
         .from('fixtures')
         .select(
-          'id, stage:stage_id(competition:competition_id(name, season)), round_name, fixture_date, venue, referee_name, home_score, away_score, went_to_extra_time, home_extra_time_score, away_extra_time_score, decided_by_penalties, home_penalty_score, away_penalty_score, status, home_team:home_team_id(id, name, logo_url), away_team:away_team_id(id, name, logo_url)'
+          'id, stage:stage_id(competition:competition_id(name, season)), round_name, fixture_date, venue, referee_name, assistant_1_name, assistant_2_name, home_score, away_score, went_to_extra_time, home_extra_time_score, away_extra_time_score, decided_by_penalties, home_penalty_score, away_penalty_score, status, home_team:home_team_id(id, name, logo_url), away_team:away_team_id(id, name, logo_url)'
         )
         .eq('id', id)
         .eq('hidden_from_public', false)
@@ -413,6 +414,7 @@ export default function FixtureDetail() {
               </Link>
             </div>
           )}
+          <AssistantOfficials fixture={fixture} />
         </div>
 
         <Link

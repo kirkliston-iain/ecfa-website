@@ -98,7 +98,7 @@ cover = Table([[p('ECFA WEBSITE', 'CoverSub')], [p('Public Features Guide', 'Cov
               ]))
 story += [Spacer(1, 35*mm), cover, Spacer(1, 18*mm)]
 story.append(Table([[p('WEBSITE', 'Smallx'), p('https://ecfa-website.vercel.app', 'CardTitle')],
-                    [p('GUIDE UPDATED', 'Smallx'), p('15 October 2026', 'CardTitle')]],
+                    [p('GUIDE UPDATED', 'Smallx'), p('21 October 2026', 'CardTitle')]],
                    colWidths=[35*mm, 125*mm], style=TableStyle([
                        ('BOX', (0,0), (-1,-1), 0.7, LINE), ('INNERGRID', (0,0), (-1,-1), 0.5, LINE),
                        ('BACKGROUND', (0,0), (0,-1), PALE), ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
@@ -123,7 +123,7 @@ story += [Spacer(1, 8), p('<b>Tip:</b> On a phone, swipe the top navigation left
 story += [Spacer(1, 7)] + section_title('2. Match Hub', 'The Match Hub brings the main matchday information together in one place.')
 story.append(card_grid([
     ('Browse by date', 'Move between available matchdays to see a particular weekend. Back from a match restores the date you were viewing. Opening Match Hub through the site navigation starts at the upcoming games.'),
-    ('Upcoming fixtures', 'See the competition, home and away teams, badges, kick-off time, venue and appointed referee when available.'),
+    ('Upcoming fixtures', 'See the competition, home and away teams, badges, kick-off time, venue and appointed referee when available. Assigned Assistant 1 and Assistant 2 appear underneath, with links to their profiles.'),
     ('Results and scores', 'Completed games show the score and link to an individual match page.'),
     ('Match details', 'Follow club names, scores, competitions, scorers, venues and referees into their recorded history. Match previews link to previous meetings. Back restores your selections and position. Venue history supports season filters from 2025/26.'),
     ('Current standings', 'A league-table snapshot provides a quick view of team positions, performance and recent five-game form, with a shareable table graphic.'),
@@ -180,7 +180,7 @@ story.append(card_grid([
 ]))
 story += [Spacer(1, 10)] + section_title('7. Referee information', 'The referee section links match officials to their recorded appointments and fixture history.')
 story.append(card_grid([
-    ('Officials directory', 'Open Referees in the main navigation. Select a referee’s name or photo to view their profile and recorded games.'),
+    ('Officials directory', 'Open Referees in the main navigation. Select a referee’s name or photo to view their profile and recorded games. Assistant links on fixtures open the same profiles, with contact details available to signed-in managers.'),
     ('Games officiated', 'Review matches, dates, teams, scores, competitions and venues.'),
     ('Venue and team breakdowns', 'Open clubs and venues from referee breakdowns. Select an appointment count to review that official’s matching games for the selected season, then open match details.'),
     ('About the referee', 'Profiles have space for a photograph, an introduction and SurveyMonkey questions and answers added by the league.'),

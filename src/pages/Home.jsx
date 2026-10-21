@@ -1,3 +1,4 @@
+import AssistantOfficials from '../components/AssistantOfficials'
 import FixtureGraphics from '../components/FixtureGraphics'
 import { TeamHistoryLink, CompetitionHistoryLink } from '../components/HistoryLinks'
 import { useRememberedState, useRememberedScroll } from '../hooks/usePageMemory'
@@ -121,7 +122,7 @@ async function loadCompetition(meta) {
   const { data: fixtures } = await supabase
     .from('fixtures')
     .select(
-      'id, fixture_date, venue, referee_name, round_name, home_placeholder, away_placeholder, home_score, away_score, went_to_extra_time, home_extra_time_score, away_extra_time_score, decided_by_penalties, home_penalty_score, away_penalty_score, status, group_id, stage_id, home_team:home_team_id(id, name, logo_url), away_team:away_team_id(id, name, logo_url)'
+      'id, fixture_date, venue, referee_name, assistant_1_name, assistant_2_name, round_name, home_placeholder, away_placeholder, home_score, away_score, went_to_extra_time, home_extra_time_score, away_extra_time_score, decided_by_penalties, home_penalty_score, away_penalty_score, status, group_id, stage_id, home_team:home_team_id(id, name, logo_url), away_team:away_team_id(id, name, logo_url)'
     )
     .in('stage_id', stageIds.length ? stageIds : ['00000000-0000-0000-0000-000000000000'])
     .eq('hidden_from_public', false)
@@ -647,7 +648,7 @@ function MatchCard({ f, allFixtures }) {
           <Link to={`/fixtures/${f.id}`} style={{ color: 'inherit' }}>Match details and previous meeting history</Link>
         </div>
       </div>
-      {(kickoff || venueName || f.referee_name) && (
+      {(kickoff || venueName || f.referee_name || f.assistant_1_name || f.assistant_2_name) && (
         <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 6, textAlign: 'center' }}>
           {kickoff}
           {kickoff && venueName ? ' · ' : ''}
@@ -670,6 +671,7 @@ function MatchCard({ f, allFixtures }) {
               Ref: {f.referee_name}
             </Link>
           )}
+          <AssistantOfficials fixture={f} />
         </div>
       )}
     </div>
