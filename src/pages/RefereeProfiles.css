@@ -42,3 +42,6 @@
 .ref-card-table th:first-child, .ref-card-table td:first-child { text-align: left; min-width: 130px; }
 .ref-card-table th { color: var(--muted); font-size: 11px; }
 .ref-card-table small { color: var(--muted); }
+
+/* Centre Chris’s face within the supplied screenshot without altering his photo. */
+.ref-avatar[src$="/chris-ashley.jpg"], .ref-portrait[src$="/chris-ashley.jpg"] { object-position: 50% 40%; }
