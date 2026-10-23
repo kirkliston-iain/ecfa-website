@@ -93,6 +93,7 @@ export default function ScorersPage() {
   const [historic, setHistoric] = useRememberedState('historic', [])
   const [current, setCurrent] = useRememberedState('current', [])
   const [playerDirectory, setPlayerDirectory] = useRememberedState('playerDirectory', [])
+  const [teamDirectory, setTeamDirectory] = useRememberedState('teamDirectory', [])
   const [sponsors, setSponsors] = useRememberedState('sponsors', [])
   useRememberedScroll(!loading)
 
@@ -107,12 +108,13 @@ export default function ScorersPage() {
 
       const hist = await fetchAllHistoricScorers()
 
-      const [{ data: scorers }, { data: directoryPlayers }, { data: sponsorRows }] = await Promise.all([
+      const [{ data: scorers }, { data: directoryPlayers }, { data: sponsorRows }, { data: teamRows }] = await Promise.all([
         supabase
           .from('fixture_scorers')
           .select('goals, player:player_id(id, first_name, last_name), team:team_id(id, name), fixture:fixture_id(id, fixture_date, hidden_from_public, home_team:home_team_id(id, name), away_team:away_team_id(id, name), stage:stage_id(competition:competition_id(name, slug, season)))'),
         supabase.from('players').select('id, first_name, last_name, team_id').order('last_name').order('first_name'),
         supabase.from('sponsors').select('id, name, website_url, logo_url').eq('is_published', true).in('name', [...SPONSOR_NAMES, 'Appin Sports']),
+        supabase.from('teams').select('id, name, logo_url'),
       ])
 
       if (!cancelled) {
@@ -130,6 +132,7 @@ export default function ScorersPage() {
         )
         setSponsors((sponsorRows || []).sort((a, b) => SPONSOR_NAMES.indexOf(a.name) - SPONSOR_NAMES.indexOf(b.name)))
         setPlayerDirectory(directoryPlayers || [])
+        setTeamDirectory(teamRows || [])
         setLoading(false)
       }
     }
@@ -327,7 +330,7 @@ export default function ScorersPage() {
         </label>
       </div>
 
-      {!playerSearch && <details className="share-disclosure" onToggle={e => setShowGraphic(e.currentTarget.open)}><summary>Share goalscorers graphic</summary>{showGraphic && <ScorersGraphic rows={rows} season={season} competition={competition} sponsors={visibleSponsors} />}</details>}
+      {!playerSearch && <details className="share-disclosure" onToggle={e => setShowGraphic(e.currentTarget.open)}><summary>Share goalscorers graphic</summary>{showGraphic && <ScorersGraphic rows={rows} season={season} competition={competition} sponsors={visibleSponsors} teams={teamDirectory} />}</details>}
 
       {playerSearch && (
         <div style={{ marginBottom: 18, padding: '10px 12px', background: '#f5f8fa', border: '1px solid var(--line)', borderRadius: 6, fontSize: 14 }}>
