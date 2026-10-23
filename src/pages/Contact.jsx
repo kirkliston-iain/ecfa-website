@@ -148,7 +148,7 @@ export default function Contact() {
   const isLeagueApplication = form.enquiryType === 'Apply to Join the League'
 
   return (
-    <div className="container" style={{ padding: '32px 20px 48px', maxWidth: 760 }}>
+    <div className="container form-page" style={{ padding: '32px 20px 48px', maxWidth: 760 }}>
       <h1 style={{ fontSize: 30, marginBottom: 4 }}>
         {isLeagueApplication ? 'Apply to Join the League' : isWebsiteReport ? 'Report a website issue' : 'Contact Us'}
       </h1>
@@ -171,7 +171,7 @@ export default function Contact() {
         <form onSubmit={submit} style={formStyle}>
           <fieldset style={fieldsetStyle}>
             <legend style={legendStyle}>What is your enquiry about?</legend>
-            <div style={{ display: 'grid', gap: 10 }}>
+            <div className="contact-options">
               {['General Query', 'Sponsorship Enquiry', 'Apply to Join the League', 'Website Error', 'Feature Request'].map((type) => (
                 <label key={type} style={optionStyle}>
                   <input type="radio" name="enquiryType" value={type} checked={form.enquiryType === type} onChange={(event) => update('enquiryType', event.target.value)} />

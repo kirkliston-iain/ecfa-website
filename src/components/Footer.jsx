@@ -94,7 +94,7 @@ export default function Footer() {
   }
 
   return (
-    <footer style={{ borderTop: '1px solid var(--line)', marginTop: 60 }}>
+    <footer className="site-footer" style={{ borderTop: '1px solid var(--line)' }}>
       <div
         className="container"
         style={{

@@ -119,7 +119,7 @@ story.append(card_grid([
     ('Teams and Referees', 'Explore clubs, player records and referee profiles. Referees has its own main navigation tab.'),
     ('Downloads and Search', 'Export public data or search names, teams, competitions and pages.'),
 ]))
-story += [Spacer(1, 8), p('<b>Tip:</b> On a phone, swipe the top navigation left or right to reveal additional sections.', 'Bodyx')]
+story += [Spacer(1, 8), p('<b>Tip:</b> Swipe the top navigation left or right to reveal additional sections. Navigation scrolls independently so the page stays within the screen. Public pages use consistent compact spacing, with narrower reading and contact layouts.', 'Bodyx')]
 story += [Spacer(1, 7)] + section_title('2. Match Hub', 'The Match Hub brings the main matchday information together in one place.')
 story.append(card_grid([
     ('Browse by date', 'Move between available matchdays to see a particular weekend. Back from a match restores the date you were viewing. Opening Match Hub through the site navigation starts at the upcoming games.'),
@@ -148,12 +148,12 @@ story.append(card_grid([
     ('League standings', 'View played, won, drawn, lost, goals for, goals against, goal difference, points and colour-coded last-five form (W/D/L). Share the current league table as a branded graphic.'),
     ('League fixtures and results', 'Open match details from a score or date; club and venue names open their histories. Table figures link to the supporting games, respecting competition, group, result and historical table date. Cup bracket ties open their matches.'),
     ('Cup progress', 'Follow group tables and knockout fixtures. Gold labels in Match Hub previews link to the relevant group, cup draw or league table.'),
-    ('Competition switching', 'Move between the Appin Sports League, ECFA Knockout Cup, ECFA League Cup and Brian Latto Cup.'),
+    ('Competition switching', 'Use the competition links or selector to move between the Appin Sports League, ECFA Knockout Cup, ECFA League Cup and Brian Latto Cup.'),
 ]))
 story += [Spacer(1, 10)] + section_title('4. Goalscorers and player information')
 story.append(card_grid([
     ('Season scorer tables', 'Choose All goals, League or Cup and select a season. The mobile-friendly table shows name, team, league goals, cup goals and overall goals. Tap any heading to sort; tap again to reverse the order. Earlier seasons are recorded under League.'),
-    ('All-time scorers', 'Combine every recorded ECFA season into an overall career goals table with competition totals. Share a branded top-20 overall scorers graphic with sponsor logo; for an individual season, share its top 10.'),
+    ('All-time scorers', 'Combine every recorded ECFA season into an overall career goals table with competition totals. Expand Share goalscorers graphic to preview and share a branded top-20 overall scorers graphic with sponsor logo; for an individual season, share its top 10.'),
     ('Goalscorers sponsors', 'Game of Throwing Edinburgh and Escape Edinburgh appear together below the Goalscorers heading.'),
     ('Player profiles', 'View a player’s current team, goals, yellow and red cards, and every recorded transfer, including moves without goals or appearances. Dated squad history retains additions and removals. Website record dates are labelled separately from confirmed transfer dates; unknown joining dates stay unknown. Club names open their team pages.'),
     ('Scoring history', 'Goals are totalled by season and the club represented in each match. Transferring a player keeps previous goals and cards with their original clubs.'),
@@ -162,7 +162,7 @@ story.append(card_grid([
 ]))
 story += [Spacer(1, 10)] + section_title('5. Teams')
 story.append(card_grid([
-    ('Team overview', 'Use Select a team to choose a current league club or a previous team. Contrasting headings separate current and previous teams. Former clubs are marked as no longer in the league and open their historical records.'),
+    ('Team overview', 'Browse the current-team badge links or use Select a team to choose a current league club or a previous team. Contrasting headings separate current and previous teams. Former clubs are marked as no longer in the league and open their historical records.'),
     ('Team websites', 'Select a club to see up to five website or social links on its team profile. Links appear only for the selected club. Links are labelled Facebook, Instagram, X, Own Website or Other when available.'),
     ('Form and fixtures', 'See the next five fixtures with home or away, competition and venue. Upcoming lists show these details too and default to the Appin Sports League. Choose another competition or all, filter by month or date, and share the list as a picture.'),
     ('Results by season', 'Switch between the current campaign and available historical seasons. The team page’s recent results mark the club as home or away and show the recorded venue.'),

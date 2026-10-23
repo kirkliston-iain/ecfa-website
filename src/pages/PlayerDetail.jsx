@@ -11,7 +11,7 @@ const CURRENT_SEASON = '2026/27'
 
 function Badge({ logoUrl, name, size = 62 }) {
   if (logoUrl) {
-    return <img src={logoUrl} alt="" style={{ width: size, height: size, borderRadius: '50%', objectFit: 'cover', background: '#fff' }} />
+    return <img src={logoUrl} alt="" style={{ width: size, height: size, objectFit: 'contain', background: '#fff' }} />
   }
   const initials = (name || '?').split(' ').map((part) => part[0]).slice(0, 2).join('').toUpperCase()
   return (
@@ -338,14 +338,14 @@ export default function PlayerDetail() {
         <div style={summaryStyle}><span style={labelStyle}>Red cards</span><strong style={{ ...valueStyle, color: '#b3261e' }}>{redTotal}</strong></div>
       </div>
 
-      <section style={{ marginBottom: 34 }}>
+      <section style={{ marginBottom: 24 }}>
         <h2 style={sectionHeadingStyle}>Transfer history</h2>
         {transferError ? <p role="alert">{transferError}</p> : <TransferHistory rows={transfers} />}
       </section>
 
       <SquadHistory rows={squadHistory} error={squadError} />
 
-      <section style={{ marginBottom: 34 }}>
+      <section style={{ marginBottom: 24 }}>
         <h2 style={sectionHeadingStyle}>Cards received</h2>
         <p style={{ color: 'var(--muted)', fontSize: 13, marginTop: -5 }}>
           Recorded yellow and red cards, shown match by match.
@@ -423,7 +423,7 @@ export default function PlayerDetail() {
         )}
       </section>
 
-      <section style={{ marginTop: 34 }}>
+      <section style={{ marginTop: 24 }}>
         <h2 style={sectionHeadingStyle}>Goals by opponent</h2>
         <p style={{ color: 'var(--muted)', fontSize: 13 }}>
           Opponent-specific goal records are available from 2025/26 onwards. Earlier seasons contain totals only and are not included here.
@@ -456,7 +456,7 @@ export default function PlayerDetail() {
         )}
       </section>
 
-      <section style={{ marginTop: 34 }}>
+      <section style={{ marginTop: 24 }}>
         <h2 style={sectionHeadingStyle}>Games scored in</h2>
         <label htmlFor="scoring-match-season" style={{ display: 'block', color: 'var(--muted)', fontSize: 12, fontWeight: 700, marginBottom: 5 }}>
           Season

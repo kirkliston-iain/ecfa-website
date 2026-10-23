@@ -3,7 +3,7 @@ import { PlayerHistoryLink, TeamHistoryLink, CompetitionHistoryLink, HistoryBack
 import { historicTeamName } from '../utils/historicTeams'
 import { supportsMatchScorers } from '../utils/historyLinks'
 import { useRememberedState, useRememberedScroll } from '../hooks/usePageMemory'
-import { useEffect, useMemo } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { supabase } from '../supabaseClient'
 import { trackInteraction } from '../utils/webAnalytics'
@@ -81,6 +81,7 @@ async function fetchAllHistoricScorers() {
 
 export default function ScorersPage() {
   const [searchParams] = useSearchParams()
+  const [showGraphic, setShowGraphic] = useState(false)
   const playerSearch = (searchParams.get('player') || '').trim()
   const [season, setSeason] = useRememberedState('season', searchParams.get('season') || 'overall')
   const [competition, setCompetition] = useRememberedState('competition', searchParams.get('competition') || 'all')
@@ -318,7 +319,7 @@ export default function ScorersPage() {
         </label>
       </div>
 
-      {!playerSearch && <ScorersGraphic rows={rows} season={season} competition={competition} sponsors={sponsors} />}
+      {!playerSearch && <details className="share-disclosure" onToggle={e => setShowGraphic(e.currentTarget.open)}><summary>Share goalscorers graphic</summary>{showGraphic && <ScorersGraphic rows={rows} season={season} competition={competition} sponsors={sponsors} />}</details>}
 
       {playerSearch && (
         <div style={{ marginBottom: 18, padding: '10px 12px', background: '#f5f8fa', border: '1px solid var(--line)', borderRadius: 6, fontSize: 14 }}>

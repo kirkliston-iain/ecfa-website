@@ -176,7 +176,7 @@ export default function Search() {
   }
 
   return (
-    <div className="container" style={{ padding: '32px 20px 48px', maxWidth: 760 }}>
+    <div className="container reading-page" style={{ padding: '32px 20px 48px', maxWidth: 760 }}>
       <h1 style={{ fontSize: 30, marginBottom: 4 }}>Search</h1>
       <p style={{ color: 'var(--muted)', marginBottom: 22 }}>
         Find players, referees, teams, venues, competitions and pages across the ECFA website.

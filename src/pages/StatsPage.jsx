@@ -21,7 +21,7 @@ const METRICS = [
 
 function Badge({ logoUrl, name }) {
   if (logoUrl) {
-    return <img src={logoUrl} alt="" style={{ width: 34, height: 34, borderRadius: '50%', objectFit: 'cover', background: '#fff', flexShrink: 0 }} />
+    return <img src={logoUrl} alt="" style={{ width: 34, height: 34, objectFit: 'contain', background: '#fff', flexShrink: 0 }} />
   }
   const initials = String(name || '?').split(' ').map((part) => part[0]).slice(0, 2).join('').toUpperCase()
   return (
@@ -258,7 +258,7 @@ export default function StatsPage() {
         </>
       )}
 
-      <section style={{ marginTop: 38 }}>
+      <section style={{ marginTop: 24 }}>
         <h2 style={{ fontSize: 20, color: 'var(--brass)', borderBottom: '2px solid var(--line)', paddingBottom: 8 }}>More ECFA statistics</h2>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(210px, 1fr))', gap: 12 }}>
           <Link to="/goalscorers" style={linkCardStyle}>

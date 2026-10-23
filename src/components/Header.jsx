@@ -65,7 +65,7 @@ export default function Header() {
     <header>
       <div style={{ background: 'var(--brass)' }}>
         <div
-          className="container"
+          className="container site-brand"
           style={{ padding: '14px 20px', display: 'flex', alignItems: 'center', gap: 14 }}
         >
           <Link to="/" style={{ display: 'flex', alignItems: 'center', gap: 14, minWidth: 0, flex: 1 }}>

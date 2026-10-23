@@ -12,7 +12,7 @@ function Badge({ logoUrl, name, size = 64 }) {
       <img
         src={logoUrl}
         alt=""
-        style={{ width: size, height: size, borderRadius: '50%', objectFit: 'cover', background: '#fff', flexShrink: 0 }}
+        style={{ width: size, height: size, objectFit: 'contain', background: '#fff', flexShrink: 0 }}
       />
     )
   }
@@ -317,6 +317,7 @@ export default function TeamDetail() {
 
       {team.manager_name && (
         <div
+          className="club-manager"
           style={{
             display: 'flex',
             alignItems: 'baseline',
@@ -359,7 +360,7 @@ export default function TeamDetail() {
         </div>
       )}
 
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 40 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 24 }}>
         <span style={{ fontSize: 12, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: 0.5, marginRight: 4 }}>
           Form
         </span>
@@ -372,14 +373,7 @@ export default function TeamDetail() {
           ))}
       </div>
 
-      <div
-        style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
-          gap: 40,
-          marginBottom: 48,
-        }}
-      >
+      <div className="club-sections">
         <section>
           <h2 style={{ fontSize: 13, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 16, paddingBottom: 8, borderBottom: '1px solid var(--line)' }}>
             Next Fixtures
@@ -451,7 +445,7 @@ export default function TeamDetail() {
         </section>
       </div>
 
-      <section id="all-fixtures" style={{ marginBottom: 48 }}>
+      <section id="all-fixtures" style={{ marginBottom: 24 }}>
         <h2 style={{ fontSize: 13, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 8, paddingBottom: 8, borderBottom: '1px solid var(--line)' }}>
           All upcoming fixtures
         </h2>
@@ -492,7 +486,7 @@ export default function TeamDetail() {
         )}
       </section>
 
-      <section style={{ marginBottom: 48 }}>
+      <section style={{ marginBottom: 24 }}>
         <h2 style={{ fontSize: 13, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 16, paddingBottom: 8, borderBottom: '1px solid var(--line)' }}>
           Results
         </h2>

@@ -416,7 +416,7 @@ export default function Downloads() {
         ))}
       </div>
 
-      <section style={{ marginTop: 34, paddingTop: 24, borderTop: '3px solid var(--brass)' }}>
+      <section style={{ marginTop: 24, paddingTop: 24, borderTop: '3px solid var(--brass)' }}>
         <h2 style={{ fontSize: 18, marginBottom: 6 }}>Complete public data archive</h2>
         <p style={{ fontSize: 13, color: 'var(--muted)', marginBottom: 14 }}>
           A single JSON download containing competitions, stages, teams, players, fixtures,

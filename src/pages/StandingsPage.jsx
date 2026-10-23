@@ -91,7 +91,7 @@ export default function StandingsPage() {
       <p style={{ color: 'var(--muted)', marginBottom: 28 }}>Every ECFA table, at a glance.</p>
 
       {competitions.map((comp) => (
-        <section key={comp.slug} style={{ marginBottom: 40 }}>
+        <section key={comp.slug} style={{ marginBottom: 24 }}>
           <div
             style={{
               display: 'flex',

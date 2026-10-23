@@ -37,13 +37,13 @@ const teamEvents = [
 export default function Charity() {
   const { siteLogo } = useSiteLogos()
   return (
-    <div className="container" style={{ padding: '32px 20px 48px', maxWidth: 820 }}>
+    <div className="container reading-page" style={{ padding: '32px 20px 48px', maxWidth: 820 }}>
       <h1 style={{ fontSize: 30, marginBottom: 4 }}>Charity</h1>
       <p style={{ color: 'var(--muted)', margin: '0 0 30px' }}>
           Each season, the ECFA nominates a charity and brings teams together to raise funds. Clubs also organise their own events for causes close to their communities.
       </p>
 
-      <section style={{ marginBottom: 34 }}>
+      <section style={{ marginBottom: 24 }}>
         <h2 style={sectionHeadingStyle}>League charity events by season</h2>
         <div style={{ display: 'grid', gap: 18 }}>
           {leagueSeasons.map((item) => (
@@ -82,7 +82,7 @@ export default function Charity() {
         </div>
       </section>
 
-      <section style={{ marginBottom: 34 }}>
+      <section style={{ marginBottom: 24 }}>
         <h2 style={sectionHeadingStyle}>Team charity events by season</h2>
         <div style={{ display: 'grid', gap: 16 }}>
           {teamEvents.map((item) => (

@@ -94,8 +94,8 @@ button {
 
   .site-navigation {
     gap: 20px !important;
-    justify-content: space-between;
-    overflow-x: visible !important;
+    justify-content: flex-start;
+    overflow-x: auto !important;
   }
 
   .desktop-card-grid {
@@ -408,3 +408,50 @@ button {
 .match-graphic-actions > * { display: inline-flex; align-items: center; justify-content: center; min-height: 44px; padding: 10px 14px; border: 1px solid var(--brass); border-radius: 6px; background: #fff; color: var(--ink); font: inherit; font-size: 13px; cursor: pointer; }
 .match-graphic-actions > button:first-child { background: var(--brass); color: #fff; font-weight: 700; }
 @media (max-width: 480px) { .fixture-summary { gap: 10px; } .fixture-summary__team > div { font-size: 14px !important; } .fixture-summary__score { max-width: 85px; } .match-graphic-actions > * { flex: 1 1 100%; } }
+
+/* Shared public layout: consistent rhythm, with scrolling confined to navigation/tables. */
+.site-main { min-width: 0; }
+.site-navigation { max-width: 100%; min-width: 0; overscroll-behavior-x: contain; }
+.site-main--public > .container { padding-top: 24px !important; padding-bottom: 28px !important; min-width: 0; }
+.site-main--public > .container > h1 { font-size: 28px; line-height: 1.2; margin-bottom: 6px !important; }
+.site-main--public > .container > p { max-width: 78ch; margin-top: 8px; margin-bottom: 20px; }
+.site-main--public > .container.reading-page { max-width: 960px !important; }
+.site-main--public > .container.form-page { max-width: 820px !important; }
+.site-main--public > .container > :last-child { margin-bottom: 0; }
+.site-footer { margin-top: 24px; }
+.site-footer > .container { flex-wrap: wrap; }
+.home-shortcuts { display: grid; grid-template-columns: repeat(4,minmax(0,1fr)); gap: 8px; max-width: 760px; margin: 12px 0 16px; }
+.match-preview-list { display: grid; grid-template-columns: repeat(auto-fit,minmax(min(100%,300px),1fr)); gap: 16px; }
+.match-preview-list > div { min-width: 0; padding: 0 0 0 12px; border-left: 2px solid var(--line); margin-bottom: 0 !important; }
+.match-preview-list p { font-size: 13px !important; line-height: 1.45 !important; }
+.share-disclosure { margin: 0 0 18px; border: 1px solid var(--line); border-radius: 8px; }
+.share-disclosure > summary { padding: 12px 14px; cursor: pointer; font-size: 14px; font-weight: 700; }
+.share-disclosure > section { margin: 0 !important; border: 0 !important; }
+.public-choice-grid { display: grid; grid-template-columns: repeat(auto-fit,minmax(min(100%,240px),1fr)); gap: 8px; margin: 18px 0 0; }
+.public-choice-grid > a { display: flex; align-items: center; gap: 10px; min-height: 54px; min-width: 0; padding: 10px 12px; border: 1px solid var(--line); border-radius: 6px; font-size: 14px; font-weight: 600; overflow-wrap: anywhere; }
+.public-choice-grid > a:hover { background: #faf7ee; border-color: var(--brass); }
+.public-choice-grid img { width: 32px; height: 32px; object-fit: contain; flex: none; }
+.contact-options { display: grid; grid-template-columns: repeat(auto-fit,minmax(min(100%,220px),1fr)); gap: 8px; }
+.contact-options label { min-width: 0; }
+.club-sections { display: grid; grid-template-columns: repeat(auto-fit,minmax(min(100%,280px),1fr)); gap: 24px; margin-bottom: 28px; }
+.public-season-grid { display: grid; grid-template-columns: repeat(auto-fit,minmax(min(100%,320px),1fr)); gap: 8px; }
+.public-season-grid > button { gap: 4px 12px; }
+.public-season-grid > button > strong { font-size: 18px !important; }
+@media (max-width: 600px) {
+  .site-main--public > .container { padding: 18px 16px 24px !important; }
+  .site-main--public > .container > h1 { font-size: 25px !important; }
+  .site-main--public > .container > p { font-size: 14px; line-height: 1.45; }
+  .home-shortcuts { grid-template-columns: repeat(2,minmax(0,1fr)); }
+  .site-navigation { gap: 22px !important; }
+  .site-navigation > a { padding-top: 12px !important; padding-bottom: 12px !important; font-size: 12px !important; }
+  .site-brand { padding-top: 10px !important; padding-bottom: 10px !important; gap: 10px !important; }
+  .site-brand > a { gap: 10px !important; }
+  .site-brand > a > span { font-size: 14px !important; }
+  .site-brand img { width: 38px !important; height: 38px !important; }
+  .site-brand button { min-height: 44px; }
+  .site-footer > .container { padding: 16px; gap: 10px; font-size: 12px !important; }
+  .site-footer > .container > span { flex-basis: 100%; }
+  .site-main--public :is(input,select,textarea) { max-width: 100%; min-width: 0; }
+  .site-main--public label { min-width: 0; }
+  .club-manager { padding-left: 0 !important; flex-wrap: wrap; }
+}

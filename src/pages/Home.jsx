@@ -476,7 +476,7 @@ function Badge({ logoUrl, name, size = 24 }) {
         className="match-team-badge"
         src={logoUrl}
         alt=""
-        style={{ width: size, height: size, borderRadius: '50%', objectFit: 'cover', background: '#fff', flexShrink: 0 }}
+        style={{ width: size, height: size, objectFit: 'contain', background: '#fff', flexShrink: 0 }}
       />
     )
   }
@@ -953,7 +953,7 @@ export default function Home() {
   return (
     <div className="container" style={{ padding: '32px 20px 48px' }}>
       <h1 style={{ fontSize: 30 }}>Match Hub</h1>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 8, maxWidth: 440, marginBottom: 14 }}>
+      <div className="home-shortcuts">
         {[["/predictions", "Weekly Predictions ⚽"], ["/news", "Latest News"], ["/on-this-day", "On This Day 📅"], ["/matchday-graphics", "Matchday Graphics 🖼️"]].map(([to, label]) => <Link key={to} to={to} style={{ padding: '7px 9px', border: '1px solid var(--brass)', borderRadius: 5, fontSize: 12, fontWeight: 700, color: 'var(--ink)', textAlign: 'center' }}>{label}</Link>)}
       </div>
       <p style={{ color: 'var(--muted)', marginBottom: 20 }}>
@@ -986,7 +986,7 @@ export default function Home() {
           <h2 style={{ fontSize: 13, textTransform: 'uppercase', letterSpacing: 0.5, color: 'var(--brass)', marginBottom: 10 }}>
             Match Preview
           </h2>
-          {previewParagraphs.map((p) => (
+          <div className="match-preview-list">{previewParagraphs.map((p) => (
             <div key={p.fixtureId} style={{ marginBottom: 14 }}>
               <Link to={`/competitions/${p.compSlug}${p.compSlug === 'league-cup' && p.groupId ? `#group-${p.groupId}` : p.compSlug === 'knockout-cup' ? '#draw' : p.compSlug === 'appin-league' ? '#table' : ''}`} style={{ display: 'inline-block', fontSize: 12, fontWeight: 800, color: 'var(--brass)', marginBottom: 3 }}>
                 {p.compName}{p.groupName ? ` · ${p.groupName}` : ''}
@@ -998,11 +998,11 @@ export default function Home() {
                 <p style={{ fontSize: 14, lineHeight: 1.6, color: 'var(--muted)', margin: 0 }}>{p.text}</p>
               </Link>
             </div>
-          ))}
+          ))}</div>
         </section>
       )}
 
-      <section id="fixtures" style={{ marginBottom: 40, scrollMarginTop:20 }}>
+      <section id="fixtures" style={{ marginBottom: 24, scrollMarginTop:20 }}>
         <h2 style={{ fontSize: 13, textTransform: 'uppercase', letterSpacing: 0.5, color: 'var(--muted)', marginBottom: 12 }}>
           {hasResultsToday ? 'Full Time' : 'Upcoming Fixtures'}
         </h2>
@@ -1037,7 +1037,7 @@ export default function Home() {
       </section>
 
       {featuredCompetition?.slug === 'appin-league' && appinStandings.length > 0 && (
-        <section style={{ marginBottom: 40 }}>
+        <section style={{ marginBottom: 24 }}>
           <h2 style={{ fontSize: 13, textTransform: 'uppercase', letterSpacing: 0.5, color: 'var(--muted)', marginBottom: 12 }}>
             Appin Sports League Table
           </h2>
@@ -1046,7 +1046,7 @@ export default function Home() {
       )}
 
       {competitionsForWeek.length > 0 && (
-        <section style={{ marginBottom: 40 }}>
+        <section style={{ marginBottom: 24 }}>
           <h2 style={{ fontSize: 13, textTransform: 'uppercase', letterSpacing: 0.5, color: 'var(--muted)', marginBottom: 12 }}>
             Competitions this week
           </h2>
@@ -1066,7 +1066,7 @@ export default function Home() {
       )}
 
       {showKnockoutBracket && (
-        <section style={{ marginBottom: 40 }}>
+        <section style={{ marginBottom: 24 }}>
           <h2 style={{ fontSize: 13, textTransform: 'uppercase', letterSpacing: 0.5, color: 'var(--muted)', marginBottom: 12 }}>
             Knockout Cup path
           </h2>

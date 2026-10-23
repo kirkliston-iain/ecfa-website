@@ -1,4 +1,4 @@
-import { useNavigate } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 
 const COMPETITIONS = [
   {
@@ -59,6 +59,9 @@ export default function CompetitionsIndex() {
           </option>
         ))}
       </select>
+      <nav className="public-choice-grid" aria-label="Browse competitions">
+        {COMPETITIONS.map(c => <Link key={c.slug} to={`/competitions/${c.slug}`}><span><strong>{c.name}</strong><small style={{display:'block',fontWeight:400,color:'var(--muted)',marginTop:4}}>{c.description}</small></span></Link>)}
+      </nav>
     </div>
   )
 }

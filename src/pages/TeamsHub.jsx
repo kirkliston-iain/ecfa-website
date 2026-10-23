@@ -18,7 +18,7 @@ function Badge({ logoUrl, name, size = 24 }) {
       <img
         src={logoUrl}
         alt=""
-        style={{ width: size, height: size, borderRadius: '50%', objectFit: 'cover', background: '#fff', flexShrink: 0 }}
+        style={{ width: size, height: size, objectFit: 'contain', background: '#fff', flexShrink: 0 }}
       />
     )
   }
@@ -589,6 +589,13 @@ export default function TeamsHub() {
         }}
       />
 
+      {!teamId && teams.length > 0 && <nav className="public-choice-grid" aria-label="Browse current teams">
+        {teams.map(entry => <Link key={entry.id} to={`/teams/${entry.id}`}>
+          {entry.logo_url && <img src={entry.logo_url} alt="" loading="lazy" />}
+          <span>{entry.name}</span>
+        </Link>)}
+      </nav>}
+
       {loading && <p style={{ color: 'var(--muted)' }}>Loading…</p>}
 
       {!loading && team && (
@@ -663,7 +670,7 @@ export default function TeamsHub() {
             )}
           </div>
 
-          <section style={{ marginBottom: 32 }}>
+          <section style={{ marginBottom: 24 }}>
             <h2 style={sectionHeaderStyle}>Next five fixtures</h2>
             {scheduledFixtures.length === 0 ? <p style={{ color: 'var(--muted)', fontSize: 14 }}>No upcoming fixtures scheduled.</p> : (
               <ul style={{ listStyle: 'none', margin: 0, padding: 0 }}>
@@ -678,7 +685,7 @@ export default function TeamsHub() {
             )}
           </section>
 
-          <section id="all-fixtures" style={{ marginBottom: 36 }}>
+          <section id="all-fixtures" style={{ marginBottom: 24 }}>
             <h2 style={sectionHeaderStyle}>All upcoming fixtures</h2>
             <p style={{ color: 'var(--muted)', fontSize: 12, margin: '0 0 12px' }}>Choose a competition, month or date. Cup dates are conditional until qualification is confirmed; league dates include Match Hub events.</p>
             <div className="team-fixture-filters">
@@ -722,9 +729,9 @@ export default function TeamsHub() {
 
           <h2 style={sectionHeaderStyle}>Squad</h2>
           {squad.length === 0 ? (
-            <p style={{ color: 'var(--muted)', fontSize: 14, marginBottom: 32 }}>No squad recorded.</p>
+            <p style={{ color: 'var(--muted)', fontSize: 14, marginBottom: 24 }}>No squad recorded.</p>
           ) : (
-            <div style={{ marginBottom: 32, display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+            <div style={{ marginBottom: 24, display: 'flex', flexWrap: 'wrap', gap: 8 }}>
               {squad.map((p) => (
                 <Link
                   key={p.id}
@@ -747,9 +754,9 @@ export default function TeamsHub() {
 
           <h2 style={sectionHeaderStyle}>Honours</h2>
           {honours.length === 0 ? (
-            <p style={{ color: 'var(--muted)', fontSize: 14, marginBottom: 32 }}>No honours recorded.</p>
+            <p style={{ color: 'var(--muted)', fontSize: 14, marginBottom: 24 }}>No honours recorded.</p>
           ) : (
-            <div style={{ marginBottom: 32 }}>
+            <div style={{ marginBottom: 24 }}>
               {honours.map((h, i) => {
                 const fixtureId = honourFixtureId(h, currentFixtures, historicFixtures)
                 return (
@@ -788,7 +795,7 @@ export default function TeamsHub() {
               </option>
             ))}
           </select>
-          <div style={{ marginBottom: 32 }}>
+          <div style={{ marginBottom: 24 }}>
             {(resultsSeason === CURRENT_SEASON ? currentPlayedForResults : historicForSeason).length === 0 ? (
               <p style={{ color: 'var(--muted)', fontSize: 14 }}>No results for this season.</p>
             ) : resultsSeason === CURRENT_SEASON ? (
@@ -850,7 +857,7 @@ export default function TeamsHub() {
             )}
           </div>
 
-          <h2 style={{ ...sectionHeaderStyle, marginTop: 36 }}>Overall Head-to-Head Record</h2>
+          <h2 style={{ ...sectionHeaderStyle, marginTop: 24 }}>Overall Head-to-Head Record</h2>
           <p style={{ color: 'var(--muted)', fontSize: 13, marginTop: -4, marginBottom: 12 }}>
             Complete record from the results currently held on this website. Penalty shootout victories count as wins; shootout kicks are not included in goals.
           </p>

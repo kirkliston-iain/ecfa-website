@@ -194,7 +194,7 @@ export default function HonoursPage() {
   return (
     <div className="container" style={{ padding: '32px 20px 48px' }}>
       <h1 style={{ fontSize: 30, marginBottom: 4 }}>Major Honours</h1>
-      <p style={{ color: 'var(--muted)', marginBottom: 32 }}>
+      <p style={{ color: 'var(--muted)', marginBottom: 24 }}>
         Season-by-season winners across every ECFA competition.
       </p>
 
@@ -228,7 +228,7 @@ export default function HonoursPage() {
           </tbody>
         </table>
       </div>
-      <p style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 40 }}>
+      <p style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 24 }}>
         * Season void (Covid) &nbsp;&nbsp; ** Tournament did not exist yet
       </p>
 

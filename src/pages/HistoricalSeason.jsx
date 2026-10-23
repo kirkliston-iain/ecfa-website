@@ -304,7 +304,7 @@ export default function HistoricalSeason() {
       {!season && (
         <section style={{ marginBottom: 30 }}>
           <h2 style={sectionHeadingStyle}>Seasons</h2>
-          <div style={{ display: 'grid', gap: 8 }}>
+          <div className="public-season-grid">
             {seasonSummaries.filter((entry) => entry.fixtures > 0).map((entry) => (
               <button
                 key={entry.season}
@@ -430,7 +430,7 @@ export default function HistoricalSeason() {
       {loading && <p style={{ color: 'var(--muted)' }}>Loading…</p>}
 
       {!loading && season && view === 'competitions' && cupResults.length > 0 && (
-        <section style={{ marginBottom: 32 }}>
+        <section style={{ marginBottom: 24 }}>
           <h2
             style={{
               fontSize: 13,
@@ -469,7 +469,7 @@ export default function HistoricalSeason() {
       )}
 
       {!loading && season && view === 'scorers' && topScorers.length > 0 && (
-        <section style={{ marginBottom: 32 }}>
+        <section style={{ marginBottom: 24 }}>
           <h2 style={sectionHeadingStyle}>Top 10 Scorers</h2>
           <div style={{ borderTop: '1px solid var(--line)' }}>
             {topScorers.map((scorer, index) => (
@@ -507,7 +507,7 @@ export default function HistoricalSeason() {
       )}
 
       {!loading && season && view === 'table' && displayTable.length > 0 && (
-        <section style={{ marginBottom: 32 }}>
+        <section style={{ marginBottom: 24 }}>
           <h2
             style={{
               fontSize: 13,

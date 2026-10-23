@@ -142,7 +142,7 @@ export default function Competition() {
         )}
         {competition.name}
       </h1>
-      <p style={{ color: 'var(--muted)', marginBottom: 32 }}>{competition.season} season</p>
+      <p style={{ color: 'var(--muted)', marginBottom: 24 }}>{competition.season} season</p>
 
       {competition.slug === 'knockout-cup' && ['Quarter-Final', 'Semi-Final'].every((round) => stages.some((stage) => stage.fixtures.some((fixture) => fixture.round_name === round))) && (
         <section id="draw" style={{ marginBottom: 44, scrollMarginTop: 20 }}>

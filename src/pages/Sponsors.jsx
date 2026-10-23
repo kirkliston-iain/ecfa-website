@@ -60,7 +60,7 @@ export default function Sponsors() {
         ))}
       </div>
 
-      <section style={{ marginTop: 38 }}>
+      <section style={{ marginTop: 24 }}>
         <h2 style={{ fontSize: 24, margin: '0 0 6px' }}>Teams’ own fundraisers</h2>
         <p style={{ color: 'var(--muted)', margin: '0 0 18px', lineHeight: 1.5 }}>
           Fundraising organised by ECFA teams for causes important to their communities.

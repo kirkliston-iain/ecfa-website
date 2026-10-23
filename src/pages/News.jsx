@@ -37,7 +37,7 @@ export default function News() {
   }, [])
 
   return (
-    <div className="container" style={{ padding: '32px 20px 48px', maxWidth: 900 }}>
+    <div className="container reading-page" style={{ padding: '32px 20px 48px', maxWidth: 900 }}>
       <h1 style={{ fontSize: 30, marginBottom: 22 }}>News</h1>
       {loading && <p>Loading news…</p>}
       {error && <p role="alert">{error}</p>}
