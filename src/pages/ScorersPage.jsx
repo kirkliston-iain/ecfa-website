@@ -1,3 +1,4 @@
+import { useSiteLogos } from '../contexts/SiteLogos'
 import ScorersGraphic from '../components/ScorersGraphic'
 import { PlayerHistoryLink, TeamHistoryLink, CompetitionHistoryLink, HistoryBack } from '../components/HistoryLinks'
 import { historicTeamName } from '../utils/historicTeams'
@@ -82,6 +83,7 @@ async function fetchAllHistoricScorers() {
 export default function ScorersPage() {
   const [searchParams] = useSearchParams()
   const [showGraphic, setShowGraphic] = useState(false)
+  const { sponsorLogo } = useSiteLogos()
   const playerSearch = (searchParams.get('player') || '').trim()
   const [season, setSeason] = useRememberedState('season', searchParams.get('season') || 'overall')
   const [competition, setCompetition] = useRememberedState('competition', searchParams.get('competition') || 'all')
@@ -110,7 +112,7 @@ export default function ScorersPage() {
           .from('fixture_scorers')
           .select('goals, player:player_id(id, first_name, last_name), team:team_id(id, name), fixture:fixture_id(id, fixture_date, hidden_from_public, home_team:home_team_id(id, name), away_team:away_team_id(id, name), stage:stage_id(competition:competition_id(name, slug, season)))'),
         supabase.from('players').select('id, first_name, last_name, team_id').order('last_name').order('first_name'),
-        supabase.from('sponsors').select('id, name, website_url, logo_url').eq('is_published', true).in('name', SPONSOR_NAMES),
+        supabase.from('sponsors').select('id, name, website_url, logo_url').eq('is_published', true).in('name', [...SPONSOR_NAMES, 'Appin Sports']),
       ])
 
       if (!cancelled) {
@@ -289,17 +291,23 @@ export default function ScorersPage() {
         ? 'Goals scored so far this season.'
         : `Goals scored in the ${season} season.`
 
+  const leagueOnly = competition === 'League'
+  const appin = sponsors.find(sponsor => sponsor.name === 'Appin Sports')
+  const visibleSponsors = leagueOnly
+    ? [{ ...appin, id: appin?.id || 'appin-sports', name: 'Appin Sports', website_url: appin?.website_url || 'https://appinsports.com/', logo_url: sponsorLogo('Appin Sports') || appin?.logo_url || '/sponsors/appin-sports.png' }]
+    : sponsors.filter(sponsor => SPONSOR_NAMES.includes(sponsor.name))
+
   return (
     <div className="container" style={{ padding: '32px 20px 48px' }}>
       {playerSearch && <HistoryBack fallback="/goalscorers" />}
       <h1 style={{ fontSize: 30, marginBottom: 4 }}>Goalscorers</h1>
-      {sponsors.length > 0 && <div aria-label="Goalscorers sponsors" style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 8, maxWidth: 500, margin: '12px 0 18px' }}>
-        {sponsors.map((sponsor) => <a key={sponsor.id} href={sponsor.website_url} target="_blank" rel="noopener noreferrer" onClick={() => trackInteraction('sponsor_click', `${sponsor.name} — Goalscorers`)} style={sponsorLinkStyle}>
-          {sponsor.logo_url && <img src={sponsor.logo_url} alt="" style={{ width: 46, height: 46, objectFit: 'contain', flexShrink: 0 }} />}
-          <span>{sponsor.name}</span>
+      {visibleSponsors.length > 0 && <div aria-label="Goalscorers sponsors" style={{ display: 'grid', gridTemplateColumns: leagueOnly ? 'minmax(0, 1fr)' : 'repeat(2, minmax(0, 1fr))', gap: 8, maxWidth: leagueOnly ? 250 : 500, margin: '12px 0 18px' }}>
+        {visibleSponsors.map((sponsor) => <a key={sponsor.id} href={sponsor.website_url} target="_blank" rel="noopener noreferrer" onClick={() => trackInteraction('sponsor_click', `${sponsor.name} — Goalscorers`)} aria-label={leagueOnly ? 'Visit Appin Sports, league sponsor' : undefined} style={sponsorLinkStyle}>
+          {sponsor.logo_url && <img src={sponsor.logo_url} alt={leagueOnly ? 'Appin Sports' : ''} style={{ width: leagueOnly ? 180 : 46, height: 46, objectFit: 'contain', flexShrink: 0 }} />}
+          {!leagueOnly && <span>{sponsor.name}</span>}
         </a>)}
       </div>}
-      <p style={{ color: 'var(--muted)', marginBottom: 20 }}>{seasonLabel} Earlier seasons are recorded as league goals.{season === 'overall' ? ' Team shows the most recent recorded club.' : ''}</p>
+      <p style={{ color: 'var(--muted)', marginBottom: 20 }}>{leagueOnly && <><strong>ECFA Appin Sports League</strong><br /></>}{seasonLabel} Earlier seasons are recorded as league goals.{season === 'overall' ? ' Team shows the most recent recorded club.' : ''}</p>
 
       <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginBottom: 24 }}>
         <label style={filterLabelStyle}>Competition
@@ -319,7 +327,7 @@ export default function ScorersPage() {
         </label>
       </div>
 
-      {!playerSearch && <details className="share-disclosure" onToggle={e => setShowGraphic(e.currentTarget.open)}><summary>Share goalscorers graphic</summary>{showGraphic && <ScorersGraphic rows={rows} season={season} competition={competition} sponsors={sponsors} />}</details>}
+      {!playerSearch && <details className="share-disclosure" onToggle={e => setShowGraphic(e.currentTarget.open)}><summary>Share goalscorers graphic</summary>{showGraphic && <ScorersGraphic rows={rows} season={season} competition={competition} sponsors={visibleSponsors} />}</details>}
 
       {playerSearch && (
         <div style={{ marginBottom: 18, padding: '10px 12px', background: '#f5f8fa', border: '1px solid var(--line)', borderRadius: 6, fontSize: 14 }}>

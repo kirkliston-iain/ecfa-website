@@ -4,6 +4,7 @@ function loadImage(src) { return new Promise(resolve=>{if(!src)return resolve(nu
 export default function ScorersGraphic({rows,season,competition,sponsors}) {
   const [preview,setPreview]=useState(null),[error,setError]=useState(''),[busy,setBusy]=useState(false)
   const count=season==='overall'?20:10
+  const leagueOnly=competition==='League'
   const ranked=[...rows].sort((a,b)=>(competition==='League'?b.byCompetition.League-a.byCompetition.League:competition==='Cup'?b.byCompetition.Cup-a.byCompetition.Cup:b.goals-a.goals)||a.player_name.localeCompare(b.player_name)).slice(0,count)
   const key=JSON.stringify({ranked,season,competition,sponsors})
   useEffect(()=>{
@@ -15,8 +16,8 @@ export default function ScorersGraphic({rows,season,competition,sponsors}) {
         canvas.width=1080;canvas.height=season==='overall'?1660:1160
         ctx.fillStyle='#ffffff';ctx.fillRect(0,0,canvas.width,canvas.height)
         ctx.fillStyle='#171717';ctx.fillRect(0,0,1080,178)
-        ctx.fillStyle='#ffffff';ctx.font='bold 55px Arial';ctx.fillText('ECFA GOALSCORERS',55,80)
-        ctx.font='28px Arial';ctx.fillText(season==='overall'?'ALL-TIME TOP 20':season+' TOP 10',55,125)
+        ctx.fillStyle='#ffffff';ctx.font=`bold ${leagueOnly?43:55}px Arial`;ctx.fillText(leagueOnly?'ECFA APPIN SPORTS LEAGUE':'ECFA GOALSCORERS',55,80)
+        ctx.font='28px Arial';ctx.fillText((leagueOnly?'GOALSCORERS · ':'')+(season==='overall'?'ALL-TIME TOP 20':season+' TOP 10'),55,125)
         ctx.fillStyle=GOLD;ctx.fillRect(55,157,970,6)
         ctx.fillStyle='#555';ctx.font='25px Arial';ctx.fillText(competition==='all'?'All competitions':competition+' goals',55,222)
         const rowHeight=season==='overall'?61:76,top=265
@@ -30,6 +31,13 @@ export default function ScorersGraphic({rows,season,competition,sponsors}) {
           ctx.textAlign='right';ctx.font='bold 30px Arial';ctx.fillText(String(competition==='League'?r.byCompetition.League||0:competition==='Cup'?r.byCompetition.Cup||0:r.goals),995,y);ctx.textAlign='left'
         })
         const footer=canvas.height-155
+        if(leagueOnly){
+          const img=await loadImage(sponsors.find(s=>s.name==='Appin Sports')?.logo_url)
+          if(!img)throw Error('Unable to load Appin Sports logo')
+          ctx.fillStyle=GOLD;ctx.fillRect(55,footer+8,970,3)
+          const scale=Math.min(560/img.width,105/img.height)
+          ctx.drawImage(img,(1080-img.width*scale)/2,footer+30+(105-img.height*scale)/2,img.width*scale,img.height*scale)
+        }else{
         ctx.fillStyle='#171717';ctx.fillRect(0,footer,1080,155)
         ctx.fillStyle='#fff';ctx.font='22px Arial';ctx.fillText('Proudly supported by',55,footer+40)
         let x=55
@@ -41,6 +49,7 @@ export default function ScorersGraphic({rows,season,competition,sponsors}) {
           parts.forEach(w=>{if(ctx.measureText(line+' '+w).width>300){lines.push(line);line=w}else line+=(line?' ':'')+w});lines.push(line)
           lines.slice(0,2).forEach((l,i)=>ctx.fillText(l,x+65,footer+78+i*23))
           x+=500
+        }
         }
         const blob=await new Promise(resolve=>canvas.toBlob(resolve,'image/png'))
         if(!blob)throw Error('Could not create image')
@@ -55,12 +64,12 @@ export default function ScorersGraphic({rows,season,competition,sponsors}) {
     const file=new File([preview.blob],filename,{type:'image/png'})
     if(!navigator.canShare?.({files:[file]})){setError('Sharing images is unavailable in this browser. Please download the graphic instead.');return}
     setBusy(true)
-    try{await navigator.share({files:[file],title:'ECFA Goalscorers'})}catch(e){if(e.name!=='AbortError')setError('Sharing failed. You can download the image instead.')}finally{setBusy(false)}
+    try{await navigator.share({files:[file],title:leagueOnly?'ECFA Appin Sports League goalscorers':'ECFA Goalscorers'})}catch(e){if(e.name!=='AbortError')setError('Sharing failed. You can download the image instead.')}finally{setBusy(false)}
   }
-  const filename='ecfa-goalscorers-'+(season==='overall'?'all-time':season.replace('/','-'))+'.png'
+  const filename=(leagueOnly?'ecfa-appin-sports-league-goalscorers-':'ecfa-goalscorers-')+(season==='overall'?'all-time':season.replace('/','-'))+'.png'
   return <section style={{border:'1px solid var(--line)',borderRadius:8,padding:14,margin:'8px 0 22px'}}>
     <h2 style={{fontSize:18,margin:'0 0 6px'}}>Share goalscorers graphic</h2>
-    <p style={{fontSize:12,color:'var(--muted)'}}>Top {count} · {season==='overall'?'All-time':season} · {competition==='all'?'All goals':competition} · includes sponsor logos</p>
+    <p style={{fontSize:12,color:'var(--muted)'}}>Top {count} · {season==='overall'?'All-time':season} · {leagueOnly?'ECFA Appin Sports League':competition==='all'?'All goals':competition} · {leagueOnly?'Appin Sports logo':'includes sponsor logos'}</p>
     {preview&&<img src={preview.url} alt="Goalscorers share graphic preview" style={{width:'100%',maxWidth:320,display:'block',margin:'12px auto',borderRadius:5}}/>}
     {!preview&&!error&&<p>Preparing graphic…</p>}
     {error&&<p role="alert">{error}</p>}
