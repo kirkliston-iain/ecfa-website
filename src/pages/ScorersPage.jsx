@@ -330,7 +330,7 @@ export default function ScorersPage() {
         </label>
       </div>
 
-      {!playerSearch && <details className="share-disclosure" onToggle={e => setShowGraphic(e.currentTarget.open)}><summary>Share goalscorers graphic</summary>{showGraphic && <ScorersGraphic rows={rows} season={season} competition={competition} sponsors={visibleSponsors} teams={teamDirectory} />}</details>}
+      {!playerSearch && <details className="share-disclosure" onToggle={e => setShowGraphic(e.currentTarget.open)}><summary>Share goalscorers graphic · {leagueOnly ? 'League Only' : competition === 'Cup' ? 'Cup Only' : 'All Competitions'}</summary>{showGraphic && <ScorersGraphic rows={rows} season={season} competition={competition} sponsors={visibleSponsors} teams={teamDirectory} />}</details>}
 
       {playerSearch && (
         <div style={{ marginBottom: 18, padding: '10px 12px', background: '#f5f8fa', border: '1px solid var(--line)', borderRadius: 6, fontSize: 14 }}>

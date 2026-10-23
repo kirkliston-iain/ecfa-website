@@ -6,6 +6,8 @@ export default function ScorersGraphic({rows,season,competition,sponsors,teams=[
   const [preview,setPreview]=useState(null),[error,setError]=useState(''),[busy,setBusy]=useState(false)
   const count=season==='overall'?20:10
   const leagueOnly=competition==='League'
+  const scopeLabel=leagueOnly?'League Only':competition==='Cup'?'Cup Only':'All Competitions'
+  const graphicTitle=leagueOnly?'ECFA Appin Sports League — League Only Goalscorers':`ECFA Goalscorers — ${scopeLabel}`
   const ranked=[...rows].sort((a,b)=>(competition==='League'?b.byCompetition.League-a.byCompetition.League:competition==='Cup'?b.byCompetition.Cup-a.byCompetition.Cup:b.goals-a.goals)||a.player_name.localeCompare(b.player_name)).slice(0,count)
   const normalise=name=>historicTeamName(name).toLocaleLowerCase('en-GB')
   const clubByName=new Map(teams.map(team=>[normalise(team.name),team]))
@@ -22,8 +24,9 @@ export default function ScorersGraphic({rows,season,competition,sponsors,teams=[
         canvas.width=1080;canvas.height=season==='overall'?1660:1160
         ctx.fillStyle='#ffffff';ctx.fillRect(0,0,canvas.width,canvas.height)
         ctx.fillStyle='#171717';ctx.fillRect(0,0,1080,178)
-        ctx.fillStyle='#ffffff';ctx.font=`bold ${leagueOnly?43:55}px Arial`;ctx.fillText(leagueOnly?'ECFA APPIN SPORTS LEAGUE':'ECFA GOALSCORERS',55,80)
-        ctx.font='28px Arial';ctx.fillText((leagueOnly?'GOALSCORERS · ':'')+(season==='overall'?'ALL-TIME TOP 20':season+' TOP 10'),55,125)
+        ctx.fillStyle='#ffffff';ctx.font=`bold ${leagueOnly?43:48}px Arial`;ctx.fillText(leagueOnly?'ECFA APPIN SPORTS LEAGUE':'ECFA GOALSCORERS',55,62)
+        ctx.fillStyle=GOLD;ctx.font='bold 34px Arial';ctx.fillText(scopeLabel.toUpperCase()+(leagueOnly?' · GOALSCORERS':''),55,106)
+        ctx.fillStyle='#ffffff';ctx.font='24px Arial';ctx.fillText(season==='overall'?'ALL-TIME TOP 20':season+' TOP 10',55,140)
         ctx.fillStyle=GOLD;ctx.fillRect(55,157,970,6)
         ctx.fillStyle='#555';ctx.font='25px Arial';ctx.fillText(competition==='all'?'All competitions':competition+' goals',55,222)
         if(season==='overall'){ctx.font='18px Arial';ctx.textAlign='right';ctx.fillText('Most recently recorded team(s)',1025,222);ctx.textAlign='left'}
@@ -80,13 +83,13 @@ export default function ScorersGraphic({rows,season,competition,sponsors,teams=[
     const file=new File([preview.blob],filename,{type:'image/png'})
     if(!navigator.canShare?.({files:[file]})){setError('Sharing images is unavailable in this browser. Please download the graphic instead.');return}
     setBusy(true)
-    try{await navigator.share({files:[file],title:leagueOnly?'ECFA Appin Sports League goalscorers':'ECFA Goalscorers'})}catch(e){if(e.name!=='AbortError')setError('Sharing failed. You can download the image instead.')}finally{setBusy(false)}
+    try{await navigator.share({files:[file],title:graphicTitle})}catch(e){if(e.name!=='AbortError')setError('Sharing failed. You can download the image instead.')}finally{setBusy(false)}
   }
-  const filename=(leagueOnly?'ecfa-appin-sports-league-goalscorers-':'ecfa-goalscorers-')+(season==='overall'?'all-time':season.replace('/','-'))+'.png'
+  const filename=(leagueOnly?'ecfa-appin-sports-league-goalscorers-':competition==='Cup'?'ecfa-goalscorers-cup-only-':'ecfa-goalscorers-all-competitions-')+(season==='overall'?'all-time':season.replace('/','-'))+'.png'
   return <section style={{border:'1px solid var(--line)',borderRadius:8,padding:14,margin:'8px 0 22px'}}>
-    <h2 style={{fontSize:18,margin:'0 0 6px'}}>Share goalscorers graphic</h2>
+    <h2 style={{fontSize:18,margin:'0 0 6px'}}>{scopeLabel} Goalscorers</h2>
     <p style={{fontSize:12,color:'var(--muted)'}}>Top {count} · {season==='overall'?'All-time':season} · {leagueOnly?'ECFA Appin Sports League':competition==='all'?'All goals':competition} · teams and badges · {leagueOnly?'Appin Sports logo':'includes sponsor logos'}</p>
-    {preview&&<img src={preview.url} alt="Goalscorers share graphic with player names, teams and club badges" style={{width:'100%',maxWidth:320,display:'block',margin:'12px auto',borderRadius:5}}/>}
+    {preview&&<img src={preview.url} alt={`${graphicTitle} share graphic with player names, teams and club badges`} style={{width:'100%',maxWidth:320,display:'block',margin:'12px auto',borderRadius:5}}/>}
     {!preview&&!error&&<p>Preparing graphic…</p>}
     {error&&<p role="alert">{error}</p>}
     <div style={{display:'flex',gap:10,flexWrap:'wrap'}}><button disabled={!preview||busy} onClick={share}>{busy?'Sharing…':'Share graphic'}</button>{preview&&<a href={preview.url} download={filename} style={{padding:'8px 12px',border:'1px solid var(--brass)',borderRadius:5}}>Download graphic</a>}</div>
