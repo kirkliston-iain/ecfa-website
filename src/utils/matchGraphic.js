@@ -38,10 +38,14 @@ export async function renderMatchGraphic(f, scorers, logos, story = false) {
   ctx.textAlign='center'
   logo(assets[0],540,110,135,'ECFA')
   text('EDINBURGH CHURCHES',540,215,960,27); text('FOOTBALL ASSOCIATION',540,251,960,27)
-  const offset = story ? 180 : 0
+  const offset = story ? 240 : 0
   const played=f.status==='played' && f.home_score!=null && f.away_score!=null
   text(played?'FULL TIME':f.status==='scheduled'?'MATCHDAY':String(f.status || 'FIXTURE').replaceAll('_',' ').toUpperCase(),540,315+offset,960,38,'#d5b65d')
   text([f.competition_name, f.round_name].filter(Boolean).join(' · '),540,363+offset,940,25,'#d9dee2',2)
+  // A white badge tile preserves dark and transparent club crests on the navy graphic.
+  for (const x of [245,835]) {
+    ctx.fillStyle='#fff'; ctx.beginPath(); ctx.roundRect(x-80,385+offset,160,160,18); ctx.fill()
+  }
   logo(assets[1],245,465+offset,130,f.home_team?.name || 'Home')
   logo(assets[2],835,465+offset,130,f.away_team?.name || 'Away')
   text(played?displayedScore(f):'v',540,490+offset,310,played?74:50)
@@ -59,7 +63,7 @@ export async function renderMatchGraphic(f, scorers, logos, story = false) {
       })
     }
   }
-  let y=725+offset
+  let y=725+offset+(story?120:0)
   if (played) {
     const note=fullOutcomeNote(f) || (f.penalty_winner_name ? `${f.penalty_winner_name} won on penalties` : '')
     if(note) y+=text(note,540,y,940,22,'#d5b65d',2)+8

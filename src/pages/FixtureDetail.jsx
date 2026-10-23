@@ -16,7 +16,7 @@ function Badge({ logoUrl, name, size = 56 }) {
       <img
         src={logoUrl}
         alt=""
-        style={{ width: size, height: size, borderRadius: '50%', objectFit: 'cover', background: '#fff' }}
+        style={{ width: size, height: size, objectFit: 'contain', background: '#fff' }}
       />
     )
   }
@@ -315,7 +315,7 @@ export default function FixtureDetail() {
   const played = fixture.status === 'played'
 
   return (
-    <div className="container" style={{ padding: '40px 20px' }}>
+    <div className="container fixture-detail" style={{ padding: '24px 20px' }}>
       <button
         onClick={() => navigate(-1)}
         style={{
@@ -338,26 +338,16 @@ export default function FixtureDetail() {
         </div>
       )}
 
-      <div
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          gap: 24,
-          padding: '28px 0',
-          borderBottom: '1px solid var(--line)',
-          marginBottom: 24,
-        }}
-      >
+      <div className="fixture-summary">
         <Link
           to={fixture.home_team?.id ? `/teams/${fixture.home_team.id}` : `/teams/previous/${encodeURIComponent(historicTeamName(fixture.home_team?.name))}`}
-          style={{ textAlign: 'center', flex: 1, color: 'inherit' }}
+          className="fixture-summary__team"
         >
           <Badge logoUrl={fixture.home_team?.logo_url} name={fixture.home_team?.name} />
           <div style={{ marginTop: 8, fontWeight: 700, fontSize: 15 }}>{fixture.home_team?.name}</div>
         </Link>
 
-        <div style={{ textAlign: 'center', minWidth: 100 }}>
+        <div className="fixture-summary__score">
           {played ? (
             <div style={{ fontSize: 36, fontWeight: 800, color: 'var(--ink)' }}>
               {fixture.is_historic
@@ -378,6 +368,19 @@ export default function FixtureDetail() {
               {fullOutcomeNote(fixture)}
             </div>
           )}
+
+        </div>
+
+        <Link
+          to={fixture.away_team?.id ? `/teams/${fixture.away_team.id}` : `/teams/previous/${encodeURIComponent(historicTeamName(fixture.away_team?.name))}`}
+          className="fixture-summary__team"
+        >
+          <Badge logoUrl={fixture.away_team?.logo_url} name={fixture.away_team?.name} />
+          <div style={{ marginTop: 8, fontWeight: 700, fontSize: 15 }}>{fixture.away_team?.name}</div>
+        </Link>
+      </div>
+
+      <div className="fixture-summary__details">
           <div style={{ fontSize: 13, color: 'var(--muted)', marginTop: 6 }}>
             {fixture.fixture_date
               ? new Date(fixture.fixture_date).toLocaleDateString('en-GB', {
@@ -415,19 +418,10 @@ export default function FixtureDetail() {
             </div>
           )}
           <AssistantOfficials fixture={fixture} />
-        </div>
-
-        <Link
-          to={fixture.away_team?.id ? `/teams/${fixture.away_team.id}` : `/teams/previous/${encodeURIComponent(historicTeamName(fixture.away_team?.name))}`}
-          style={{ textAlign: 'center', flex: 1, color: 'inherit' }}
-        >
-          <Badge logoUrl={fixture.away_team?.logo_url} name={fixture.away_team?.name} />
-          <div style={{ marginTop: 8, fontWeight: 700, fontSize: 15 }}>{fixture.away_team?.name}</div>
-        </Link>
       </div>
 
       <div id="match-graphic" style={{ scrollMarginTop: 20 }}>
-        {location.search.includes('graphic=1') ? <MatchGraphic fixture={fixture} scorers={scorers} /> : <Link to={`?graphic=1#match-graphic`} style={{display:'inline-block',margin:'16px 0',padding:'7px 12px',border:'1px solid var(--brass)',borderRadius:5}}>Share graphic 🖼️</Link>}
+        {location.search.includes('graphic=1') ? <MatchGraphic fixture={fixture} scorers={scorers} /> : <Link to={`?graphic=1#match-graphic`} className="fixture-share-link">Share match graphic <span aria-hidden="true">↗</span></Link>}
       </div>
 
       {played && (

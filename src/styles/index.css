@@ -392,3 +392,19 @@ button {
 @media (max-width: 350px) {
   .team-pref-entry { grid-template-columns: minmax(0, 1fr) 76px; }
 }
+
+/* Keep match details readable beside long club names on small screens. */
+.fixture-summary { display: grid; grid-template-columns: minmax(0,1fr) auto minmax(0,1fr); align-items: start; gap: 16px; padding: 20px 0 16px; }
+.fixture-summary__team { text-align: center; min-width: 0; color: inherit; }
+.fixture-summary__team img { display: block; margin: 0 auto; }
+.fixture-summary__team > div { overflow-wrap: anywhere; line-height: 1.35; }
+.fixture-summary__score { text-align: center; align-self: center; max-width: 140px; }
+.fixture-summary__details { text-align: center; display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 6px 16px; padding: 12px 8px 18px; border-bottom: 1px solid var(--line); }
+.fixture-summary__details > div:first-child { flex-basis: 100%; margin-top: 0 !important; font-weight: 600; }
+.fixture-share-link { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 20px 0; padding: 12px 16px; border: 1px solid var(--brass); border-radius: 8px; font-size: 14px; font-weight: 700; background: #faf7ee; }
+.fixture-share-link:hover { background: #f3ecd8; }
+.match-graphic-panel { min-width: 0; }
+.match-graphic-panel select { max-width: 100%; padding: 8px; }
+.match-graphic-actions > * { display: inline-flex; align-items: center; justify-content: center; min-height: 44px; padding: 10px 14px; border: 1px solid var(--brass); border-radius: 6px; background: #fff; color: var(--ink); font: inherit; font-size: 13px; cursor: pointer; }
+.match-graphic-actions > button:first-child { background: var(--brass); color: #fff; font-weight: 700; }
+@media (max-width: 480px) { .fixture-summary { gap: 10px; } .fixture-summary__team > div { font-size: 14px !important; } .fixture-summary__score { max-width: 85px; } .match-graphic-actions > * { flex: 1 1 100%; } }
