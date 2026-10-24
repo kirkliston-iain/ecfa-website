@@ -478,3 +478,8 @@ button {
 .discipline-team-points-toggle { display: flex; width: 100%; justify-content: space-between; align-items: center; gap: 12px; font-size: 14px; }
 .discipline-card-history { max-width: 440px; }
 .discipline-card-history h3:not(:first-child) { margin-top: 16px; }
+.discipline-player-toggle { text-decoration: none; }
+.discipline-player-toggle:hover { text-decoration: underline; }
+.discipline-detail-history { max-width: none; margin-top: 20px; padding: 16px; }
+.discipline-detail-history h2 { font-size: 18px; margin: 0 0 10px; }
+.discipline-back-link { display: inline-block; margin-bottom: 18px; color: var(--brass); font-size: 14px; }

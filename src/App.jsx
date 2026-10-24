@@ -205,6 +205,7 @@ export default function App() {
               </ProtectedRoute>
             }
           />
+          <Route path="/discipline/:kind/:id" element={<ProtectedRoute><Discipline /></ProtectedRoute>} />
           <Route
             path="/discipline/weekly"
             element={

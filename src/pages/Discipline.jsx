@@ -1,8 +1,9 @@
-import { Fragment, useEffect, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { useEffect, useState } from 'react'
+import { Link, useLocation, useParams } from 'react-router-dom'
 import { supabase } from '../supabaseClient'
 import PlayerDisciplineRow from '../components/PlayerDisciplineRow'
 import DisciplineCardHistory from '../components/DisciplineCardHistory'
+import DisciplineDetailLink from '../components/DisciplineDetailLink'
 
 const YELLOW_POINTS = 2
 const RED_POINTS = 4
@@ -31,6 +32,8 @@ function banForPoints(points) {
 }
 
 export default function Discipline() {
+  const { kind, id } = useParams()
+  const location = useLocation()
   const [loading, setLoading] = useState(true)
   const [isAdmin, setIsAdmin] = useState(false)
   const [playerRows, setPlayerRows] = useState([])
@@ -39,13 +42,11 @@ export default function Discipline() {
   const [seriousRows, setSeriousRows] = useState([])
   const [regularRedRows, setRegularRedRows] = useState([])
   const [playedFixtures, setPlayedFixtures] = useState([])
-  const [expandedCardsTeam, setExpandedCardsTeam] = useState(null)
-  const [expandedPointsTeam, setExpandedPointsTeam] = useState(null)
-  const [expandedBan, setExpandedBan] = useState(null)
+  const [bansLoading, setBansLoading] = useState(true)
 
   const [suspensions, setSuspensions] = useState([])
   const [teams, setTeams] = useState([])
-  const [teamFilter, setTeamFilter] = useState('')
+  const [teamFilter, setTeamFilter] = useState(location.state?.disciplineReturn?.teamFilter || '')
   const [squadByTeam, setSquadByTeam] = useState({})
   const [savingSuspension, setSavingSuspension] = useState(null)
   const [teamOverrides, setTeamOverrides] = useState({})
@@ -78,19 +79,21 @@ export default function Discipline() {
   const [pointForm, setPointForm] = useState({ teamId: '', playerId: '', points: '', reason: '' })
 
   useEffect(() => {
-    loadPointsOverview()
-      .catch((error) => console.error('Could not load discipline overview', error))
-      .finally(() => setLoading(false))
-    loadSuspensions()
-    loadPlayedFixtures()
-    loadTeamOverrides()
-    loadPlayerPoints()
-    checkAdmin()
-    supabase
-      .from('teams')
-      .select('id, name')
-      .order('name')
-      .then(({ data }) => setTeams(data || []))
+    Promise.allSettled([
+      loadPointsOverview(),
+      loadSuspensions(),
+      loadPlayedFixtures(),
+      loadTeamOverrides(),
+      loadPlayerPoints(),
+      checkAdmin(),
+      supabase.from('teams').select('id, name').order('name').then(({ data }) => setTeams(data || [])),
+    ]).then((results) => {
+      for (const result of results) {
+        if (result.status === 'rejected') console.error('Could not load discipline data', result.reason)
+      }
+      setBansLoading(false)
+      setLoading(false)
+    })
   }, [])
 
   async function loadTeamOverrides() {
@@ -306,7 +309,6 @@ export default function Discipline() {
       .sort((a, b) => b.count - a.count)
 
     setSeriousRows(seriousList)
-    setLoading(false)
   }
 
   async function loadSuspensions() {
@@ -604,10 +606,72 @@ export default function Discipline() {
     .filter((s) => !teamFilter || s.team?.id === teamFilter)
     .sort((a, b) => new Date(b.completedOn || 0) - new Date(a.completedOn || 0))
 
-  if (loading) {
+
+  useEffect(() => {
+    if (kind || loading || !location.state?.disciplineReturn) return
+    setTeamFilter(location.state.disciplineReturn.teamFilter || '')
+    const frame = requestAnimationFrame(() => window.scrollTo({ top: location.state.disciplineReturn.scrollY || 0, behavior: 'instant' }))
+    return () => cancelAnimationFrame(frame)
+  }, [kind, loading, location.key])
+
+  if (loading || (kind === 'bans' && bansLoading)) {
     return (
       <div className="container" style={{ padding: '32px 20px' }}>
         <p style={{ color: 'var(--muted)' }}>Loading…</p>
+      </div>
+    )
+  }
+
+  if (kind) {
+    const playerRow = kind === 'players' ? playerRows.find((row) => row.player.id === id) : null
+    const teamRow = ['cards', 'points'].includes(kind) ? teamRows.find((row) => row.team.id === id) : null
+    const cards = teamCardRows.find((row) => row.team.id === id)
+    const s = kind === 'bans' ? [...manualSuspensions, ...automaticSeriousSuspensions, ...automaticRedSuspensions, ...automaticThresholdSuspensions].find((ban) => ban.id === id) : null
+    const team = teamRow?.team || (kind === 'cards' ? teams.find((team) => team.id === id) : null)
+    const title = playerRow ? `${playerRow.player.first_name} ${playerRow.player.last_name}` : s ? `${s.player.first_name} ${s.player.last_name} — ban details` : team?.name
+    return (
+      <div className="container" style={{ padding: '24px 20px 48px', maxWidth: 580 }}>
+        <Link className="discipline-back-link" to="/discipline" state={{ disciplineReturn: location.state?.disciplineReturn || { teamFilter: '', scrollY: 0 } }}>← Back to discipline overview</Link>
+        <h1 style={{ fontSize: 24, marginBottom: 8 }}>{title || 'Discipline record unavailable'}</h1>
+        <p className="discipline-history-meta">Private — available to signed-in managers and administrators.</p>
+        {playerRow ? (
+          <section className="discipline-card-history discipline-detail-history" aria-label={`Card history for ${title}`}>
+            <h2>When did I get cards?</h2>
+            <p>{playerRow.team?.name || 'No team'} · {playerRow.points} points</p>
+            <DisciplineCardHistory playerId={playerRow.player.id} />
+          </section>
+        ) : team ? (
+          <section className="discipline-card-history discipline-detail-history" aria-label={`Discipline history for ${team.name}`}>
+            <h2>{kind === 'points' ? 'Points breakdown' : 'Recorded cards'}</h2>
+            <p>{cards?.yellow || 0} yellows · {cards?.red || 0} reds · {(cards?.yellow || 0) + (cards?.red || 0)} cards · {teamRow?.points || 0} points</p>
+            <DisciplineCardHistory teamId={team.id} />
+          </section>
+        ) : s ? (
+                    <section id={`ban-details-${s.id}`} className="discipline-card-history discipline-detail-history" aria-label={`Ban details for ${s.player.first_name} ${s.player.last_name}`}>
+                      <h3>{s.player.first_name} {s.player.last_name} — ban record</h3>
+                      <p>{s.reason}</p>
+                      <p><strong>{s.is_lifetime ? 'Indefinite / lifetime' : s.available_from ? `Available ${new Date(`${s.available_from}T12:00:00`).toLocaleDateString('en-GB')}` : `${s.automaticGamesServed} of ${s.games_banned} games served — ${Math.max(0, s.games_banned - s.automaticGamesServed)} remaining`}</strong></p>
+                      <p>{s.start_date ? `Ban began: ${new Date(`${String(s.start_date).slice(0, 10)}T12:00:00`).toLocaleDateString('en-GB')}` : 'Ban start date not recorded.'}</p>
+                      {!s.isAutomatic && <p className="discipline-history-meta">Manually added ban. No originating match is linked to this ban record.</p>}
+                      {s.notes && <p>{s.notes}</p>}
+                      <h3>Games counted as served</h3>
+                      {!s.team?.id || !(s.start_date || s.created_at) ? (
+                        <p>No dated team fixture breakdown is available. Recorded games served: {s.automaticGamesServed}.</p>
+                      ) : (
+                        <>
+                          <p className="discipline-history-meta">Played team fixtures after {String(s.start_date || s.created_at).slice(0, 10)}, using the same rule as the ban counter.</p>
+                          <ul>
+                            {playedFixtures.filter((fixture) => String(fixture.fixture_date).slice(0, 10) > String(s.start_date || s.created_at).slice(0, 10) && (fixture.home_team_id === s.team.id || fixture.away_team_id === s.team.id)).map((fixture) => (
+                              <li key={fixture.id}><Link to={`/fixtures/${fixture.id}`}>{new Date(fixture.fixture_date).toLocaleDateString('en-GB')} · {fixture.home_team?.name || 'Home team'} v {fixture.away_team?.name || 'Away team'} →</Link></li>
+                            ))}
+                          </ul>
+                          {s.automaticGamesServed === 0 && <p>No games counted as served yet.</p>}
+                        </>
+                      )}
+                      <h3>Player’s recorded cards</h3>
+                      <DisciplineCardHistory playerId={s.player.id} />
+                    </section>
+        ) : <p>This record is no longer available. Return to the overview to choose a current entry.</p>}
       </div>
     )
   }
@@ -665,27 +729,17 @@ export default function Discipline() {
               })
               .sort((a, b) => b.total - a.total || b.red - a.red || a.team.name.localeCompare(b.team.name))
               .map((row, index) => (
-                <Fragment key={row.team.id}>
-                <tr className="discipline-player-row" onClick={() => setExpandedCardsTeam(expandedCardsTeam === row.team.id ? null : row.team.id)}>
+                <tr key={row.team.id}>
                   <td style={{ ...tableCellStyle, fontWeight: 600 }}>
-                    <button type="button" className="discipline-player-toggle" aria-expanded={expandedCardsTeam === row.team.id} aria-controls={`team-cards-${row.team.id}`} onClick={(event) => { event.stopPropagation(); setExpandedCardsTeam(expandedCardsTeam === row.team.id ? null : row.team.id) }}>
-                      {index + 1}. {row.team.name} <span aria-hidden="true">{expandedCardsTeam === row.team.id ? '−' : '+'}</span>
-                    </button>
+                    <DisciplineDetailLink className="discipline-player-toggle" to={`/discipline/cards/${row.team.id}`} teamFilter={teamFilter}>
+                      {index + 1}. {row.team.name} <span aria-hidden="true">→</span>
+                    </DisciplineDetailLink>
                   </td>
                   <td style={{ ...tableCellStyle, textAlign: 'center' }}>{row.yellow}</td>
                   <td style={{ ...tableCellStyle, textAlign: 'center' }}>{row.red}</td>
                   <td style={{ ...tableCellStyle, textAlign: 'center', fontWeight: 800 }}>{row.total}</td>
                 </tr>
-                {expandedCardsTeam === row.team.id && (
-                  <tr><td colSpan={4} style={{ padding: 0 }}>
-                    <section id={`team-cards-${row.team.id}`} className="discipline-card-history" aria-label={`Cards for ${row.team.name}`}>
-                      <h3>{row.team.name} — recorded cards</h3>
-                      <p className="discipline-history-summary">{row.yellow} yellows · {row.red} reds · {row.total} cards</p>
-                      <DisciplineCardHistory teamId={row.team.id} />
-                    </section>
-                  </td></tr>
-                )}
-                </Fragment>
+
               ))}
           </tbody>
         </table>
@@ -730,12 +784,11 @@ export default function Discipline() {
             </thead>
             <tbody>
               {activeSuspensions.map((s) => (
-                <Fragment key={s.id}>
-                <tr>
+                <tr key={s.id}>
                   <td style={{ ...tableCellStyle, fontWeight: 700, whiteSpace: 'nowrap' }}>
-                    <button type="button" className="discipline-player-toggle" aria-expanded={expandedBan === s.id} aria-controls={`ban-details-${s.id}`} onClick={() => setExpandedBan(expandedBan === s.id ? null : s.id)}>
-                      {s.player.first_name} {s.player.last_name} <span aria-hidden="true">{expandedBan === s.id ? '−' : '+'}</span>
-                    </button>
+                    <DisciplineDetailLink className="discipline-player-toggle" to={`/discipline/bans/${encodeURIComponent(s.id)}`} teamFilter={teamFilter}>
+                      {s.player.first_name} {s.player.last_name} <span aria-hidden="true">→</span>
+                    </DisciplineDetailLink>
                   </td>
                   <td style={{ ...tableCellStyle, minWidth: 150 }}>
                     {editingSuspensionTeam === s.id ? (
@@ -851,34 +904,7 @@ export default function Discipline() {
                     </td>
                   )}
                 </tr>
-                {expandedBan === s.id && (
-                  <tr><td colSpan={isAdmin ? 6 : 5} style={{ padding: 0 }}>
-                    <section id={`ban-details-${s.id}`} className="discipline-card-history" aria-label={`Ban details for ${s.player.first_name} ${s.player.last_name}`}>
-                      <h3>{s.player.first_name} {s.player.last_name} — ban record</h3>
-                      <p>{s.reason}</p>
-                      <p>{s.start_date ? `Ban began: ${new Date(`${String(s.start_date).slice(0, 10)}T12:00:00`).toLocaleDateString('en-GB')}` : 'Ban start date not recorded.'}</p>
-                      {!s.isAutomatic && <p className="discipline-history-meta">Manually added ban. No originating match is linked to this ban record.</p>}
-                      {s.notes && <p>{s.notes}</p>}
-                      <h3>Games counted as served</h3>
-                      {!s.team?.id || !(s.start_date || s.created_at) ? (
-                        <p>No dated team fixture breakdown is available. Recorded games served: {s.automaticGamesServed}.</p>
-                      ) : (
-                        <>
-                          <p className="discipline-history-meta">Played team fixtures after {String(s.start_date || s.created_at).slice(0, 10)}, using the same rule as the ban counter.</p>
-                          <ul>
-                            {playedFixtures.filter((fixture) => String(fixture.fixture_date).slice(0, 10) > String(s.start_date || s.created_at).slice(0, 10) && (fixture.home_team_id === s.team.id || fixture.away_team_id === s.team.id)).map((fixture) => (
-                              <li key={fixture.id}><Link to={`/fixtures/${fixture.id}`}>{new Date(fixture.fixture_date).toLocaleDateString('en-GB')} · {fixture.home_team?.name || 'Home team'} v {fixture.away_team?.name || 'Away team'} →</Link></li>
-                            ))}
-                          </ul>
-                          {s.automaticGamesServed === 0 && <p>No games counted as served yet.</p>}
-                        </>
-                      )}
-                      <h3>Player’s recorded cards</h3>
-                      <DisciplineCardHistory playerId={s.player.id} />
-                    </section>
-                  </td></tr>
-                )}
-                </Fragment>
+
               ))}
             </tbody>
           </table>
@@ -1017,16 +1043,11 @@ export default function Discipline() {
         <div style={{ marginBottom: 32 }}>
           {displayTeamRows.map((row) => (
               <div key={row.team.id} style={{ padding: '8px 0', borderBottom: '1px solid var(--line)' }}>
-                <button type="button" className="discipline-player-toggle discipline-team-points-toggle" aria-expanded={expandedPointsTeam === row.team.id} aria-controls={`team-points-${row.team.id}`} onClick={() => setExpandedPointsTeam(expandedPointsTeam === row.team.id ? null : row.team.id)}>
+                <DisciplineDetailLink className="discipline-player-toggle discipline-team-points-toggle" to={`/discipline/points/${row.team.id}`} teamFilter={teamFilter}>
                   <span>{row.team.name}</span>
-                  <strong>{row.points} <span aria-hidden="true">{expandedPointsTeam === row.team.id ? '−' : '+'}</span></strong>
-                </button>
-                {expandedPointsTeam === row.team.id && (
-                  <section id={`team-points-${row.team.id}`} className="discipline-card-history" aria-label={`Points breakdown for ${row.team.name}`}>
-                    <h3>{row.team.name} — {row.points} points</h3>
-                    <DisciplineCardHistory teamId={row.team.id} />
-                  </section>
-                )}
+                  <strong>{row.points} <span aria-hidden="true">→</span></strong>
+                </DisciplineDetailLink>
+
               </div>
           ))}
         </div>
@@ -1067,7 +1088,7 @@ export default function Discipline() {
             </thead>
             <tbody>
               {filteredPlayerRows.map((row) => (
-                <PlayerDisciplineRow key={row.player.id} row={row} cellStyle={tableCellStyle} />
+                <PlayerDisciplineRow key={row.player.id} row={row} cellStyle={tableCellStyle} teamFilter={teamFilter} />
               ))}
             </tbody>
           </table>
