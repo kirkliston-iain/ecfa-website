@@ -1,6 +1,8 @@
-import { useEffect, useState } from 'react'
+import { Fragment, useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { supabase } from '../supabaseClient'
+import PlayerDisciplineRow from '../components/PlayerDisciplineRow'
+import DisciplineCardHistory from '../components/DisciplineCardHistory'
 
 const YELLOW_POINTS = 2
 const RED_POINTS = 4
@@ -37,6 +39,9 @@ export default function Discipline() {
   const [seriousRows, setSeriousRows] = useState([])
   const [regularRedRows, setRegularRedRows] = useState([])
   const [playedFixtures, setPlayedFixtures] = useState([])
+  const [expandedCardsTeam, setExpandedCardsTeam] = useState(null)
+  const [expandedPointsTeam, setExpandedPointsTeam] = useState(null)
+  const [expandedBan, setExpandedBan] = useState(null)
 
   const [suspensions, setSuspensions] = useState([])
   const [teams, setTeams] = useState([])
@@ -315,7 +320,7 @@ export default function Discipline() {
   async function loadPlayedFixtures() {
     const { data } = await supabase
       .from('fixtures')
-      .select('id, fixture_date, status, home_team_id, away_team_id')
+      .select('id, fixture_date, status, home_team_id, away_team_id, home_team:home_team_id(name), away_team:away_team_id(name)')
       .eq('status', 'played')
       .order('fixture_date')
     setPlayedFixtures(data || [])
@@ -498,6 +503,7 @@ export default function Discipline() {
       player: row.player,
       team: row.team,
       reason: row.label,
+      start_date: row.startDate,
       games_banned: row.gamesBanned,
       is_lifetime: row.isLifetime,
       available_from: row.availableFrom,
@@ -512,6 +518,7 @@ export default function Discipline() {
       player: row.player,
       team: row.team,
       reason: 'Red card',
+      start_date: row.startDate,
       games_banned: 1,
       is_lifetime: false,
       automaticGamesServed: gamesPlayedSince(row.team?.id, row.startDate),
@@ -528,6 +535,7 @@ export default function Discipline() {
       player: row.player,
       team: row.team,
       reason: `Points threshold — ${row.ban.points} points`,
+      start_date: row.thresholdStartDate,
       games_banned: row.ban.games,
       is_lifetime: false,
       available_from: null,
@@ -635,6 +643,7 @@ export default function Discipline() {
       </h2>
       <p style={{ fontSize: 13, color: 'var(--muted)', marginBottom: 12 }}>
         Current-season team totals. Managers can view this table; figures update when admins change recorded cards.
+        {' '}Tap a team to see the players and matches behind its cards.
       </p>
       <div style={{ overflowX: 'auto', marginBottom: 28 }}>
         <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
@@ -656,14 +665,27 @@ export default function Discipline() {
               })
               .sort((a, b) => b.total - a.total || b.red - a.red || a.team.name.localeCompare(b.team.name))
               .map((row, index) => (
-                <tr key={row.team.id}>
+                <Fragment key={row.team.id}>
+                <tr className="discipline-player-row" onClick={() => setExpandedCardsTeam(expandedCardsTeam === row.team.id ? null : row.team.id)}>
                   <td style={{ ...tableCellStyle, fontWeight: 600 }}>
-                    {index + 1}. {row.team.name}
+                    <button type="button" className="discipline-player-toggle" aria-expanded={expandedCardsTeam === row.team.id} aria-controls={`team-cards-${row.team.id}`} onClick={(event) => { event.stopPropagation(); setExpandedCardsTeam(expandedCardsTeam === row.team.id ? null : row.team.id) }}>
+                      {index + 1}. {row.team.name} <span aria-hidden="true">{expandedCardsTeam === row.team.id ? '−' : '+'}</span>
+                    </button>
                   </td>
                   <td style={{ ...tableCellStyle, textAlign: 'center' }}>{row.yellow}</td>
                   <td style={{ ...tableCellStyle, textAlign: 'center' }}>{row.red}</td>
                   <td style={{ ...tableCellStyle, textAlign: 'center', fontWeight: 800 }}>{row.total}</td>
                 </tr>
+                {expandedCardsTeam === row.team.id && (
+                  <tr><td colSpan={4} style={{ padding: 0 }}>
+                    <section id={`team-cards-${row.team.id}`} className="discipline-card-history" aria-label={`Cards for ${row.team.name}`}>
+                      <h3>{row.team.name} — recorded cards</h3>
+                      <p className="discipline-history-summary">{row.yellow} yellows · {row.red} reds · {row.total} cards</p>
+                      <DisciplineCardHistory teamId={row.team.id} />
+                    </section>
+                  </td></tr>
+                )}
+                </Fragment>
               ))}
           </tbody>
         </table>
@@ -688,6 +710,7 @@ export default function Discipline() {
       <p style={{ fontSize: 13, color: 'var(--muted)', marginBottom: 14 }}>
         Includes red-card, serious-offence and manually added bans. Games served are counted automatically
         from the team's played fixtures after the ban began.
+        {' '}Tap a player for the ban record, card history and games counted as served.
       </p>
 
       {activeSuspensions.length === 0 ? (
@@ -707,9 +730,12 @@ export default function Discipline() {
             </thead>
             <tbody>
               {activeSuspensions.map((s) => (
-                <tr key={s.id}>
+                <Fragment key={s.id}>
+                <tr>
                   <td style={{ ...tableCellStyle, fontWeight: 700, whiteSpace: 'nowrap' }}>
-                    {s.player.first_name} {s.player.last_name}
+                    <button type="button" className="discipline-player-toggle" aria-expanded={expandedBan === s.id} aria-controls={`ban-details-${s.id}`} onClick={() => setExpandedBan(expandedBan === s.id ? null : s.id)}>
+                      {s.player.first_name} {s.player.last_name} <span aria-hidden="true">{expandedBan === s.id ? '−' : '+'}</span>
+                    </button>
                   </td>
                   <td style={{ ...tableCellStyle, minWidth: 150 }}>
                     {editingSuspensionTeam === s.id ? (
@@ -825,6 +851,34 @@ export default function Discipline() {
                     </td>
                   )}
                 </tr>
+                {expandedBan === s.id && (
+                  <tr><td colSpan={isAdmin ? 6 : 5} style={{ padding: 0 }}>
+                    <section id={`ban-details-${s.id}`} className="discipline-card-history" aria-label={`Ban details for ${s.player.first_name} ${s.player.last_name}`}>
+                      <h3>{s.player.first_name} {s.player.last_name} — ban record</h3>
+                      <p>{s.reason}</p>
+                      <p>{s.start_date ? `Ban began: ${new Date(`${String(s.start_date).slice(0, 10)}T12:00:00`).toLocaleDateString('en-GB')}` : 'Ban start date not recorded.'}</p>
+                      {!s.isAutomatic && <p className="discipline-history-meta">Manually added ban. No originating match is linked to this ban record.</p>}
+                      {s.notes && <p>{s.notes}</p>}
+                      <h3>Games counted as served</h3>
+                      {!s.team?.id || !(s.start_date || s.created_at) ? (
+                        <p>No dated team fixture breakdown is available. Recorded games served: {s.automaticGamesServed}.</p>
+                      ) : (
+                        <>
+                          <p className="discipline-history-meta">Played team fixtures after {String(s.start_date || s.created_at).slice(0, 10)}, using the same rule as the ban counter.</p>
+                          <ul>
+                            {playedFixtures.filter((fixture) => String(fixture.fixture_date).slice(0, 10) > String(s.start_date || s.created_at).slice(0, 10) && (fixture.home_team_id === s.team.id || fixture.away_team_id === s.team.id)).map((fixture) => (
+                              <li key={fixture.id}><Link to={`/fixtures/${fixture.id}`}>{new Date(fixture.fixture_date).toLocaleDateString('en-GB')} · {fixture.home_team?.name || 'Home team'} v {fixture.away_team?.name || 'Away team'} →</Link></li>
+                            ))}
+                          </ul>
+                          {s.automaticGamesServed === 0 && <p>No games counted as served yet.</p>}
+                        </>
+                      )}
+                      <h3>Player’s recorded cards</h3>
+                      <DisciplineCardHistory playerId={s.player.id} />
+                    </section>
+                  </td></tr>
+                )}
+                </Fragment>
               ))}
             </tbody>
           </table>
@@ -954,7 +1008,7 @@ export default function Discipline() {
         Total Points by Team
       </h2>
       <p style={{ fontSize: 13, color: 'var(--muted)', marginBottom: 12 }}>
-        Calculated automatically from every recorded player card.
+        Calculated automatically from every recorded player card. Tap a team to see its players, cards and match-by-match points.
       </p>
 
       {displayTeamRows.length === 0 ? (
@@ -963,10 +1017,16 @@ export default function Discipline() {
         <div style={{ marginBottom: 32 }}>
           {displayTeamRows.map((row) => (
               <div key={row.team.id} style={{ padding: '8px 0', borderBottom: '1px solid var(--line)' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 14 }}>
+                <button type="button" className="discipline-player-toggle discipline-team-points-toggle" aria-expanded={expandedPointsTeam === row.team.id} aria-controls={`team-points-${row.team.id}`} onClick={() => setExpandedPointsTeam(expandedPointsTeam === row.team.id ? null : row.team.id)}>
                   <span>{row.team.name}</span>
-                  <strong>{row.points}</strong>
-                </div>
+                  <strong>{row.points} <span aria-hidden="true">{expandedPointsTeam === row.team.id ? '−' : '+'}</span></strong>
+                </button>
+                {expandedPointsTeam === row.team.id && (
+                  <section id={`team-points-${row.team.id}`} className="discipline-card-history" aria-label={`Points breakdown for ${row.team.name}`}>
+                    <h3>{row.team.name} — {row.points} points</h3>
+                    <DisciplineCardHistory teamId={row.team.id} />
+                  </section>
+                )}
               </div>
           ))}
         </div>
@@ -978,6 +1038,7 @@ export default function Discipline() {
       <p style={{ fontSize: 13, color: 'var(--muted)', marginBottom: 12 }}>
         Calculated automatically from recorded cards. One yellow is 2 points; two yellows in the
         same match or a red card are 4 points.
+        {' '}Tap a player to see when they received their cards.
       </p>
       <select
         value={teamFilter}
@@ -1006,13 +1067,7 @@ export default function Discipline() {
             </thead>
             <tbody>
               {filteredPlayerRows.map((row) => (
-                <tr key={row.player.id}>
-                  <td style={{ ...tableCellStyle, fontWeight: 600 }}>
-                    {row.player.first_name} {row.player.last_name}
-                  </td>
-                  <td style={{ ...tableCellStyle, color: 'var(--muted)' }}>{row.team?.name || 'No team'}</td>
-                  <td style={{ ...tableCellStyle, textAlign: 'center', fontWeight: 700 }}>{row.points}</td>
-                </tr>
+                <PlayerDisciplineRow key={row.player.id} row={row} cellStyle={tableCellStyle} />
               ))}
             </tbody>
           </table>
