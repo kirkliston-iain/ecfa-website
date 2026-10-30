@@ -111,6 +111,7 @@ story.append(PageBreak())
 story += section_title('1. Getting around the website', 'The website is designed for phones, tablets and computers. The main navigation bar scrolls horizontally on smaller screens, so every section remains available without crowding the display.')
 story.append(card_grid([
     ('Match Hub', 'The front page for fixtures and results, organised by match date. The Latest News shortcut beside the heading opens the news section.'),
+    ('ECFA Weekly', 'Read the dated weekly newspaper: results, full league table, season statistics, scorers, team form, a public referee profile, upcoming fixtures and association news. Share an edition to WhatsApp or print and save it as a PDF. Older editions stay frozen in the weekly archive.'),
     ('News', 'Read published ECFA stories with dates, pictures and links to related articles. The most recently published story appears first.'),
     ('Competitions', 'League tables, cup structures, fixtures, results and competition detail.'),
     ('Goalscorers', 'All goals, League and Cup views with season history and player links.'),

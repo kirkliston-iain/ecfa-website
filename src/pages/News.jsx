@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { supabase } from '../supabaseClient'
 
 const PAGE_SIZE = 20
@@ -39,6 +40,7 @@ export default function News() {
   return (
     <div className="container reading-page" style={{ padding: '32px 20px 48px', maxWidth: 900 }}>
       <h1 style={{ fontSize: 30, marginBottom: 22 }}>News</h1>
+      <Link to="/weekly" style={{ display: 'block', borderBlock: '1px solid var(--brass)', padding: '18px 0', marginBottom: 24 }}><strong style={{ fontFamily: 'Georgia, serif', fontSize: 25 }}>ECFA Weekly →</strong><span style={{ display: 'block', marginTop: 5, fontSize: 14 }}>The results, the stories, the people. Read the latest newspaper edition.</span></Link>
       {loading && <p>Loading news…</p>}
       {error && <p role="alert">{error}</p>}
       {!loading && !error && stories.length === 0 && <p style={{ color: 'var(--muted)' }}>No news stories have been published yet.</p>}

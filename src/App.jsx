@@ -11,6 +11,7 @@ import ProtectedRoute from './components/ProtectedRoute'
 import Home from './pages/Home'
 import WeekendPredictions from './pages/WeekendPredictions'
 import News from './pages/News'
+import WeeklyNewsletter from './pages/WeeklyNewsletter'
 import NewsAdmin from './pages/NewsAdmin'
 import CompetitionsIndex from './pages/CompetitionsIndex'
 import StandingsPage from './pages/StandingsPage'
@@ -75,6 +76,8 @@ export default function App() {
           <Route path="/on-this-day" element={<OnThisDay />} />
           <Route path="/matchday-graphics" element={<MatchdayGraphics />} />
           <Route path="/predictions" element={<WeekendPredictions />} />
+          <Route path="/weekly" element={<WeeklyNewsletter />} />
+          <Route path="/weekly/:editionDate" element={<WeeklyNewsletter />} />
           <Route path="/news" element={<News key={location.key} />} />
           <Route path="/competitions" element={<CompetitionsIndex key={location.key} />} />
           <Route path="/standings" element={<StandingsPage key={location.key} />} />

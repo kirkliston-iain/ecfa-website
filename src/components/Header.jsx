@@ -7,6 +7,7 @@ const TABS = [
   { to: '/', label: 'Match Hub', end: true },
   { to: '/predictions', label: 'Predictions' },
   { to: '/news', label: 'News' },
+  { to: '/weekly', label: 'ECFA Weekly' },
   { to: '/standings', label: 'Competitions' },
   { to: '/teams', label: 'Teams' },
   { to: '/referees', label: 'Referees' },

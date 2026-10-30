@@ -1,0 +1,1229 @@
+{
+  "date": "2026-10-30",
+  "start": "2026-10-24",
+  "season": "2026-27",
+  "generatedAt": "2026-10-30T18:45:27.792Z",
+  "issue": 1,
+  "tables": [
+    {
+      "name": "Table",
+      "rows": [
+        {
+          "teamId": "6608eb8c-38b6-4c20-8914-b35e5373b690",
+          "teamName": "White Lightning",
+          "teamLogo": "/badges/White Lightning.jpg",
+          "played": 7,
+          "won": 6,
+          "drawn": 0,
+          "lost": 1,
+          "goalsFor": 33,
+          "goalsAgainst": 6,
+          "goalDifference": 27,
+          "points": 18
+        },
+        {
+          "teamId": "d781cbcf-5db7-4e53-846a-03efe828cede",
+          "teamName": "North Berwick Abbey Church",
+          "teamLogo": "/badges/north-berwick-full.jpg",
+          "played": 7,
+          "won": 4,
+          "drawn": 3,
+          "lost": 0,
+          "goalsFor": 24,
+          "goalsAgainst": 9,
+          "goalDifference": 15,
+          "points": 15
+        },
+        {
+          "teamId": "135a2028-e76c-41ab-962e-5cba398b24ea",
+          "teamName": "St Marys Metropolitan Church",
+          "teamLogo": "/badges/St Marys (1).jpg",
+          "played": 7,
+          "won": 4,
+          "drawn": 3,
+          "lost": 0,
+          "goalsFor": 22,
+          "goalsAgainst": 10,
+          "goalDifference": 12,
+          "points": 15
+        },
+        {
+          "teamId": "2541036a-edcc-4e37-a166-b341e351324c",
+          "teamName": "Kirkliston Community Church",
+          "teamLogo": "/badges/IMG-20260917-WA0123.jpg",
+          "played": 8,
+          "won": 5,
+          "drawn": 0,
+          "lost": 3,
+          "goalsFor": 27,
+          "goalsAgainst": 24,
+          "goalDifference": 3,
+          "points": 15
+        },
+        {
+          "teamId": "a814814a-0c54-4db2-8162-2ed7c3b508c4",
+          "teamName": "Liberton Church",
+          "teamLogo": "/badges/liberton-full.jpg",
+          "played": 8,
+          "won": 4,
+          "drawn": 1,
+          "lost": 3,
+          "goalsFor": 31,
+          "goalsAgainst": 22,
+          "goalDifference": 9,
+          "points": 13
+        },
+        {
+          "teamId": "4481546a-a041-47f8-8393-24287e6cdf26",
+          "teamName": "Barclay Viewforth Church",
+          "teamLogo": "/badges/IMG-20210728-WA0006 (2).jpg",
+          "played": 7,
+          "won": 4,
+          "drawn": 1,
+          "lost": 2,
+          "goalsFor": 21,
+          "goalsAgainst": 16,
+          "goalDifference": 5,
+          "points": 13
+        },
+        {
+          "teamId": "24949b6f-7fa0-48b4-be1d-aa8e16345860",
+          "teamName": "The Mission",
+          "teamLogo": "/badges/MISS (1).png",
+          "played": 6,
+          "won": 3,
+          "drawn": 3,
+          "lost": 0,
+          "goalsFor": 23,
+          "goalsAgainst": 12,
+          "goalDifference": 11,
+          "points": 12
+        },
+        {
+          "teamId": "f7afe62e-abc9-4114-8ea1-fefd3606b024",
+          "teamName": "Ladywell Baptist Church",
+          "teamLogo": "/badges/LADY (2).png",
+          "played": 7,
+          "won": 2,
+          "drawn": 1,
+          "lost": 4,
+          "goalsFor": 13,
+          "goalsAgainst": 23,
+          "goalDifference": -10,
+          "points": 7
+        },
+        {
+          "teamId": "f3a17c3f-6878-41b8-99cf-fff2320c7909",
+          "teamName": "Murrayburn Church",
+          "teamLogo": "/badges/Murrayburn Logo (1).jpg",
+          "played": 8,
+          "won": 2,
+          "drawn": 1,
+          "lost": 5,
+          "goalsFor": 15,
+          "goalsAgainst": 29,
+          "goalDifference": -14,
+          "points": 7
+        },
+        {
+          "teamId": "34db7f73-710d-4d20-b3bc-660447ce7d7d",
+          "teamName": "Carrubbers Church",
+          "teamLogo": "/badges/Carrubers (1).jpg",
+          "played": 7,
+          "won": 1,
+          "drawn": 0,
+          "lost": 6,
+          "goalsFor": 18,
+          "goalsAgainst": 37,
+          "goalDifference": -19,
+          "points": 3
+        },
+        {
+          "teamId": "2d9f3680-3914-4eb9-a60a-984f479999d4",
+          "teamName": "South East Saints",
+          "teamLogo": "/badges/SES.png",
+          "played": 8,
+          "won": 0,
+          "drawn": 2,
+          "lost": 6,
+          "goalsFor": 20,
+          "goalsAgainst": 40,
+          "goalDifference": -20,
+          "points": 2
+        },
+        {
+          "teamId": "5a9bfe64-5da5-4bb9-8018-1b46f7649329",
+          "teamName": "Gorgie United Salvation Army",
+          "teamLogo": "/badges/IMG-20220929-WA0009 (1).jpg",
+          "played": 6,
+          "won": 0,
+          "drawn": 1,
+          "lost": 5,
+          "goalsFor": 11,
+          "goalsAgainst": 30,
+          "goalDifference": -19,
+          "points": 1
+        }
+      ]
+    }
+  ],
+  "results": [
+    {
+      "id": "bdf8caa3-d43e-4d64-a7c2-176031282d97",
+      "fixture_date": "2026-10-24T09:15:00+00:00",
+      "status": "played",
+      "venue": "Jack Kane 3G",
+      "home_score": 4,
+      "away_score": 3,
+      "round_name": null,
+      "went_to_extra_time": false,
+      "home_extra_time_score": null,
+      "away_extra_time_score": null,
+      "decided_by_penalties": false,
+      "home_penalty_score": null,
+      "away_penalty_score": null,
+      "home_team": {
+        "id": "4481546a-a041-47f8-8393-24287e6cdf26",
+        "name": "Barclay Viewforth Church",
+        "logo_url": "/badges/IMG-20210728-WA0006 (2).jpg"
+      },
+      "away_team": {
+        "id": "2541036a-edcc-4e37-a166-b341e351324c",
+        "name": "Kirkliston Community Church",
+        "logo_url": "/badges/IMG-20260917-WA0123.jpg"
+      },
+      "competition": "Appin Sports League",
+      "slug": "appin-league"
+    },
+    {
+      "id": "4c38d4e5-611a-46bb-8579-917357be2b9c",
+      "fixture_date": "2026-10-24T10:00:00+00:00",
+      "status": "played",
+      "venue": "Saughton 3G",
+      "home_score": 3,
+      "away_score": 4,
+      "round_name": "Semi-Final",
+      "went_to_extra_time": false,
+      "home_extra_time_score": null,
+      "away_extra_time_score": null,
+      "decided_by_penalties": false,
+      "home_penalty_score": null,
+      "away_penalty_score": null,
+      "home_team": {
+        "id": "135a2028-e76c-41ab-962e-5cba398b24ea",
+        "name": "St Marys Metropolitan Church",
+        "logo_url": "/badges/St Marys (1).jpg"
+      },
+      "away_team": {
+        "id": "24949b6f-7fa0-48b4-be1d-aa8e16345860",
+        "name": "The Mission",
+        "logo_url": "/badges/MISS (1).png"
+      },
+      "competition": "ECFA Knockout Cup",
+      "slug": "knockout-cup"
+    },
+    {
+      "id": "7ea854d5-aa3c-4a78-857e-c0dbfed1a3ab",
+      "fixture_date": "2026-10-24T11:00:00+00:00",
+      "status": "played",
+      "venue": "Jack Kane 3G",
+      "home_score": 2,
+      "away_score": 8,
+      "round_name": null,
+      "went_to_extra_time": false,
+      "home_extra_time_score": null,
+      "away_extra_time_score": null,
+      "decided_by_penalties": false,
+      "home_penalty_score": null,
+      "away_penalty_score": null,
+      "home_team": {
+        "id": "5a9bfe64-5da5-4bb9-8018-1b46f7649329",
+        "name": "Gorgie United Salvation Army",
+        "logo_url": "/badges/IMG-20220929-WA0009 (1).jpg"
+      },
+      "away_team": {
+        "id": "6608eb8c-38b6-4c20-8914-b35e5373b690",
+        "name": "White Lightning",
+        "logo_url": "/badges/White Lightning.jpg"
+      },
+      "competition": "Appin Sports League",
+      "slug": "appin-league"
+    }
+  ],
+  "nextDay": "2026-10-31",
+  "nextFixtures": [
+    {
+      "id": "db41a515-adff-4d52-98de-1ee20bab87b4",
+      "fixture_date": "2026-10-31T09:15:00+00:00",
+      "status": "scheduled",
+      "venue": "Peffermill Sports Complex",
+      "home_score": 0,
+      "away_score": 0,
+      "round_name": null,
+      "went_to_extra_time": false,
+      "home_extra_time_score": null,
+      "away_extra_time_score": null,
+      "decided_by_penalties": false,
+      "home_penalty_score": null,
+      "away_penalty_score": null,
+      "home_team": {
+        "id": "24949b6f-7fa0-48b4-be1d-aa8e16345860",
+        "name": "The Mission",
+        "logo_url": "/badges/MISS (1).png"
+      },
+      "away_team": {
+        "id": "f3a17c3f-6878-41b8-99cf-fff2320c7909",
+        "name": "Murrayburn Church",
+        "logo_url": "/badges/Murrayburn Logo (1).jpg"
+      },
+      "competition": "Appin Sports League",
+      "slug": "appin-league"
+    },
+    {
+      "id": "e7a7d95e-35b7-45ef-84b9-a1f682dbc5ee",
+      "fixture_date": "2026-10-31T09:15:00+00:00",
+      "status": "scheduled",
+      "venue": "Jack Kane 3G",
+      "home_score": 0,
+      "away_score": 0,
+      "round_name": null,
+      "went_to_extra_time": false,
+      "home_extra_time_score": null,
+      "away_extra_time_score": null,
+      "decided_by_penalties": false,
+      "home_penalty_score": null,
+      "away_penalty_score": null,
+      "home_team": {
+        "id": "5a9bfe64-5da5-4bb9-8018-1b46f7649329",
+        "name": "Gorgie United Salvation Army",
+        "logo_url": "/badges/IMG-20220929-WA0009 (1).jpg"
+      },
+      "away_team": {
+        "id": "34db7f73-710d-4d20-b3bc-660447ce7d7d",
+        "name": "Carrubbers Church",
+        "logo_url": "/badges/Carrubers (1).jpg"
+      },
+      "competition": "Appin Sports League",
+      "slug": "appin-league"
+    },
+    {
+      "id": "9a5d3792-d513-4e3b-89b7-90321e90b3c1",
+      "fixture_date": "2026-10-31T10:00:00+00:00",
+      "status": "scheduled",
+      "venue": "Gyle",
+      "home_score": 0,
+      "away_score": 0,
+      "round_name": null,
+      "went_to_extra_time": false,
+      "home_extra_time_score": null,
+      "away_extra_time_score": null,
+      "decided_by_penalties": false,
+      "home_penalty_score": null,
+      "away_penalty_score": null,
+      "home_team": {
+        "id": "a814814a-0c54-4db2-8162-2ed7c3b508c4",
+        "name": "Liberton Church",
+        "logo_url": "/badges/liberton-full.jpg"
+      },
+      "away_team": {
+        "id": "2541036a-edcc-4e37-a166-b341e351324c",
+        "name": "Kirkliston Community Church",
+        "logo_url": "/badges/IMG-20260917-WA0123.jpg"
+      },
+      "competition": "Appin Sports League",
+      "slug": "appin-league"
+    },
+    {
+      "id": "bc254124-5518-4014-aab2-0bda736bd9da",
+      "fixture_date": "2026-10-31T10:00:00+00:00",
+      "status": "scheduled",
+      "venue": "Saughton 3G",
+      "home_score": 0,
+      "away_score": 0,
+      "round_name": "Semi-Final",
+      "went_to_extra_time": false,
+      "home_extra_time_score": null,
+      "away_extra_time_score": null,
+      "decided_by_penalties": false,
+      "home_penalty_score": null,
+      "away_penalty_score": null,
+      "home_team": {
+        "id": "d781cbcf-5db7-4e53-846a-03efe828cede",
+        "name": "North Berwick Abbey Church",
+        "logo_url": "/badges/north-berwick-full.jpg"
+      },
+      "away_team": {
+        "id": "6608eb8c-38b6-4c20-8914-b35e5373b690",
+        "name": "White Lightning",
+        "logo_url": "/badges/White Lightning.jpg"
+      },
+      "competition": "ECFA Knockout Cup",
+      "slug": "knockout-cup"
+    },
+    {
+      "id": "84e41ca4-4c81-4554-af7a-867449bcc3ef",
+      "fixture_date": "2026-10-31T11:00:00+00:00",
+      "status": "scheduled",
+      "venue": "Peffermill Sports Complex",
+      "home_score": 0,
+      "away_score": 0,
+      "round_name": null,
+      "went_to_extra_time": false,
+      "home_extra_time_score": null,
+      "away_extra_time_score": null,
+      "decided_by_penalties": false,
+      "home_penalty_score": null,
+      "away_penalty_score": null,
+      "home_team": {
+        "id": "135a2028-e76c-41ab-962e-5cba398b24ea",
+        "name": "St Marys Metropolitan Church",
+        "logo_url": "/badges/St Marys (1).jpg"
+      },
+      "away_team": {
+        "id": "2d9f3680-3914-4eb9-a60a-984f479999d4",
+        "name": "South East Saints",
+        "logo_url": "/badges/SES.png"
+      },
+      "competition": "Appin Sports League",
+      "slug": "appin-league"
+    },
+    {
+      "id": "eb7b14ef-b690-4841-95fc-40d80e982fac",
+      "fixture_date": "2026-10-31T11:00:00+00:00",
+      "status": "scheduled",
+      "venue": "Jack Kane 3G",
+      "home_score": 0,
+      "away_score": 0,
+      "round_name": null,
+      "went_to_extra_time": false,
+      "home_extra_time_score": null,
+      "away_extra_time_score": null,
+      "decided_by_penalties": false,
+      "home_penalty_score": null,
+      "away_penalty_score": null,
+      "home_team": {
+        "id": "4481546a-a041-47f8-8393-24287e6cdf26",
+        "name": "Barclay Viewforth Church",
+        "logo_url": "/badges/IMG-20210728-WA0006 (2).jpg"
+      },
+      "away_team": {
+        "id": "f7afe62e-abc9-4114-8ea1-fefd3606b024",
+        "name": "Ladywell Baptist Church",
+        "logo_url": "/badges/LADY (2).png"
+      },
+      "competition": "Appin Sports League",
+      "slug": "appin-league"
+    }
+  ],
+  "laterFixtures": [
+    {
+      "id": "314c0094-4f7c-4000-8b8a-6e8048e6be5e",
+      "fixture_date": "2026-11-14T10:00:00+00:00",
+      "status": "scheduled",
+      "venue": "N/A",
+      "home_score": null,
+      "away_score": null,
+      "round_name": "Group Stage",
+      "went_to_extra_time": false,
+      "home_extra_time_score": null,
+      "away_extra_time_score": null,
+      "decided_by_penalties": false,
+      "home_penalty_score": null,
+      "away_penalty_score": null,
+      "home_team": {
+        "id": "34db7f73-710d-4d20-b3bc-660447ce7d7d",
+        "name": "Carrubbers Church",
+        "logo_url": "/badges/Carrubers (1).jpg"
+      },
+      "away_team": {
+        "id": "2d9f3680-3914-4eb9-a60a-984f479999d4",
+        "name": "South East Saints",
+        "logo_url": "/badges/SES.png"
+      },
+      "competition": "ECFA League Cup",
+      "slug": "league-cup"
+    },
+    {
+      "id": "3214ff0e-9fe7-4f49-bf15-dc70118cfc45",
+      "fixture_date": "2026-11-14T10:00:00+00:00",
+      "status": "scheduled",
+      "venue": "League Decide",
+      "home_score": null,
+      "away_score": null,
+      "round_name": "Group Stage",
+      "went_to_extra_time": false,
+      "home_extra_time_score": null,
+      "away_extra_time_score": null,
+      "decided_by_penalties": false,
+      "home_penalty_score": null,
+      "away_penalty_score": null,
+      "home_team": {
+        "id": "f3a17c3f-6878-41b8-99cf-fff2320c7909",
+        "name": "Murrayburn Church",
+        "logo_url": "/badges/Murrayburn Logo (1).jpg"
+      },
+      "away_team": {
+        "id": "d781cbcf-5db7-4e53-846a-03efe828cede",
+        "name": "North Berwick Abbey Church",
+        "logo_url": "/badges/north-berwick-full.jpg"
+      },
+      "competition": "ECFA League Cup",
+      "slug": "league-cup"
+    },
+    {
+      "id": "65815c40-d1c8-45ac-a939-2a2faa5bba1a",
+      "fixture_date": "2026-11-14T10:00:00+00:00",
+      "status": "scheduled",
+      "venue": "N/A",
+      "home_score": null,
+      "away_score": null,
+      "round_name": "Group Stage",
+      "went_to_extra_time": false,
+      "home_extra_time_score": null,
+      "away_extra_time_score": null,
+      "decided_by_penalties": false,
+      "home_penalty_score": null,
+      "away_penalty_score": null,
+      "home_team": {
+        "id": "24949b6f-7fa0-48b4-be1d-aa8e16345860",
+        "name": "The Mission",
+        "logo_url": "/badges/MISS (1).png"
+      },
+      "away_team": {
+        "id": "4481546a-a041-47f8-8393-24287e6cdf26",
+        "name": "Barclay Viewforth Church",
+        "logo_url": "/badges/IMG-20210728-WA0006 (2).jpg"
+      },
+      "competition": "ECFA League Cup",
+      "slug": "league-cup"
+    },
+    {
+      "id": "6da17ebb-adfa-4f11-a653-eec55e528a68",
+      "fixture_date": "2026-11-14T10:00:00+00:00",
+      "status": "scheduled",
+      "venue": "N/A",
+      "home_score": null,
+      "away_score": null,
+      "round_name": "Group Stage",
+      "went_to_extra_time": false,
+      "home_extra_time_score": null,
+      "away_extra_time_score": null,
+      "decided_by_penalties": false,
+      "home_penalty_score": null,
+      "away_penalty_score": null,
+      "home_team": {
+        "id": "6608eb8c-38b6-4c20-8914-b35e5373b690",
+        "name": "White Lightning",
+        "logo_url": "/badges/White Lightning.jpg"
+      },
+      "away_team": {
+        "id": "135a2028-e76c-41ab-962e-5cba398b24ea",
+        "name": "St Marys Metropolitan Church",
+        "logo_url": "/badges/St Marys (1).jpg"
+      },
+      "competition": "ECFA League Cup",
+      "slug": "league-cup"
+    },
+    {
+      "id": "c88c2667-b351-4d1a-9436-3bfc00d829b1",
+      "fixture_date": "2026-11-14T10:00:00+00:00",
+      "status": "scheduled",
+      "venue": "League Decide",
+      "home_score": null,
+      "away_score": null,
+      "round_name": "Group Stage",
+      "went_to_extra_time": false,
+      "home_extra_time_score": null,
+      "away_extra_time_score": null,
+      "decided_by_penalties": false,
+      "home_penalty_score": null,
+      "away_penalty_score": null,
+      "home_team": {
+        "id": "a814814a-0c54-4db2-8162-2ed7c3b508c4",
+        "name": "Liberton Church",
+        "logo_url": "/badges/liberton-full.jpg"
+      },
+      "away_team": {
+        "id": "5a9bfe64-5da5-4bb9-8018-1b46f7649329",
+        "name": "Gorgie United Salvation Army",
+        "logo_url": "/badges/IMG-20220929-WA0009 (1).jpg"
+      },
+      "competition": "ECFA League Cup",
+      "slug": "league-cup"
+    },
+    {
+      "id": "ced98e1e-d922-469b-877d-579df755b7c9",
+      "fixture_date": "2026-11-14T10:00:00+00:00",
+      "status": "scheduled",
+      "venue": "N/A",
+      "home_score": null,
+      "away_score": null,
+      "round_name": "Group Stage",
+      "went_to_extra_time": false,
+      "home_extra_time_score": null,
+      "away_extra_time_score": null,
+      "decided_by_penalties": false,
+      "home_penalty_score": null,
+      "away_penalty_score": null,
+      "home_team": {
+        "id": "f7afe62e-abc9-4114-8ea1-fefd3606b024",
+        "name": "Ladywell Baptist Church",
+        "logo_url": "/badges/LADY (2).png"
+      },
+      "away_team": {
+        "id": "2541036a-edcc-4e37-a166-b341e351324c",
+        "name": "Kirkliston Community Church",
+        "logo_url": "/badges/IMG-20260917-WA0123.jpg"
+      },
+      "competition": "ECFA League Cup",
+      "slug": "league-cup"
+    },
+    {
+      "id": "2e130816-78ec-402c-88b1-60c61c8ef455",
+      "fixture_date": "2026-11-21T10:00:00+00:00",
+      "status": "scheduled",
+      "venue": "N/A",
+      "home_score": 0,
+      "away_score": 0,
+      "round_name": null,
+      "went_to_extra_time": false,
+      "home_extra_time_score": null,
+      "away_extra_time_score": null,
+      "decided_by_penalties": false,
+      "home_penalty_score": null,
+      "away_penalty_score": null,
+      "home_team": {
+        "id": "f7afe62e-abc9-4114-8ea1-fefd3606b024",
+        "name": "Ladywell Baptist Church",
+        "logo_url": "/badges/LADY (2).png"
+      },
+      "away_team": {
+        "id": "135a2028-e76c-41ab-962e-5cba398b24ea",
+        "name": "St Marys Metropolitan Church",
+        "logo_url": "/badges/St Marys (1).jpg"
+      },
+      "competition": "Appin Sports League",
+      "slug": "appin-league"
+    }
+  ],
+  "topScorers": [
+    {
+      "name": "Daniel McKinley",
+      "playerId": "0506a3b4-9010-4c3c-8943-67a03a91a59b",
+      "teams": [
+        {
+          "id": "a814814a-0c54-4db2-8162-2ed7c3b508c4",
+          "name": "Liberton Church"
+        }
+      ],
+      "goals": 13,
+      "leagueGoals": 9,
+      "cupGoals": 4
+    },
+    {
+      "name": "Alex Robertson",
+      "playerId": "bac24936-a118-497d-afbd-29341ae44e5b",
+      "teams": [
+        {
+          "id": "6608eb8c-38b6-4c20-8914-b35e5373b690",
+          "name": "White Lightning"
+        }
+      ],
+      "goals": 9,
+      "leagueGoals": 7,
+      "cupGoals": 2
+    },
+    {
+      "name": "Ruaridh Miller",
+      "playerId": "571e806e-f964-4085-b5c1-3b104e2da5a9",
+      "teams": [
+        {
+          "id": "d781cbcf-5db7-4e53-846a-03efe828cede",
+          "name": "North Berwick Abbey Church"
+        }
+      ],
+      "goals": 9,
+      "leagueGoals": 9,
+      "cupGoals": 0
+    },
+    {
+      "name": "Connor Hall",
+      "playerId": "b76d2007-1286-4c76-abbc-382b57244a7a",
+      "teams": [
+        {
+          "id": "a814814a-0c54-4db2-8162-2ed7c3b508c4",
+          "name": "Liberton Church"
+        }
+      ],
+      "goals": 8,
+      "leagueGoals": 6,
+      "cupGoals": 2
+    },
+    {
+      "name": "Euan Moffat",
+      "playerId": "7dd09d9d-632c-40e3-afe4-9472909f1f50",
+      "teams": [
+        {
+          "id": "135a2028-e76c-41ab-962e-5cba398b24ea",
+          "name": "St Marys Metropolitan Church"
+        }
+      ],
+      "goals": 8,
+      "leagueGoals": 3,
+      "cupGoals": 5
+    },
+    {
+      "name": "Graeme Carral",
+      "playerId": "d38390a5-4c61-4dad-acd6-939d1f86abb8",
+      "teams": [
+        {
+          "id": "4481546a-a041-47f8-8393-24287e6cdf26",
+          "name": "Barclay Viewforth Church"
+        }
+      ],
+      "goals": 8,
+      "leagueGoals": 6,
+      "cupGoals": 2
+    },
+    {
+      "name": "Harry Anderson",
+      "playerId": "051d54ff-10c4-4764-8724-eb61896e7133",
+      "teams": [
+        {
+          "id": "2d9f3680-3914-4eb9-a60a-984f479999d4",
+          "name": "South East Saints"
+        }
+      ],
+      "goals": 8,
+      "leagueGoals": 5,
+      "cupGoals": 3
+    },
+    {
+      "name": "Phil Scott",
+      "playerId": "14448e75-3bbf-4b7b-b79c-9cf04cc8c805",
+      "teams": [
+        {
+          "id": "a814814a-0c54-4db2-8162-2ed7c3b508c4",
+          "name": "Liberton Church"
+        }
+      ],
+      "goals": 8,
+      "leagueGoals": 7,
+      "cupGoals": 1
+    },
+    {
+      "name": "Jake Morris",
+      "playerId": "ac767d98-450d-42cb-9e04-cd839713103e",
+      "teams": [
+        {
+          "id": "34db7f73-710d-4d20-b3bc-660447ce7d7d",
+          "name": "Carrubbers Church"
+        }
+      ],
+      "goals": 7,
+      "leagueGoals": 4,
+      "cupGoals": 3
+    },
+    {
+      "name": "Liam Burns",
+      "playerId": "374debc7-d23f-410f-b451-7ca25589c2d1",
+      "teams": [
+        {
+          "id": "34db7f73-710d-4d20-b3bc-660447ce7d7d",
+          "name": "Carrubbers Church"
+        }
+      ],
+      "goals": 7,
+      "leagueGoals": 7,
+      "cupGoals": 0
+    },
+    {
+      "name": "Rob Monkhouse",
+      "playerId": "8fb61ce5-2dbd-4282-bcf7-f4b046c1aef0",
+      "teams": [
+        {
+          "id": "4481546a-a041-47f8-8393-24287e6cdf26",
+          "name": "Barclay Viewforth Church"
+        }
+      ],
+      "goals": 7,
+      "leagueGoals": 6,
+      "cupGoals": 1
+    }
+  ],
+  "referee": {
+    "id": "c0625297-378c-4f59-a99c-8d8025a42757",
+    "name": "Chris Ashley",
+    "photo_url": "/images/referees/chris-ashley.jpg",
+    "about": "Chris was a finalist in Scotland for Football's Next Star.",
+    "survey_answers": [
+      {
+        "answer": "2026.",
+        "question": "Refereeing in the ECFA since?"
+      },
+      {
+        "answer": "Lochee United v BSC in the Scottish Cup.",
+        "question": "Largest crowd you have refereed in front of?"
+      },
+      {
+        "answer": "The more relaxed approach to football.",
+        "question": "What is the best thing about refereeing in the ECFA?"
+      },
+      {
+        "answer": "The early mornings.",
+        "question": "What is the worst thing about refereeing in the ECFA?"
+      },
+      {
+        "answer": "Easter Road or Tynecastle.",
+        "question": "Best venue you have refereed at?"
+      }
+    ]
+  },
+  "eligibleReferees": 10,
+  "bestAttack": [
+    {
+      "teamId": "6608eb8c-38b6-4c20-8914-b35e5373b690",
+      "teamName": "White Lightning",
+      "teamLogo": "/badges/White Lightning.jpg",
+      "played": 7,
+      "won": 6,
+      "drawn": 0,
+      "lost": 1,
+      "goalsFor": 33,
+      "goalsAgainst": 6,
+      "goalDifference": 27,
+      "points": 18
+    }
+  ],
+  "bestDefence": [
+    {
+      "teamId": "6608eb8c-38b6-4c20-8914-b35e5373b690",
+      "teamName": "White Lightning",
+      "teamLogo": "/badges/White Lightning.jpg",
+      "played": 7,
+      "won": 6,
+      "drawn": 0,
+      "lost": 1,
+      "goalsFor": 33,
+      "goalsAgainst": 6,
+      "goalDifference": 27,
+      "points": 18
+    }
+  ],
+  "mostWins": [
+    {
+      "teamId": "6608eb8c-38b6-4c20-8914-b35e5373b690",
+      "teamName": "White Lightning",
+      "teamLogo": "/badges/White Lightning.jpg",
+      "played": 7,
+      "won": 6,
+      "drawn": 0,
+      "lost": 1,
+      "goalsFor": 33,
+      "goalsAgainst": 6,
+      "goalDifference": 27,
+      "points": 18
+    }
+  ],
+  "forms": [
+    {
+      "teamId": "6608eb8c-38b6-4c20-8914-b35e5373b690",
+      "teamName": "White Lightning",
+      "teamLogo": "/badges/White Lightning.jpg",
+      "played": 7,
+      "won": 6,
+      "drawn": 0,
+      "lost": 1,
+      "goalsFor": 33,
+      "goalsAgainst": 6,
+      "goalDifference": 27,
+      "points": 18,
+      "form": [
+        "W",
+        "W",
+        "W",
+        "W",
+        "W"
+      ],
+      "unbeaten": 6,
+      "cleanSheets": 3
+    },
+    {
+      "teamId": "d781cbcf-5db7-4e53-846a-03efe828cede",
+      "teamName": "North Berwick Abbey Church",
+      "teamLogo": "/badges/north-berwick-full.jpg",
+      "played": 7,
+      "won": 4,
+      "drawn": 3,
+      "lost": 0,
+      "goalsFor": 24,
+      "goalsAgainst": 9,
+      "goalDifference": 15,
+      "points": 15,
+      "form": [
+        "D",
+        "W",
+        "D",
+        "W",
+        "W"
+      ],
+      "unbeaten": 7,
+      "cleanSheets": 1
+    },
+    {
+      "teamId": "135a2028-e76c-41ab-962e-5cba398b24ea",
+      "teamName": "St Marys Metropolitan Church",
+      "teamLogo": "/badges/St Marys (1).jpg",
+      "played": 7,
+      "won": 4,
+      "drawn": 3,
+      "lost": 0,
+      "goalsFor": 22,
+      "goalsAgainst": 10,
+      "goalDifference": 12,
+      "points": 15,
+      "form": [
+        "D",
+        "D",
+        "W",
+        "D",
+        "W"
+      ],
+      "unbeaten": 7,
+      "cleanSheets": 2
+    },
+    {
+      "teamId": "2541036a-edcc-4e37-a166-b341e351324c",
+      "teamName": "Kirkliston Community Church",
+      "teamLogo": "/badges/IMG-20260917-WA0123.jpg",
+      "played": 8,
+      "won": 5,
+      "drawn": 0,
+      "lost": 3,
+      "goalsFor": 27,
+      "goalsAgainst": 24,
+      "goalDifference": 3,
+      "points": 15,
+      "form": [
+        "W",
+        "W",
+        "L",
+        "W",
+        "L"
+      ],
+      "unbeaten": 0,
+      "cleanSheets": 1
+    },
+    {
+      "teamId": "a814814a-0c54-4db2-8162-2ed7c3b508c4",
+      "teamName": "Liberton Church",
+      "teamLogo": "/badges/liberton-full.jpg",
+      "played": 8,
+      "won": 4,
+      "drawn": 1,
+      "lost": 3,
+      "goalsFor": 31,
+      "goalsAgainst": 22,
+      "goalDifference": 9,
+      "points": 13,
+      "form": [
+        "W",
+        "W",
+        "D",
+        "W",
+        "L"
+      ],
+      "unbeaten": 0,
+      "cleanSheets": 1
+    },
+    {
+      "teamId": "4481546a-a041-47f8-8393-24287e6cdf26",
+      "teamName": "Barclay Viewforth Church",
+      "teamLogo": "/badges/IMG-20210728-WA0006 (2).jpg",
+      "played": 7,
+      "won": 4,
+      "drawn": 1,
+      "lost": 2,
+      "goalsFor": 21,
+      "goalsAgainst": 16,
+      "goalDifference": 5,
+      "points": 13,
+      "form": [
+        "L",
+        "D",
+        "W",
+        "W",
+        "W"
+      ],
+      "unbeaten": 4,
+      "cleanSheets": 2
+    },
+    {
+      "teamId": "24949b6f-7fa0-48b4-be1d-aa8e16345860",
+      "teamName": "The Mission",
+      "teamLogo": "/badges/MISS (1).png",
+      "played": 6,
+      "won": 3,
+      "drawn": 3,
+      "lost": 0,
+      "goalsFor": 23,
+      "goalsAgainst": 12,
+      "goalDifference": 11,
+      "points": 12,
+      "form": [
+        "D",
+        "W",
+        "D",
+        "W",
+        "D"
+      ],
+      "unbeaten": 6,
+      "cleanSheets": 1
+    },
+    {
+      "teamId": "f7afe62e-abc9-4114-8ea1-fefd3606b024",
+      "teamName": "Ladywell Baptist Church",
+      "teamLogo": "/badges/LADY (2).png",
+      "played": 7,
+      "won": 2,
+      "drawn": 1,
+      "lost": 4,
+      "goalsFor": 13,
+      "goalsAgainst": 23,
+      "goalDifference": -10,
+      "points": 7,
+      "form": [
+        "L",
+        "L",
+        "L",
+        "D",
+        "L"
+      ],
+      "unbeaten": 0,
+      "cleanSheets": 1
+    },
+    {
+      "teamId": "f3a17c3f-6878-41b8-99cf-fff2320c7909",
+      "teamName": "Murrayburn Church",
+      "teamLogo": "/badges/Murrayburn Logo (1).jpg",
+      "played": 8,
+      "won": 2,
+      "drawn": 1,
+      "lost": 5,
+      "goalsFor": 15,
+      "goalsAgainst": 29,
+      "goalDifference": -14,
+      "points": 7,
+      "form": [
+        "W",
+        "L",
+        "L",
+        "L",
+        "L"
+      ],
+      "unbeaten": 0,
+      "cleanSheets": 0
+    },
+    {
+      "teamId": "34db7f73-710d-4d20-b3bc-660447ce7d7d",
+      "teamName": "Carrubbers Church",
+      "teamLogo": "/badges/Carrubers (1).jpg",
+      "played": 7,
+      "won": 1,
+      "drawn": 0,
+      "lost": 6,
+      "goalsFor": 18,
+      "goalsAgainst": 37,
+      "goalDifference": -19,
+      "points": 3,
+      "form": [
+        "L",
+        "L",
+        "L",
+        "L",
+        "L"
+      ],
+      "unbeaten": 0,
+      "cleanSheets": 0
+    },
+    {
+      "teamId": "2d9f3680-3914-4eb9-a60a-984f479999d4",
+      "teamName": "South East Saints",
+      "teamLogo": "/badges/SES.png",
+      "played": 8,
+      "won": 0,
+      "drawn": 2,
+      "lost": 6,
+      "goalsFor": 20,
+      "goalsAgainst": 40,
+      "goalDifference": -20,
+      "points": 2,
+      "form": [
+        "L",
+        "L",
+        "D",
+        "L",
+        "D"
+      ],
+      "unbeaten": 1,
+      "cleanSheets": 0
+    },
+    {
+      "teamId": "5a9bfe64-5da5-4bb9-8018-1b46f7649329",
+      "teamName": "Gorgie United Salvation Army",
+      "teamLogo": "/badges/IMG-20220929-WA0009 (1).jpg",
+      "played": 6,
+      "won": 0,
+      "drawn": 1,
+      "lost": 5,
+      "goalsFor": 11,
+      "goalsAgainst": 30,
+      "goalDifference": -19,
+      "points": 1,
+      "form": [
+        "L",
+        "L",
+        "L",
+        "L",
+        "L"
+      ],
+      "unbeaten": 0,
+      "cleanSheets": 0
+    }
+  ],
+  "bigGames": [
+    {
+      "id": "6fe952fe-7426-456d-86fc-e456d1767af9",
+      "fixture_date": "2026-09-26T10:00:00+00:00",
+      "status": "played",
+      "venue": "Gyle",
+      "home_score": 9,
+      "away_score": 4,
+      "round_name": null,
+      "went_to_extra_time": false,
+      "home_extra_time_score": null,
+      "away_extra_time_score": null,
+      "decided_by_penalties": false,
+      "home_penalty_score": null,
+      "away_penalty_score": null,
+      "home_team": {
+        "id": "a814814a-0c54-4db2-8162-2ed7c3b508c4",
+        "name": "Liberton Church",
+        "logo_url": "/badges/liberton-full.jpg"
+      },
+      "away_team": {
+        "id": "f3a17c3f-6878-41b8-99cf-fff2320c7909",
+        "name": "Murrayburn Church",
+        "logo_url": "/badges/Murrayburn Logo (1).jpg"
+      },
+      "competition": "Appin Sports League",
+      "slug": "appin-league"
+    },
+    {
+      "id": "eb57a0f6-384f-4b0a-98e7-dfb41bc36978",
+      "fixture_date": "2026-10-10T10:00:00+00:00",
+      "status": "played",
+      "venue": "Saughton 3G",
+      "home_score": 4,
+      "away_score": 7,
+      "round_name": null,
+      "went_to_extra_time": false,
+      "home_extra_time_score": null,
+      "away_extra_time_score": null,
+      "decided_by_penalties": false,
+      "home_penalty_score": null,
+      "away_penalty_score": null,
+      "home_team": {
+        "id": "34db7f73-710d-4d20-b3bc-660447ce7d7d",
+        "name": "Carrubbers Church",
+        "logo_url": "/badges/Carrubers (1).jpg"
+      },
+      "away_team": {
+        "id": "2541036a-edcc-4e37-a166-b341e351324c",
+        "name": "Kirkliston Community Church",
+        "logo_url": "/badges/IMG-20260917-WA0123.jpg"
+      },
+      "competition": "Appin Sports League",
+      "slug": "appin-league"
+    },
+    {
+      "id": "7ea854d5-aa3c-4a78-857e-c0dbfed1a3ab",
+      "fixture_date": "2026-10-24T11:00:00+00:00",
+      "status": "played",
+      "venue": "Jack Kane 3G",
+      "home_score": 2,
+      "away_score": 8,
+      "round_name": null,
+      "went_to_extra_time": false,
+      "home_extra_time_score": null,
+      "away_extra_time_score": null,
+      "decided_by_penalties": false,
+      "home_penalty_score": null,
+      "away_penalty_score": null,
+      "home_team": {
+        "id": "5a9bfe64-5da5-4bb9-8018-1b46f7649329",
+        "name": "Gorgie United Salvation Army",
+        "logo_url": "/badges/IMG-20220929-WA0009 (1).jpg"
+      },
+      "away_team": {
+        "id": "6608eb8c-38b6-4c20-8914-b35e5373b690",
+        "name": "White Lightning",
+        "logo_url": "/badges/White Lightning.jpg"
+      },
+      "competition": "Appin Sports League",
+      "slug": "appin-league"
+    }
+  ],
+  "totals": {
+    "matches": 59,
+    "goals": 347,
+    "leagueMatches": 43,
+    "leagueGoals": 258,
+    "weeklyGoals": 24,
+    "recordedScorerGoals": 336
+  },
+  "news": [
+    {
+      "id": "273ef5f4-8fa4-4c50-b5d3-9b02843c30f6",
+      "title": "ECFA Charity Day",
+      "body": "All teams will be raising money for our nominated charity on Saturday 7th November.\n\nEach event and details will also be posted here as and when teams confirm",
+      "graphics": [
+        {
+          "url": "https://enzdsbzsgtwqoictiwam.supabase.co/storage/v1/object/public/news-graphics/29d00ff7-4451-418b-8b94-f98e58abf145-241786.png",
+          "path": "29d00ff7-4451-418b-8b94-f98e58abf145-241786.png"
+        },
+        {
+          "url": "https://enzdsbzsgtwqoictiwam.supabase.co/storage/v1/object/public/news-graphics/4c16c361-4f5c-4be8-9124-72803537fdfc-244717.png",
+          "path": "4c16c361-4f5c-4be8-9124-72803537fdfc-244717.png"
+        }
+      ],
+      "event_date": "2026-11-07"
+    }
+  ],
+  "sponsors": [
+    {
+      "id": "4142026f-3038-430d-8687-706a42e0c1f5",
+      "name": "Appin Sports",
+      "logo_url": "/sponsors/appin-sports.png",
+      "website_url": "https://appinsports.com/"
+    },
+    {
+      "id": "440dfb92-7566-4128-af62-72b46278d754",
+      "name": "Kwik Fit",
+      "logo_url": "/sponsors/kwik-fit.png",
+      "website_url": "https://www.kwik-fit.com/"
+    },
+    {
+      "id": "4e70ef69-94e9-456f-b942-6ee4a303265e",
+      "name": "Game of Throwing Edinburgh",
+      "logo_url": "/sponsors/game-of-throwing.jpg",
+      "website_url": "https://www.gameofthrowing.co.uk/game-of-throwing-edinburgh"
+    },
+    {
+      "id": "e19a5110-ddd5-40dd-b18b-15db29f31eb1",
+      "name": "Escape Edinburgh",
+      "logo_url": "https://images.squarespace-cdn.com/content/v1/5ecf8c7643241f1336b4b4e8/1590767988445-8NK7H35VJD02TDJS6P4D/Escape_Logo%402x.png",
+      "website_url": "https://www.escape.game/escape-edinburgh"
+    }
+  ]
+}
