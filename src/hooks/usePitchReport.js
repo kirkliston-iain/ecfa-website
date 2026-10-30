@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react'
 
-export default function usePitchReport() {
+export default function usePitchReport(enabled = true) {
   const [report, setReport] = useState(null)
   const [state, setState] = useState('loading')
   useEffect(() => {
+    if (!enabled) return
     let active = true
     let controller
     async function load() {
@@ -24,6 +25,6 @@ export default function usePitchReport() {
     const timer = setInterval(load, 300000)
     window.addEventListener('focus', load)
     return () => { active = false; clearInterval(timer); controller?.abort(); window.removeEventListener('focus', load) }
-  }, [])
+  }, [enabled])
   return { report, state }
 }

@@ -42,3 +42,13 @@ export function reportCoversDate(report, fixtureDate, now = new Date()) {
   const day = fixtureDate?.slice(0, 10)
   return today >= updated && today <= sunday && day >= updated && day <= sunday
 }
+
+export const PITCH_STATUS_LABELS = { playable: 'Playable', unplayable: 'Unplayable', referee: 'Referee’s decision', unknown: 'Check with venue', 'not-listed': 'No football status listed', awaiting: 'Awaiting weekend update' }
+
+// Shared by website badges and exported images so both use the same venue/date rules.
+export function fixturePitchStatus(fixture, report, now = new Date()) {
+  if (['played', 'postponed', 'cancelled'].includes(fixture.status) || !fixture.fixture_date || fixture.fixture_date.slice(0, 10) < ukDate(now)) return null
+  const pitch = matchPitch(fixture.venue, report)
+  if (!pitch) return null
+  return { ...pitch, status: reportCoversDate(report, fixture.fixture_date, now) ? pitch.status : 'awaiting', updatedDate: report.updatedDate }
+}

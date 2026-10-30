@@ -1,3 +1,4 @@
+import usePitchReport from '../hooks/usePitchReport'
 import { loadPublicMatches } from '../utils/publicMatches'
 import { lastFiveForm } from '../utils/matchForm'
 import { useEffect, useState } from 'react'
@@ -7,6 +8,8 @@ import { renderMatchGraphic, renderWeekendGraphic } from '../utils/matchGraphic'
 
 export default function MatchGraphic({ fixture, scorers, report = null, onReady }) {
   const {siteLogo,sponsorLogo}=useSiteLogos()
+  const needsPitchStatus = report ? report.type === 'fixtures' : fixture.status === 'scheduled'
+  const { report: pitchReport, state: pitchState } = usePitchReport(needsPitchStatus)
   const [sponsors,setSponsors]=useState(null)
   const [format,setFormat]=useState('square')
   const [output,setOutput]=useState(null)
@@ -28,13 +31,13 @@ export default function MatchGraphic({ fixture, scorers, report = null, onReady 
   useEffect(()=> {
     let active=true; let url
     setOutput(null); setError(''); setMessage('')
-    if(!sponsors || !scorers || (!report && !form)) return
-    (report ? renderWeekendGraphic.bind(null,report) : renderMatchGraphic.bind(null,{...fixture,form:formError?null:form},scorers))({league,sponsors:sponsors.map(s=>({name:s.name,url:sponsorLogo(s.name)||s.logo_url}))},format==='story').then(result=> {
+    if(!sponsors || !scorers || (!report && !form) || (needsPitchStatus && pitchState === 'loading')) return
+    (report ? renderWeekendGraphic.bind(null,{...report,pitchReport,pitchState}) : renderMatchGraphic.bind(null,{...fixture,form:formError?null:form,pitchReport,pitchState},scorers))({league,sponsors:sponsors.map(s=>({name:s.name,url:sponsorLogo(s.name)||s.logo_url}))},format==='story').then(result=> {
       if(!active)return
       url=URL.createObjectURL(result.blob); setOutput({...result,url})
     }).catch(()=>{if(active)setError('Unable to generate the image. Please refresh and try again.')})
     return ()=>{active=false;if(url)URL.revokeObjectURL(url)}
-  },[fixture,scorers,report,form,formError,format,league,sponsorKey,appin])
+  },[fixture,scorers,report,form,formError,format,league,sponsorKey,appin,pitchReport,pitchState,needsPitchStatus])
   const filename=report ? `ecfa-${report.type}-${report.end}-${report.page || 1}-${format}.png` : `ecfa-${fixture.status==='played'?'result':'fixture'}-${fixture.id}-${format}.png`
   useEffect(() => { onReady?.(output ? { blob: output.blob, filename } : null) }, [output, filename, onReady])
   const shareUrl = `${window.location.origin}${report ? (report.sharePath || `/matchday-graphics?weekend=${report.start}&type=${report.type}`) : `/fixtures/${fixture.id}`}`

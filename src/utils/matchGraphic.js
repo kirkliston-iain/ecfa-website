@@ -1,4 +1,20 @@
+import { fixturePitchStatus, PITCH_STATUS_LABELS } from './pitchStatus.js'
 import { displayedScore, fullOutcomeNote } from './fixtureOutcome'
+
+const pitchColours = { playable: '#a7e3b6', referee: '#ffe09a', unplayable: '#ffb0a9' }
+function pitchText(pitch) {
+  return `Grass: ${PITCH_STATUS_LABELS[pitch.status]}${pitch.follows ? ` · Follows ${pitch.follows}` : ''}`
+}
+function pitchDate(report) {
+  return report?.updatedDate ? new Date(`${report.updatedDate}T12:00:00Z`).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'Europe/London' }) : ''
+}
+function pitchKey(ctx, y) {
+  const items = [['Key:', '#d9dee2'], ['Playable', pitchColours.playable], ['Referee’s decision', pitchColours.referee], ['Unplayable', pitchColours.unplayable], ['Awaiting update', '#d9dee2']]
+  ctx.font = 'bold 15px Arial'; ctx.textAlign = 'left'
+  const widths = items.map(([label]) => ctx.measureText(label).width)
+  let x = (1080 - widths.reduce((a,b) => a+b, 0) - (items.length-1)*22)/2
+  items.forEach(([label, colour], i) => { ctx.fillStyle=colour; ctx.fillText(label,x,y); x+=widths[i]+22 })
+}
 
 function image(url) {
   return new Promise(resolve => {
@@ -79,7 +95,15 @@ export async function renderMatchGraphic(f, scorers, logos, story = false) {
   } else {
     const date=f.fixture_date ? new Date(String(f.fixture_date).slice(0,10)+'T12:00:00').toLocaleDateString('en-GB',{weekday:'short',day:'numeric',month:'long',year:'numeric'}) + (String(f.fixture_date).slice(11,16) && String(f.fixture_date).slice(11,16)!=='00:00' ? ` · ${String(f.fixture_date).slice(11,16)}` : '') : 'Date to be confirmed'
     y+=text(date,540,y,940,28,'#fff',2)+10
-    text(f.venue || 'Venue to be confirmed',540,y,940,24,'#d9dee2',2)
+    const venueHeight=text(f.venue || 'Venue to be confirmed',540,y,940,24,'#d9dee2',2)
+    const pitch=fixturePitchStatus(f,f.pitchReport)
+    if(pitch) {
+      const pitchY=Math.min(y+venueHeight+10,h-248)
+      text(pitchText(pitch),540,pitchY,940,22,pitchColours[pitch.status] || '#d9dee2',1)
+      text(`Edinburgh Leisure · updated ${pitchDate(f.pitchReport)} · Check latest status before travel`,540,pitchY+25,940,16,'#d9dee2',1)
+    } else if(f.pitchState==='unavailable') {
+      text('Pitch update unavailable · Check Edinburgh Leisure before travel',540,Math.min(y+venueHeight+10,h-248),940,17,'#d9dee2',1)
+    }
   }
   if(f.referee_name) text(`Referee: ${f.referee_name}`,540,h-185,940,23,'#d9dee2',2)
   ctx.fillStyle='#fff'; ctx.fillRect(36,h-155,1008,100)
@@ -102,7 +126,8 @@ export async function renderWeekendGraphic(report, logos, story = false) {
   fit(report.type==='fixtures'?'UPCOMING FIXTURES':report.type==='results'?'SATURDAY RESULTS':'LEAGUE TABLE',540,251,970,42,'#d5b65d','center')
   fit(report.subtitle,540,296,970,26,'#d9dee2','center')
   fit(report.type==='table'?`As at Saturday ${report.displayEnd} · ${report.season}`:report.type==='fixtures'?report.displayStart:report.displayStart,540,336,970,23,'#d9dee2','center')
-  const top=385;const bottom=h-205;const space=bottom-top
+  const top=report.type==='fixtures'?360:385;const bottom=h-205;const space=bottom-top
+  const pitchStatuses=report.type==='fixtures'?report.rows.map(f=>fixturePitchStatus(f,report.pitchReport)):[]
   if(report.type==='table') {
     const columns=[530,588,646,704,762,820,886,974]
     const headers=['Pl','W','D','L','GF','GA','GD','Pts']
@@ -115,10 +140,10 @@ export async function renderWeekendGraphic(report, logos, story = false) {
     const rowHeight=Math.min(report.includeScorers ? (story?360:165) : (story?160:90),space/Math.max(1,report.rows.length))
     report.rows.forEach((f,i)=>{
       const y=top+i*rowHeight
-      ctx.fillStyle=i%2?'#1d2c38':'#172631';ctx.fillRect(32,y-18,1016,rowHeight-5)
-      fit(f.competition_name||'ECFA',540,y+6,900,Math.min(20,rowHeight*.23),'#d5b65d','center')
+      ctx.fillStyle=i%2?'#1d2c38':'#172631';ctx.fillRect(32,y-(report.type==='fixtures'?10:18),1016,rowHeight-5)
+      fit(f.competition_name||f.compName||'ECFA',540,y+(report.type==='fixtures'?1:6),900,Math.min(20,rowHeight*.23),'#d5b65d','center')
       drawImage(assets[1+logos.sponsors.length+i*2],45,y+16,40,40);drawImage(assets[2+logos.sponsors.length+i*2],995,y+16,40,40)
-      fit(f.home_team?.name||'Home',100,y+(report.type==='fixtures'?35:45),350,Math.min(27,rowHeight*.32));fit(report.type==='fixtures'?(String(f.fixture_date).slice(11,16)||'TBC'):displayedScore(f),540,y+(report.type==='fixtures'?35:45),160,report.type==='fixtures'?24:Math.min(34,rowHeight*.4),'#fff','center');fit(f.away_team?.name||'Away',980,y+(report.type==='fixtures'?35:45),350,Math.min(27,rowHeight*.32),'#fff','right')
+      fit(f.home_team?.name||'Home',100,y+(report.type==='fixtures'?26:45),350,Math.min(27,rowHeight*.32));fit(report.type==='fixtures'?(String(f.fixture_date).slice(11,16)||'TBC'):displayedScore(f),540,y+(report.type==='fixtures'?26:45),160,report.type==='fixtures'?24:Math.min(34,rowHeight*.4),'#fff','center');fit(f.away_team?.name||'Away',980,y+(report.type==='fixtures'?26:45),350,Math.min(27,rowHeight*.32),'#fff','right')
       const note=report.type==='fixtures'?[f.venue||'Venue TBC',f.referee_name?`Ref: ${f.referee_name}`:'Referee TBC'].join(' · '):fullOutcomeNote(f)
       if(report.includeScorers){
         for(const [team,x,align] of [[f.home_team,100,'left'],[f.away_team,980,'right']]){
@@ -130,12 +155,22 @@ export async function renderWeekendGraphic(report, logos, story = false) {
           ctx.fillStyle='#d9dee2';ctx.textAlign=align;wrapped.forEach((line,j)=>ctx.fillText(line,x,y+76+j*size*1.2))
         }
       }
-      if(note)fit(note,540,y+rowHeight-(report.type==='fixtures'?25:28),900,16,'#d9dee2','center')
+      if(report.type==='fixtures') {
+        // Compact fixed baselines keep six fixtures readable in the square image.
+        const pitch=pitchStatuses[i]
+        if(note)fit(note,540,y+47,900,15,'#d9dee2','center')
+        if(pitch)fit(pitchText(pitch),540,y+67,900,16,pitchColours[pitch.status] || '#d9dee2','center')
+      } else if(note)fit(note,540,y+rowHeight-28,900,16,'#d9dee2','center')
     })
+  }
+  if(report.type==='fixtures') {
+    if(pitchStatuses.some(Boolean)) pitchKey(ctx,h-192)
+    const source=report.pitchReport ? `Pitch status: Edinburgh Leisure · updated ${pitchDate(report.pitchReport)} · Check latest before travel` : 'Pitch status unavailable · Check Edinburgh Leisure before travel'
+    fit(source,540,h-172,980,14,'#d9dee2','center')
   }
   ctx.fillStyle='#fff';ctx.fillRect(36,h-155,1008,100)
   logos.sponsors.forEach((s,i)=>{const count=logos.sponsors.length;const x=36+1008/count*i;const img=assets[1+i];if(img)drawImage(img,x+10,h-143,1008/count-20,76);else fit(s.name,x+1008/count/2,h-100,900/count,18,'#131f29','center')})
-  fit(`More ECFA results: ${'ecfa-website.vercel.app'}`,540,h-27,980,19,'#d5b65d','center')
+  fit(`${report.type==='fixtures'?'Fixtures and pitch updates':'More ECFA results'}: ${'ecfa-website.vercel.app'}`,540,h-27,980,19,'#d5b65d','center')
   const blob=await new Promise((resolve,reject)=>{try{canvas.toBlob(b=>b?resolve(b):reject(new Error('Unable to create image.')),'image/png')}catch(e){reject(e)}})
   return {blob,missing:[]}
 }

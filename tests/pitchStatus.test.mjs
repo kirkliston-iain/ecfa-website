@@ -2,7 +2,7 @@ import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import { parsePitchReport } from '../server/pitchReport.js'
 import handler from '../api/pitch-status.js'
-import { matchPitch, reportCoversDate } from '../src/utils/pitchStatus.js'
+import { matchPitch, reportCoversDate, fixturePitchStatus } from '../src/utils/pitchStatus.js'
 
 const row = (name, css, text = '', comment = '') => `<tr><td>${name}</td><td class="sportsPitches--titles">Pitch Status</td><td class="sportsPitches--${css}"><span>Football</span>${text}</td><td class="sportsPitches--yes"><span>Rugby</span></td><td>${comment}</td></tr>`
 const html = `Updated: <strong>30 October 2026</strong><section class="sportsPitches"><table>${row('Gyle Public Park', 'yes')}${row('Roseburn Park', 'no', '', 'Waterlogged')}${row('Inverleith Park', 'other')}${row('Broughton High School Grass', 'no', 'No Football Pitches')}${row('Meggetland Sports Complex', 'other', 'Decision made on the day. Call venue.')}</table></section>`
@@ -34,6 +34,15 @@ for (const day of ['2026-10-29', '2026-11-02', '2026-11-07']) assert.equal(repor
 assert.equal(reportCoversDate(report, '2026-10-31', new Date('2026-11-02T12:00:00Z')), false)
 assert.equal(reportCoversDate({ ...report, updatedDate: '2026-10-23' }, '2026-10-31', friday), false)
 assert.equal(reportCoversDate({ ...report, updatedDate: '2026-10-29' }, '2026-10-31', friday), false)
+const fixture = { status: 'scheduled', fixture_date: '2026-10-31T10:00:00', venue: 'Newcraighall' }
+assert.equal(fixturePitchStatus(fixture, report, friday).status, 'playable')
+assert.equal(fixturePitchStatus(fixture, report, friday).follows, 'Gyle')
+assert.equal(fixturePitchStatus(fixture, report, friday).updatedDate, '2026-10-30')
+assert.equal(fixturePitchStatus({ ...fixture, fixture_date: '2026-11-07' }, report, friday).status, 'awaiting')
+assert.equal(fixturePitchStatus({ ...fixture, venue: 'Jack Kane 3G' }, report, friday), null)
+assert.equal(fixturePitchStatus(fixture, null, friday), null)
+for (const status of ['played', 'postponed', 'cancelled']) assert.equal(fixturePitchStatus({ ...fixture, status }, report, friday), null)
+assert.equal(fixturePitchStatus({ ...fixture, fixture_date: '2026-10-24' }, report, friday), null)
 assert.throws(() => parsePitchReport('<html>Website unavailable</html>'))
 assert.throws(() => parsePitchReport(html.replace('30 October 2026', 'invalid')))
 let code, body, headers
