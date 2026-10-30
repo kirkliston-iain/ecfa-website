@@ -21,8 +21,12 @@ export function matchPitch(venue, report) {
   if (/\b[2345]\s*g\b|astro|artificial|synthetic/i.test(venue || '')) return null
   // Only exact names or known aliases; never guess between similarly named pitches.
   const key = normal(venue).replace(/\s+(?:pitch\s*)?\d+$/, '')
-  const target = normal(aliases[key] || key)
-  return report?.pitches?.find(p => normal(p.name) === target) || null
+  // League policy: Newcraighall follows Gyle's status for every fixture there.
+  const followsGyle = /^newcraig ?hall(?: (?:park|grass|playing fields|playing field|recreation ground|sports ground))?$/.test(key)
+  const target = normal(followsGyle ? 'Gyle Public Park' : aliases[key] || key)
+  const pitch = report?.pitches?.find(p => normal(p.name) === target) || null
+  // Gyle-specific comments are not a direct report about Newcraighall.
+  return followsGyle && pitch ? { ...pitch, name: 'Newcraighall', follows: 'Gyle', comments: '' } : pitch
 }
 export function ukDate(now = new Date()) {
   return new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/London', year: 'numeric', month: '2-digit', day: '2-digit' }).format(now)

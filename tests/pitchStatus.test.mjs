@@ -13,6 +13,21 @@ assert.equal(report.pitches[1].comments, 'Waterlogged')
 assert.equal(matchPitch('Gyle', report).status, 'playable')
 assert.equal(matchPitch('Gyle Pitch 1', report).name, 'Gyle Public Park')
 for (const venue of ['Gyle 3G', 'Gyle 3 G', 'Gyle Astro', 'Unknown Park', 'Gyle Public Park 4G']) assert.equal(matchPitch(venue, report), null)
+for (const status of ['playable', 'referee', 'unplayable', 'unknown', 'not-listed']) {
+  const source = { ...report, pitches: [{ name: 'Gyle Public Park', status, comments: 'Gyle-specific note' }] }
+  for (const venue of ['Newcraighall', 'Newcraighall Park', 'Newcraighall Playing Fields', 'Newcraig Hall', 'Newcraighall Pitch 1']) {
+    const result = matchPitch(venue, source)
+    assert.equal(result.status, status)
+    assert.equal(result.follows, 'Gyle')
+    assert.equal(result.name, 'Newcraighall')
+    assert.equal(result.comments, '')
+  }
+  assert.equal(source.pitches[0].name, 'Gyle Public Park')
+  assert.equal(source.pitches[0].comments, 'Gyle-specific note')
+}
+assert.equal(matchPitch('Newcraighall', { ...report, pitches: [] }), null)
+assert.equal(matchPitch('Newcraighall 3G', report), null)
+assert.equal(matchPitch('Newcraighall Astro', report), null)
 const friday = new Date('2026-10-30T12:00:00Z')
 for (const day of ['2026-10-30', '2026-10-31', '2026-11-01']) assert.equal(reportCoversDate(report, day, friday), true)
 for (const day of ['2026-10-29', '2026-11-02', '2026-11-07']) assert.equal(reportCoversDate(report, day, friday), false)

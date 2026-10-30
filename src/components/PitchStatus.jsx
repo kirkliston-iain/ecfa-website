@@ -12,10 +12,10 @@ export default function PitchStatus({ venue, fixtureDate, status, report, state 
   const label = current ? labels[pitch.status] : 'Awaiting weekend update'
   const [background, color] = current ? colours[pitch.status] || ['#f0f2f4', '#46515a'] : ['#f0f2f4', '#46515a']
   return <div style={{ marginTop: 5, textAlign: 'center', fontSize: 11, display: 'flex', flexWrap: 'wrap', justifyContent: 'center', alignItems: 'center', gap: '3px 7px' }}>
-    <a href={PITCH_SOURCE_URL} target="_blank" rel="noopener noreferrer" style={{ display: 'inline-block', padding: '3px 7px', borderRadius: 5, background, color, fontWeight: 700 }} title={`${pitch.name}${current && pitch.comments ? `: ${pitch.comments}` : ''}`}>
+    <a href={PITCH_SOURCE_URL} target="_blank" rel="noopener noreferrer" style={{ display: 'inline-block', padding: '3px 7px', borderRadius: 5, background, color, fontWeight: 700 }} title={`${pitch.name}${pitch.follows ? ` — follows ${pitch.follows}` : ''}${current && pitch.comments ? `: ${pitch.comments}` : ''}`}>
       Grass pitch: {label} ↗
     </a>
-    <span style={{ color: 'var(--muted)', fontSize: 10 }}>Edinburgh Leisure · updated {dateLabel(report.updatedDate)}</span>
+    <span style={{ color: 'var(--muted)', fontSize: 10 }}>{pitch.follows ? `Follows ${pitch.follows}` : 'Edinburgh Leisure'} · updated {dateLabel(report.updatedDate)}</span>
     {current && pitch.comments && <span style={{ flexBasis: '100%', color: 'var(--muted)' }}>{pitch.comments}</span>}
   </div>
 }
