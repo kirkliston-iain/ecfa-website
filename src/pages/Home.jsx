@@ -1,3 +1,5 @@
+import PitchStatus, { PitchReportSummary } from '../components/PitchStatus'
+import usePitchReport from '../hooks/usePitchReport'
 import AssistantOfficials from '../components/AssistantOfficials'
 import FixtureGraphics from '../components/FixtureGraphics'
 import { TeamHistoryLink, CompetitionHistoryLink } from '../components/HistoryLinks'
@@ -568,7 +570,7 @@ function FormStrip({ results, align = 'left', teamName }) {
   )
 }
 
-function MatchCard({ f, allFixtures }) {
+function MatchCard({ f, allFixtures, pitchReport }) {
   const played = f.status === 'played'
   const kickoff = f.fixture_date && f.fixture_date.slice(11, 16) !== '00:00'
     ? f.fixture_date.slice(11, 16)
@@ -672,6 +674,7 @@ function MatchCard({ f, allFixtures }) {
             </Link>
           )}
           <AssistantOfficials fixture={f} />
+          <PitchStatus venue={f.venue} fixtureDate={f.fixture_date} status={f.status} {...pitchReport} />
         </div>
       )}
     </div>
@@ -679,6 +682,7 @@ function MatchCard({ f, allFixtures }) {
 }
 
 export default function Home() {
+  const pitchReport = usePitchReport()
   const [loading, setLoading] = useRememberedState('loading', true)
   const [competitions, setCompetitions] = useRememberedState('competitions', [])
   const [selectedDate, setSelectedDate] = useRememberedState('selectedDate', null)
@@ -966,6 +970,8 @@ export default function Home() {
         <span style={{ color: 'var(--brass)', fontWeight: 800, fontSize: 13, whiteSpace: 'nowrap' }}>Visit ↗</span>
       </a>
 
+      <PitchReportSummary {...pitchReport} />
+
       <MatchdayCarousel days={allDays} selected={selectedDate} onSelect={setSelectedDate} />
 
       {hasResultsToday && recapParagraphs.length > 0 && (
@@ -1031,7 +1037,7 @@ export default function Home() {
           })()
         ) : (
           <div className="desktop-card-grid">
-            {matchesForDate.map((f) => <MatchCard key={f.id} f={f} allFixtures={allCurrentSeasonFixtures} />)}
+            {matchesForDate.map((f) => <MatchCard key={f.id} f={f} allFixtures={allCurrentSeasonFixtures} pitchReport={pitchReport} />)}
           </div>
         )}
       </section>

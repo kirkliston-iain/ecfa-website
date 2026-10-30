@@ -98,7 +98,7 @@ cover = Table([[p('ECFA WEBSITE', 'CoverSub')], [p('Public Features Guide', 'Cov
               ]))
 story += [Spacer(1, 35*mm), cover, Spacer(1, 18*mm)]
 story.append(Table([[p('WEBSITE', 'Smallx'), p('https://ecfa-website.vercel.app', 'CardTitle')],
-                    [p('GUIDE UPDATED', 'Smallx'), p('21 October 2026', 'CardTitle')]],
+                    [p('GUIDE UPDATED', 'Smallx'), p('30 October 2026', 'CardTitle')]],
                    colWidths=[35*mm, 125*mm], style=TableStyle([
                        ('BOX', (0,0), (-1,-1), 0.7, LINE), ('INNERGRID', (0,0), (-1,-1), 0.5, LINE),
                        ('BACKGROUND', (0,0), (0,-1), PALE), ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
@@ -123,6 +123,7 @@ story += [Spacer(1, 8), p('<b>Tip:</b> Swipe the top navigation left or right to
 story += [Spacer(1, 7)] + section_title('2. Match Hub', 'The Match Hub brings the main matchday information together in one place.')
 story.append(card_grid([
     ('Browse by date', 'Move between available matchdays to see a particular weekend. Back from a match restores the date you were viewing. Opening Match Hub through the site navigation starts at the upcoming games.'),
+    ('Grass pitch playability', 'Compact Edinburgh Leisure status badges appear beside matched grass fixtures and on match pages. One shared colour key sits above all fixtures. The source date and official link are shown; expand the pitch update to read the report. Friday reports apply only to that Friday-Sunday. Old reports await an update; 3G venues are excluded.'),
     ('Upcoming fixtures', 'See the competition, home and away teams, badges, kick-off time, venue and appointed referee when available. Assigned Assistant 1 and Assistant 2 appear underneath, with links to their profiles.'),
     ('Results and scores', 'Completed games show the score and link to an individual match page.'),
     ('Match details', 'Follow club names, scores, competitions, scorers, venues and referees into their recorded history. Match previews link to previous meetings. Back restores your selections and position. Venue history supports season filters from 2025/26.'),

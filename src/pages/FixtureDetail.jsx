@@ -1,3 +1,5 @@
+import PitchStatus from '../components/PitchStatus'
+import usePitchReport from '../hooks/usePitchReport'
 import AssistantOfficials from '../components/AssistantOfficials'
 import MatchGraphic from '../components/MatchGraphic'
 import { useRememberedState, useRememberedScroll } from '../hooks/usePageMemory'
@@ -56,6 +58,7 @@ function normalizedPlayerName(name) {
 }
 
 export default function FixtureDetail() {
+  const pitchReport = usePitchReport()
   const { id } = useParams()
   const navigate = useNavigate()
   const location = useLocation()
@@ -406,6 +409,7 @@ export default function FixtureDetail() {
               <div style={{ fontSize: 12, color: 'var(--muted)' }}>{fixture.venue}</div>
             )
           )}
+          <PitchStatus venue={fixture.venue} fixtureDate={fixture.fixture_date} status={fixture.status} {...pitchReport} />
           {fixture.referee_name && (
             <div style={{ fontSize: 12, color: 'var(--muted)' }}>
               Referee:{' '}
