@@ -14,6 +14,36 @@
   --font-body: 'Inter', -apple-system, 'Segoe UI', Roboto, Arial, sans-serif;
 }
 
+.news-posters {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: start;
+  gap: 8px;
+  margin-top: 18px;
+}
+
+.news-posters a {
+  display: block;
+  min-width: 0;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  overflow: hidden;
+  background: #fff;
+}
+
+.news-posters img {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+@media (min-width: 768px) {
+  .news-posters {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 10px;
+  }
+}
+
 * {
   box-sizing: border-box;
 }

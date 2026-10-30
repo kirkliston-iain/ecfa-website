@@ -55,10 +55,10 @@ export default function News() {
             </a>
           )}
           {Array.isArray(story.graphics) && story.graphics.length > 0 && (
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 220px), 1fr))', gap: 12, marginTop: 18 }}>
+            <div className="news-posters">
               {story.graphics.map((graphic, index) => (
                 <a key={graphic.path || index} href={graphic.url} target="_blank" rel="noopener noreferrer" aria-label={`Open graphic ${index + 1} for ${story.title}`}>
-                  <img src={graphic.url} alt={`${story.title} graphic ${index + 1}`} loading="lazy" style={{ width: '100%', height: 'auto', maxHeight: 480, objectFit: 'contain', border: '1px solid var(--line)', borderRadius: 8, background: '#fff' }} />
+                  <img src={graphic.url} alt={`${story.title} graphic ${index + 1}`} loading="lazy" />
                 </a>
               ))}
             </div>
