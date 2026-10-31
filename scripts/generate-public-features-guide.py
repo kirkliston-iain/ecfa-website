@@ -149,7 +149,7 @@ story += section_title('3. Competitions, tables and cups', 'Competition pages se
 story.append(card_grid([
     ('League standings', 'View played, won, drawn, lost, goals for, goals against, goal difference, points and colour-coded last-five form (W/D/L). Share the current league table as a branded graphic.'),
     ('League fixtures and results', 'Open match details from a score or date; club and venue names open their histories. Table figures link to the supporting games, respecting competition, group, result and historical table date. Cup bracket ties open their matches.'),
-    ('Cup progress', 'Follow group tables and knockout fixtures. Gold labels in Match Hub previews link to the relevant group, cup draw or league table.'),
+    ('Cup progress', 'Cup slots are linked to the source match or group position. Winners advance automatically, including extra time and penalties. League Cup group qualifiers appear after the group finishes; ties on points and goal difference wait for confirmation of the further tiebreaks. Gold labels in Match Hub previews link to the relevant group, cup draw or league table.'),
     ('Competition switching', 'Use the competition links or selector to move between the Appin Sports League, ECFA Knockout Cup, ECFA League Cup and Brian Latto Cup.'),
 ]))
 story += [Spacer(1, 10)] + section_title('4. Goalscorers and player information')
