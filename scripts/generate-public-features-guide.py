@@ -98,7 +98,7 @@ cover = Table([[p('ECFA WEBSITE', 'CoverSub')], [p('Public Features Guide', 'Cov
               ]))
 story += [Spacer(1, 35*mm), cover, Spacer(1, 18*mm)]
 story.append(Table([[p('WEBSITE', 'Smallx'), p('https://ecfa-website.vercel.app', 'CardTitle')],
-                    [p('GUIDE UPDATED', 'Smallx'), p('30 October 2026', 'CardTitle')]],
+                    [p('GUIDE UPDATED', 'Smallx'), p('31 October 2026', 'CardTitle')]],
                    colWidths=[35*mm, 125*mm], style=TableStyle([
                        ('BOX', (0,0), (-1,-1), 0.7, LINE), ('INNERGRID', (0,0), (-1,-1), 0.5, LINE),
                        ('BACKGROUND', (0,0), (0,-1), PALE), ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
@@ -222,6 +222,8 @@ story.append(card_grid([
     ('Pages and competitions', 'Search also returns relevant website pages and competition links.'),
     ('Current and historical players', 'Current squad records and historical scorer records can both appear.'),
     ('Direct navigation', 'Each result links to the most relevant team, player, competition or statistics page.'),
+    ('Ask ECFA', 'A separate question box checks public current and archived results. Ask about a team\'s last defeat, latest win, unbeaten run, next fixture, head-to-head record, biggest win or team attack and defence rankings. Tap an example to begin.'),
+    ('Check the evidence', 'Answers show the season and competition scope, supporting match links and coverage notes. Last-result questions default to all recorded seasons; rankings default to the latest season. Choose filters to override, or write before YYYY-MM-DD. Unsupported questions are explained rather than guessed; player scoring queries link to Goalscorers.'),
 ]))
 story.append(PageBreak())
 
