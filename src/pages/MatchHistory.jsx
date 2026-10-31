@@ -58,6 +58,7 @@ export default function MatchHistory() {
   function sameTeam(name, id, requested) { return requested === id || historicTeamName(name) === historicTeamName(requested) }
   const filtered = matches.filter((match) => {
     if (params.get('group') && match.group_id !== params.get('group')) return false
+    if (params.get('from') && String(match.fixture_date).slice(0, 10) < params.get('from')) return false
     if (params.get('through') && String(match.fixture_date).slice(0, 10) > params.get('through')) return false
     if (params.get('status') === 'played' && match.status !== 'played') return false
     if (team && !sameTeam(match.home, match.homeId, team) && !sameTeam(match.away, match.awayId, team)) return false
