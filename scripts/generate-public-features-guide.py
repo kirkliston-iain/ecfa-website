@@ -222,8 +222,8 @@ story.append(card_grid([
     ('Pages and competitions', 'Search also returns relevant website pages and competition links.'),
     ('Current and historical players', 'Current squad records and historical scorer records can both appear.'),
     ('Direct navigation', 'Each result links to the most relevant team, player, competition or statistics page.'),
-    ('Ask ECFA', 'A separate question box checks public current and archived results. Ask about a team\'s last defeat, latest win, unbeaten run, next fixture, head-to-head record, biggest win or team attack and defence rankings. Tap an example to begin.'),
-    ('Check the evidence', 'Answers show the season and competition scope, supporting match links and coverage notes. Last-result questions default to all recorded seasons; rankings default to the latest season. Choose filters to override, or write before YYYY-MM-DD. Unsupported questions are explained rather than guessed; player scoring queries link to Goalscorers.'),
+    ('Ask ECFA', 'A separate question box checks public current and archived results. Ask about a team\'s last defeat, latest win, unbeaten run, next fixture, head-to-head record, biggest win, total goals scored or team attack and defence rankings. Type the question into the box and select Ask ECFA.'),
+    ('Check the evidence', 'Answers show the season and competition scope, supporting match links and coverage notes. Last-result questions default to all recorded seasons; rankings default to the latest season. Include a season or competition in the question, or write before YYYY-MM-DD. There are no example buttons or filter menus. Unsupported questions are explained rather than guessed; player scoring queries link to Goalscorers.'),
 ]))
 story.append(PageBreak())
 

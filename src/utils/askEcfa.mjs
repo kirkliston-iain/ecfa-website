@@ -49,12 +49,13 @@ export function answerQuestion(question, matches, { today, season: selection = '
   const ordered = [...matches].sort((a,b) => String(b.fixture_date).localeCompare(String(a.fixture_date)))
   const seasons = [...new Set(matches.map(m => m.season?.replace('-', '/')).filter(Boolean))].sort().reverse()
   const currentSeason = seasons[0] || ''
+  const aggregate = /\b(how many|total|number of|average|per game|per match)\b/.test(q) && /\b(goals|matches|games)\b/.test(q)
   const ranking = /\b(best|most|worst|fewest|top|highest|lowest|biggest)\b/.test(q)
   const seasonToken = String(question).replace(/\b\d{4}-\d{2}-\d{2}\b/g, '').match(/\b(20\d{2}|\d{2})\s*[/–-]\s*(20\d{2}|\d{2})\b/)
   const explicitSeason = seasonToken ? `${seasonToken[1].length === 2 ? '20' : ''}${seasonToken[1]}/${seasonToken[2].slice(-2)}` : ''
-  let season = selection !== 'auto' ? selection === 'all' ? '' : selection : explicitSeason || (/\b(this|current) season\b/.test(q) || (ranking && !/\b(all time|ever|history|overall)\b/.test(q)) ? currentSeason : '')
+  let season = selection !== 'auto' ? selection === 'all' ? '' : selection : explicitSeason || (/\b(this|current) season\b/.test(q) || ((ranking || aggregate) && !/\b(all time|ever|history|overall)\b/.test(q)) ? currentSeason : '')
   if (/\blast season\b/.test(q) && selection === 'auto') { const year = Number(currentSeason.slice(0,4)) - 1; season = `${year}/${String(year+1).slice(-2)}` }
-  const scope = selectedScope !== 'auto' ? selectedScope : /\bcup\b/.test(q) ? 'cup' : /\bleague\b/.test(q) ? 'league' : 'all'
+  const scope = selectedScope !== 'auto' ? selectedScope : /\ball competitions\b/.test(q) ? 'all' : /\bcups?\b/.test(q) ? 'cup' : /\bleagues?\b/.test(q) ? 'league' : 'all'
   const teams = mentionedTeams(question, matches)
   const [team, opponent] = teams
   const sourceLink = { label: 'Explore match history', to: historyLink(team, opponent, season, scope) }
@@ -67,12 +68,28 @@ export function answerQuestion(question, matches, { today, season: selection = '
   if (/\bbefore yesterday\b/.test(q)) { const d = new Date(`${today}T12:00:00Z`); d.setUTCDate(d.getUTCDate()-2); through = d.toISOString().slice(0,10) }
   else if (/\bbefore today\b/.test(q)) { const d = new Date(`${today}T12:00:00Z`); d.setUTCDate(d.getUTCDate()-1); through = d.toISOString().slice(0,10) }
   else if (beforeDate && !Number.isNaN(Date.parse(beforeDate))) { const d = new Date(`${beforeDate}T12:00:00Z`); d.setUTCDate(d.getUTCDate()-1); through = d.toISOString().slice(0,10) }
-  if (/\b(since|between|before|after|in 20\d{2})\b/.test(q) && !beforeDate && !/\bbefore (today|yesterday)\b/.test(q)) return answer('For date comparisons, please use a season below, or write “before YYYY-MM-DD”. I cannot reliably apply that date range yet.')
+  if ((/\b(since|between|before|after)\b/.test(q) || (/\bin 20\d{2}\b/.test(q) && !explicitSeason)) && !beforeDate && !/\bbefore (today|yesterday)\b/.test(q)) return answer('For date comparisons, please include a season in your question, or write “before YYYY-MM-DD”. I cannot reliably apply that date range yet.')
   const scoped = ordered.filter(m => (!season || m.season?.replace('-', '/') === season) && (scope === 'all' || (scope === 'cup' ? /cup/i.test(m.competition_name || '') : /league/i.test(m.competition_name || '') && !/cup/i.test(m.competition_name || ''))))
   const eligible = scoped.filter(m => m.status === 'played' && m.home_score != null && m.away_score != null && matchDay(m) <= through)
   const rows = eligible.filter(m => (!team || hasTeam(m,team)) && (!opponent || hasTeam(m,opponent)))
   const datedContext = through !== today ? `${context} · Through ${dateLabel(through)}` : context
   const finish = (text, found = [], links = [sourceLink], extra = {}) => answer(text, found, links, { context: datedContext, ...extra })
+  if (aggregate && !/\b(who|player|players|scorer|scorers)\b/.test(q) && /\b(goals|matches|games)\b/.test(q) && !/\b(won|wins|lost|losses|draws|drew|clean sheets|unbeaten)\b/.test(q)) {
+    if (!rows.length) return finish('No completed, scored matches are available for this selection.')
+    const conceded = /\b(conceded|against|let in)\b/.test(q)
+    const goals = rows.reduce((sum,m) => {
+      const [home,away] = matchGoals(m)
+      if (!team) return sum + home + away
+      const isHome = canonical(m.home_team?.name) === canonical(team)
+      return sum + (conceded ? isHome ? away : home : isHome ? home : away)
+    },0)
+    const subject = team ? `${team}${opponent ? ` against ${opponent}` : ''}: ` : ''
+    if (/\b(average|per game|per match)\b/.test(q)) return finish(`${subject}${(goals/rows.length).toFixed(2)} goals ${team && conceded ? 'conceded' : 'scored'} per game (${goals.toLocaleString('en-GB')} goals across ${rows.length} completed matches).`, [], undefined, { totals:{goals,matches:rows.length} })
+    const text = /\bgoals\b/.test(q)
+      ? `${subject}${goals.toLocaleString('en-GB')} goals have been ${team && conceded ? 'conceded' : 'scored'} across ${rows.length} completed match${rows.length === 1 ? '' : 'es'}.`
+      : `${subject}${rows.length} completed match${rows.length === 1 ? '' : 'es'} are recorded, with ${goals.toLocaleString('en-GB')} goals${team ? conceded ? ' conceded' : ' scored' : ''}.`
+    return finish(text, [], undefined, { totals:{goals,matches:rows.length} })
+  }
   if (/\b(next|upcoming|coming up)\b/.test(q)) {
     const next = scoped.filter(m => m.status === 'scheduled' && matchDay(m) >= today && (!team || hasTeam(m,team)) && (!opponent || hasTeam(m,opponent))).reverse()
     return finish(next.length ? `${team || 'ECFA'}: the next recorded fixture is on ${dateLabel(matchDay(next[0]))}.` : 'No upcoming fixture is recorded for this selection.', next)

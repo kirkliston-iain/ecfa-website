@@ -36,3 +36,18 @@ assert.deepEqual(answerQuestion('When did St Marys last lose before yesterday?',
 assert.match(answerQuestion('What is Kirkliston’s unbeaten run?',matches,options).text,/Kirkliston Community Church have/)
 assert.match(answerQuestion('Who has the best defence this season?',matches.map(m=>({...m,season:m.season.replace('/', '-')})),options).text,/Kirkliston Community Church: 2/)
 console.log('Ask ECFA: aliases, historical seasons, date cutoffs, future fixtures, head-to-head, scope, ranking, shootouts, extra time and unsupported questions passed')
+
+// Regression: the user's ordinary aggregate question must calculate from match scores.
+const totals = answerQuestion('How many goals have been scored this season in all competitions?',matches,options)
+assert.equal(totals.totals.goals, 9)
+assert.equal(totals.totals.matches, 3)
+assert.match(totals.text,/9 goals have been scored across 3 completed matches/)
+assert.equal(answerQuestion('How many goals have been scored this season in all competitions?',[...matches,pen],options).totals.goals,11)
+assert.equal(answerQuestion('How many goals were scored in 2025/26?',matches,options).totals.goals,5)
+assert.equal(answerQuestion('How many goals have St Marys scored this season?',matches,options).totals.goals,6)
+assert.equal(answerQuestion('How many goals have St Marys conceded this season?',matches,options).totals.goals,3)
+assert.equal(answerQuestion('How many matches have been played this season?',matches,options).totals.matches,3)
+assert.match(answerQuestion('What is the average goals per game this season?',matches,options).text,/3.00 goals/)
+assert.equal(answerQuestion('How many goals have been scored all time?',matches,options).totals.goals,14)
+assert.equal(answerQuestion('How many goals have been scored this season in the cups?',[...matches,pen],options).totals.goals,2)
+console.log('Aggregate goal/match totals: current season, explicit season, all-time, cups, team scored/conceded and averages passed')
