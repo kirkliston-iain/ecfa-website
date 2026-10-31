@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict'
-import { normaliseMatches, analyseMatches, analyseScorers, resolveTeam } from '../server/ecfaAIRecords.mjs'
+import { normaliseMatches, analyseMatches, analyseScorers, resolveTeam } from '../server/ecfaRecords.mjs'
 import { acceptQuestion } from '../api/ask-ecfa.js'
 const fixture=(id,date,home,away,h,a,extra={})=>({id,fixture_date:date,status:'played',hidden_from_public:false,home_score:h,away_score:a,home_team:{name:home},away_team:{name:away},stage:{competition:{name:'Appin Sports League',season:'2026-27'}},...extra})
 const live=[fixture('a','2026-10-24','St Marys Metropolitan Church','Liberton Church',2,3),fixture('b','2026-10-17','St Marys Metropolitan Church','Kirkliston Community Church',3,0),fixture('hidden','2026-10-25','St Marys Metropolitan Church','Kirkliston Community Church',99,1,{hidden_from_public:true}),fixture('future','2026-11-14','Liberton Church','Kirkliston Community Church',null,null,{status:'scheduled'}),fixture('pen','2026-10-31','St Marys Metropolitan Church','Liberton Church',1,1,{decided_by_penalties:true,home_penalty_score:4,away_penalty_score:5,stage:{competition:{name:'League Cup',season:'2026/27'}}})]
@@ -30,4 +30,4 @@ assert.match(analyseScorers(scorerRows,{season:'all',scope:'cup'},today).error,/
 assert.throws(()=>acceptQuestion({question:'x'.repeat(501)}))
 assert.throws(()=>acceptQuestion({question:{prompt:'injected'}}))
 assert.equal(acceptQuestion({question:' Goals this season? '}),'Goals this season?')
-console.log('ECFA AI data tools: public-only rows, deduplication, totals, scopes, dates, aliases, streaks, rankings, shootouts, future fixtures, scorer coverage and request validation passed')
+console.log('ECFA record calculations: public-only rows, deduplication, totals, scopes, dates, aliases, streaks, rankings, shootouts, future fixtures, scorer coverage and request validation passed')

@@ -1,10 +1,9 @@
 import { createHash } from 'node:crypto'
-import { createRecordReader, todayLondon } from '../server/ecfaAIRecords.mjs'
-import { answerQuestion } from '../src/utils/askEcfa.mjs'
-import { runEcfaAI } from '../server/ecfaAIAgent.mjs'
+import { createRecordReader, todayLondon } from '../server/ecfaRecords.mjs'
+import { answerFromRecords } from '../server/recordAnswers.mjs'
 
-export const config = { maxDuration: 60 }
-// Bounded warm-instance caches reduce repeat costs. They are not a global quota.
+export const config = { maxDuration: 30 }
+// Short-lived answer cache and bounded request tracking for public record lookups.
 const requests=new Map(),answers=new Map()
 export function acceptQuestion(body) {
  const question=body?.question
@@ -23,31 +22,19 @@ export default async function handler(req,res) {
  const visitor=createHash('sha256').update(ip).digest('hex')
  if(requests.size>5000)requests.clear()
  const window=requests.get(visitor)
- if(window && now-window.start<600000 && window.count>=10){res.setHeader('Retry-After','60');return res.status(429).json({error:'Please wait a minute before asking another question.'})}
+ if(window && now-window.start<600000 && window.count>=30){res.setHeader('Retry-After','60');return res.status(429).json({error:'Please wait a minute before asking another question.'})}
  requests.set(visitor,window&&now-window.start<600000?{...window,count:window.count+1}:{start:now,count:1})
  const key=createHash('sha256').update(question.toLowerCase()).digest('hex'),cached=answers.get(key)
  if(cached&&now-cached.at<60000)return res.status(200).json(cached.result)
- const signal=AbortSignal.timeout(50000)
+ const signal=AbortSignal.timeout(25000)
  const reader=createRecordReader(signal)
  try {
-  const result=await runEcfaAI(question,reader,{today:todayLondon(),signal})
+  const result=await answerFromRecords(question,reader,{today:todayLondon(),signal})
   if(answers.size>=100)answers.clear()
   answers.set(key,{at:Date.now(),result})
   return res.status(200).json(result)
- } catch(error) {
-  // Log a short diagnostic, never tokens, request bodies or connection values.
-  const status=error.statusCode||error.status
-  const messages=[]
-  let cause=error
-  for(let i=0;cause&&i<4;i++,cause=cause.cause)messages.push(String(cause.message||''),String(cause.responseBody||''))
-  const raw=messages.join(' ')
-  const code=/customer_verification_required|payment method|credit card/i.test(raw)?'AI_PAYMENT_VERIFICATION_REQUIRED':/insufficient.funds|credits.*balance|quota_for_entity|budget.*exhaust|insufficient.*credit/i.test(raw)?'AI_CREDITS_REQUIRED':/unauthoriz|authentication|oidc|api key/i.test(raw)||status===401?'AI_AUTH_REQUIRED':'AI_UNAVAILABLE'
-  console.error('Ask ECFA AI unavailable',{type:error.name,status,code,reason:raw.replace(/(?:Bearer\s+|(?:key|token)[=: ]+)[^\s,]+/gi,'[redacted]').slice(0,350)})
-  // Preserve verified record calculations if a provider is unavailable, visibly labelled.
-  try {
-   const fallback=answerQuestion(question,await reader.get('matches'),{today:todayLondon()})
-   if(!/^(I cannot reliably|For date comparisons|Open Goalscorers)/.test(fallback.text))return res.status(200).json({...fallback,mode:'records',notice:'AI is temporarily unavailable. This answer uses ECFA’s recorded results.',connectionCode:code})
-  } catch { /* A failed data read must never produce an invented answer. */ }
-  return res.status(503).json({error:'AI answering is temporarily unavailable. Please try again later.',code})
+ } catch {
+  console.error('Ask ECFA public record lookup failed')
+  return res.status(503).json({error:'The ECFA records could not be loaded. Please try again shortly.'})
  }
 }
