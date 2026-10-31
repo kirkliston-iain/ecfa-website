@@ -40,10 +40,10 @@ export default function AskEcfa() {
     <div aria-live="polite" aria-busy={busy}>
       {busy && <p>Finding the records and preparing your answer…</p>}
       {error && <p role="alert">{error}</p>}
-      {result && <article className="ecfa-answer"><p className="ecfa-answer-context">{result.context}</p><h3>{latestQuestion.current}</h3><p className="ecfa-answer-text" style={{ whiteSpace: 'pre-wrap' }}>{result.text}</p>
+      {result && <article className="ecfa-answer">{result.notice && <p className="ecfa-answer-note">{result.notice}</p>}<p className="ecfa-answer-context">{result.context}</p><h3>{latestQuestion.current}</h3><p className="ecfa-answer-text" style={{ whiteSpace: 'pre-wrap' }}>{result.text}</p>
         {result.matches.map(m=><Link className="ecfa-answer-match" key={`${m.is_historic?'h':'l'}-${m.id}`} to={`/fixtures/${m.id}`}><span>{dateLabel(matchDay(m))} · {m.competition_name || 'Competition not recorded'}</span><strong>{m.home_team?.name} {m.status === 'played' ? m.is_historic ? historicDisplayedScore(m) : matchGoals(m).join(' – ') : 'v'} {m.away_team?.name}</strong>{!m.is_historic && outcomeNote(m) && <span>{outcomeNote(m)}</span>}<span>View match →</span></Link>)}
         <div className="ecfa-answer-links">{result.links.map(link=><Link key={link.to} to={link.to}>{link.label} →</Link>)}</div>
-        <p className="ecfa-answer-note">AI answer based on public ECFA records, checked {dateLabel(today())}. Check the linked sources; historical records may be incomplete.</p>
+        <p className="ecfa-answer-note">{result.mode === 'ai' ? 'AI answer based on' : 'Calculated from'} public ECFA records, checked {dateLabel(today())}. Check the linked sources; historical records may be incomplete.</p>
       </article>}
     </div>
     {!result && !busy && <p className="ecfa-answer-note">Include any season, competition or dates in your question.</p>}

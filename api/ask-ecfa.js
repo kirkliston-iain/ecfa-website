@@ -1,5 +1,6 @@
 import { createHash } from 'node:crypto'
 import { createRecordReader, todayLondon } from '../server/ecfaAIRecords.mjs'
+import { answerQuestion } from '../src/utils/askEcfa.mjs'
 import { runEcfaAI } from '../server/ecfaAIAgent.mjs'
 
 export const config = { maxDuration: 60 }
@@ -27,17 +28,26 @@ export default async function handler(req,res) {
  const key=createHash('sha256').update(question.toLowerCase()).digest('hex'),cached=answers.get(key)
  if(cached&&now-cached.at<60000)return res.status(200).json(cached.result)
  const signal=AbortSignal.timeout(50000)
+ const reader=createRecordReader(signal)
  try {
-  const result=await runEcfaAI(question,createRecordReader(signal),{today:todayLondon(),signal})
+  const result=await runEcfaAI(question,reader,{today:todayLondon(),signal})
   if(answers.size>=100)answers.clear()
   answers.set(key,{at:Date.now(),result})
   return res.status(200).json(result)
  } catch(error) {
   // Log a short diagnostic, never tokens, request bodies or connection values.
   const status=error.statusCode||error.status
-  const raw=String(error.message||'')
-  const setup=/customer_verification_required|verification|payment method|insufficient.funds|credits|quota_for_entity|unauthoriz|authentication|oidc|api key/i.test(raw)||[401,402,403].includes(status)
-  console.error('Ask ECFA AI unavailable',{type:error.name,status,setup,reason:raw.replace(/(?:Bearer\s+|(?:key|token)[=: ]+)[^\s,]+/gi,'[redacted]').slice(0,350)})
-  return res.status(503).json({error:setup?'The AI connection needs account setup before it can answer questions. Please try again later.':'The assistant could not finish that answer. Please try again or make the question more specific.',code:setup?'AI_SETUP_REQUIRED':'AI_UNAVAILABLE'})
+  const messages=[]
+  let cause=error
+  for(let i=0;cause&&i<4;i++,cause=cause.cause)messages.push(String(cause.message||''),String(cause.responseBody||''))
+  const raw=messages.join(' ')
+  const code=/customer_verification_required|payment method|credit card/i.test(raw)?'AI_PAYMENT_VERIFICATION_REQUIRED':/insufficient.funds|credits.*balance|quota_for_entity|budget.*exhaust|insufficient.*credit/i.test(raw)?'AI_CREDITS_REQUIRED':/unauthoriz|authentication|oidc|api key/i.test(raw)||status===401?'AI_AUTH_REQUIRED':'AI_UNAVAILABLE'
+  console.error('Ask ECFA AI unavailable',{type:error.name,status,code,reason:raw.replace(/(?:Bearer\s+|(?:key|token)[=: ]+)[^\s,]+/gi,'[redacted]').slice(0,350)})
+  // Preserve verified record calculations if a provider is unavailable, visibly labelled.
+  try {
+   const fallback=answerQuestion(question,await reader.get('matches'),{today:todayLondon()})
+   if(!/^(I cannot reliably|For date comparisons|Open Goalscorers)/.test(fallback.text))return res.status(200).json({...fallback,mode:'records',notice:'AI is temporarily unavailable. This answer uses ECFA’s recorded results.',connectionCode:code})
+  } catch { /* A failed data read must never produce an invented answer. */ }
+  return res.status(503).json({error:'AI answering is temporarily unavailable. Please try again later.',code})
  }
 }

@@ -223,7 +223,7 @@ story.append(card_grid([
     ('Current and historical players', 'Current squad records and historical scorer records can both appear.'),
     ('Direct navigation', 'Each result links to the most relevant team, player, competition or statistics page.'),
     ('Ask ECFA', 'Type a question in everyday language. The AI assistant uses read-only public records to answer questions about results, goals, team comparisons, streaks, upcoming fixtures, scorers, honours, referees, news, sponsors and the league handbook. Include any season, competition or dates in the question.'),
-    ('Check the evidence', 'Answers include links to the records used. Calculations run against matching public records; the assistant reports missing or incomplete coverage. Private contacts and referee portal records are excluded. There are no example buttons or filter menus. Questions have length and request limits; account or service problems show a clear error.'),
+    ('Check the evidence', 'Answers include links to the records used. Calculations run against matching public records; the assistant reports missing or incomplete coverage. Private contacts and referee portal records are excluded. There are no example buttons or filter menus. Questions have length and request limits. If AI is unavailable, supported match questions can still use recorded calculations, explicitly labelled; other questions show a service message.'),
 ]))
 story.append(PageBreak())
 
