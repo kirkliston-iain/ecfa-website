@@ -98,7 +98,7 @@ cover = Table([[p('ECFA WEBSITE', 'CoverSub')], [p('Public Features Guide', 'Cov
               ]))
 story += [Spacer(1, 35*mm), cover, Spacer(1, 18*mm)]
 story.append(Table([[p('WEBSITE', 'Smallx'), p('https://ecfa-website.vercel.app', 'CardTitle')],
-                    [p('GUIDE UPDATED', 'Smallx'), p('31 October 2026', 'CardTitle')]],
+                    [p('GUIDE UPDATED', 'Smallx'), p('1 November 2026', 'CardTitle')]],
                    colWidths=[35*mm, 125*mm], style=TableStyle([
                        ('BOX', (0,0), (-1,-1), 0.7, LINE), ('INNERGRID', (0,0), (-1,-1), 0.5, LINE),
                        ('BACKGROUND', (0,0), (0,-1), PALE), ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
@@ -222,8 +222,6 @@ story.append(card_grid([
     ('Pages and competitions', 'Search also returns relevant website pages and competition links.'),
     ('Current and historical players', 'Current squad records and historical scorer records can both appear.'),
     ('Direct navigation', 'Each result links to the most relevant team, player, competition or statistics page.'),
-    ('Ask ECFA', 'A question box answers common questions directly from public ECFA records, with no external AI service or AI usage charges. Ask about results, goal totals, scorers, team season summaries, recent form, unbeaten runs, previous meetings, upcoming fixtures, honours and public league information. Include any season, competition or dates in the question.'),
-    ('Check the evidence', 'Answers link to the records used and show the period covered. This is a record-based question tool with a defined range of supported questions, not an unrestricted chatbot. Unmatched names, unsupported questions and missing data are explained. Private contacts and referee portal data are excluded. There are no example buttons, filter menus or card requirements.'),
 ]))
 story.append(PageBreak())
 

@@ -1,4 +1,3 @@
-import AskEcfa from '../components/AskEcfa'
 import { useRememberedState, useRememberedScroll } from '../hooks/usePageMemory'
 import { useEffect, useMemo } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
@@ -178,9 +177,7 @@ export default function Search() {
 
   return (
     <div className="container reading-page" style={{ padding: '32px 20px 48px', maxWidth: 760 }}>
-      <h1 style={{ fontSize: 30, marginBottom: 4 }}>Search & Ask ECFA</h1>
-      <AskEcfa />
-      <h2 style={{ fontSize: 23, marginBottom: 8 }}>Search the website</h2>
+      <h1 style={{ fontSize: 30, marginBottom: 4 }}>Search</h1>
       <p style={{ color: 'var(--muted)', marginBottom: 22 }}>
         Find players, referees, teams, venues, competitions and pages across the ECFA website.
       </p>
