@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { supabase } from '../supabaseClient'
 import { londonToday } from '../utils/publicMatches'
@@ -15,7 +15,10 @@ export default function TeamReportDownload() {
   const initialMode = searchParams.get('mode') === 'season' || initialSeason !== seasons[0] ? 'season' : 'to-date'
   const [access,setAccess] = useState(null), [data,setData] = useState(null), [error,setError] = useState('')
   const [teamId,setTeamId] = useState(''), [mode,setMode] = useState(initialMode), [season,setSeason] = useState(initialSeason), [month,setMonth] = useState(initialSeason === seasons[0] || initialSeason === 'all' ? today.slice(0,7) : `${initialSeason.slice(0,4)}-07`), [competition,setCompetition] = useState('')
-  const [working,setWorking] = useState(false)
+  const [working,setWorking] = useState('')
+  const [preview,setPreview] = useState(null)
+  const previewUrls = useRef(new Set())
+  useEffect(()=>()=>{previewUrls.current.forEach(url=>URL.revokeObjectURL(url));previewUrls.current.clear()},[])
   useEffect(()=>{
     let active=true
     async function check(){
@@ -47,17 +50,30 @@ export default function TeamReportDownload() {
     if(!team||!data)return null
     try{return buildTeamAnalysis(data,team,{mode,season,month,today,competition,label})}catch{return null}
   },[team,data,mode,season,month,today,competition,label])
-  async function download(){
-    setWorking(true);setError('')
+  async function preparePdf(action){
+    if(working||!report?.stats.p)return
+    // Open during the click so mobile browsers do not block the viewer after awaits.
+    let viewer=null
+    setWorking(action);setError('')
     try{
+      if(action==='view'){
+        viewer=window.open('about:blank','_blank')
+        if(viewer){viewer.opener=null;viewer.document.title='Preparing team PDF';viewer.document.body.textContent='Preparing your team analysis PDF…'}
+      }
       if(!await canDownloadTeamPacks()) {setAccess(false);throw new Error('Please log in as a manager again.')}
       const {createTeamAnalysisPdf,loadTeamBadge,teamPackFilename}=await import('../utils/teamAnalysisPdf')
       const badge=await loadTeamBadge(team.logo_url)
       if(!badge)throw new Error('The team badge could not be loaded. Please try again so your pack includes the team logo.')
       if(!await canDownloadTeamPacks()){setAccess(false);throw new Error('Your manager session has ended. Please log in again.')}
-      createTeamAnalysisPdf(report,badge).save(teamPackFilename(report))
-      trackInteraction('download',`Team analysis PDF: ${team.name} / ${label} / ${competition||'All competitions'}`)
-    }catch(err){setError(err.message||'The PDF could not be created.')}finally{setWorking(false)}
+      const pdf=createTeamAnalysisPdf(report,badge)
+      if(action==='view'){
+        const url=URL.createObjectURL(pdf.output('blob'))
+        previewUrls.current.add(url)
+        setPreview({url,report})
+        if(viewer&&!viewer.closed)viewer.location.replace(url)
+      }else pdf.save(teamPackFilename(report))
+      trackInteraction(action==='view'?'view':'download',`Team analysis PDF: ${team.name} / ${label} / ${competition||'All competitions'}`)
+    }catch(err){if(viewer&&!viewer.closed)viewer.close();setError(err.message||'The PDF could not be created.')}finally{setWorking('')}
   }
   return <div className="container" style={{maxWidth:920,padding:'30px 20px 48px'}}>
     <Link to="/downloads">← Downloads</Link>
@@ -79,7 +95,11 @@ export default function TeamReportDownload() {
         {report&&<div style={{marginTop:20}}>
           <div style={{display:'flex',gap:14,alignItems:'center'}}>{team.logo_url&&<img src={team.logo_url} alt={`${team.name} badge`} style={{width:52,height:52,objectFit:'contain'}}/>}<div><strong>{team.name}</strong><div>{label} · {competition||'All competitions'}</div></div></div>
           <p>{report.stats.p} matches · {report.stats.w} wins · {report.stats.d} draws · {report.stats.l} losses · {report.stats.gf}-{report.stats.ga} goals</p>
-          <button style={button} onClick={download} disabled={working||!report.stats.p}>{working?'Creating your PDF…':'Download mobile-friendly PDF'}</button>
+          <div style={{display:'flex',gap:10,flexWrap:'wrap'}}>
+            <button style={button} onClick={()=>preparePdf('view')} disabled={!!working||!report.stats.p}>{working==='view'?'Preparing preview…':'View PDF'}</button>
+            <button style={{...button,background:'#fff',color:'var(--ink)',border:'1px solid var(--line)'}} onClick={()=>preparePdf('download')} disabled={!!working||!report.stats.p}>{working==='download'?'Creating your PDF…':'Download PDF'}</button>
+          </div>
+          {preview?.report===report&&<p role="status" style={{fontSize:14}}>PDF ready. <a href={preview.url} target="_blank" rel="noopener noreferrer">Open PDF viewer</a></p>}
           {!report.stats.p&&<p>No completed matches are recorded for this selection. Choose another period or competition.</p>}
         </div>}
       </section>
