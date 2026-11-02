@@ -126,15 +126,15 @@ export function createTeamAnalysisPdf(r,badge=null) {
       y+=h
     }
   }
-  function recordCards(rows,{ranked=false}={}) {
+  function recordCards(rows,{ranked=false,compact=false}={}) {
     if(!rows.length)return paragraph('No recorded matches for this selection.')
     for(const [i,row] of rows.entries()){
-      const ls=lines(`${ranked?`${i+1}. `:''}${row.name}`,CW-38,12.5,true),h=22+ls.length*5.5
+      const ls=lines(`${ranked?`${i+1}. `:''}${row.name}`,CW-38,12.5,true),h=(compact?16:22)+ls.length*5.5
       ensure(h+4);fill(C.paper,M,y,CW,h,2)
       text(ls,M+4,y+7,12.5,true);text(pct(row.win),W-M-4,y+7,12.5,true,C.green,{align:'right'})
       const yy=y+7+ls.length*5.5
-      text(`${row.p} played   ${row.w}W  ${row.d}D  ${row.l}L`,M+4,yy,11.5)
-      text(`Goals ${row.gf}-${row.ga}   GD ${row.gd>0?'+':''}${row.gd}`,M+4,yy+6,11.5,false,C.muted)
+      text(compact?`${row.w}W   ${row.d}D   ${row.l}L`:`${row.p} played   ${row.w}W  ${row.d}D  ${row.l}L`,M+4,yy,11.5)
+      if(!compact)text(`Goals ${row.gf}-${row.ga}   GD ${row.gd>0?'+':''}${row.gd}`,M+4,yy+6,11.5,false,C.muted)
       const barY=y+h-4, barW=CW-8
       fill(C.line,M+4,barY,barW,1.4)
       let x=M+4
@@ -230,16 +230,12 @@ export function createTeamAnalysisPdf(r,badge=null) {
   recordCards([...r.referees].sort((a,b)=>b.win-a.win||b.p-a.p),{ranked:true})
 
   start('Who brings the joy?')
-  if(r.joy?.w)callout('MOST SUCCESSFUL OPPONENT',`${r.joy.name}: ${r.joy.w} wins in ${r.joy.p} (${pct(r.joy.win)}).`,C.green)
-  else callout('MOST SUCCESSFUL OPPONENT','No qualifying winning record from at least two meetings.',C.green)
-  if(r.bogey?.l)callout('BOGEY TEAM',`${r.bogey.name}: ${r.bogey.w} wins, ${r.bogey.d} draws and ${r.bogey.l} defeats in ${r.bogey.p}.`,C.red)
-  else callout('BOGEY TEAM','No qualifying losing record from at least two meetings.',C.red)
-  paragraph('Highlights need at least two meetings. Full opponent records follow, including single meetings.',{size:11.5})
-  recordCards([...r.opponents].sort((a,b)=>b.win-a.win||b.p-a.p),{ranked:true})
+  paragraph('Win rate against each team. W = wins, D = draws, L = losses.',{size:12})
+  recordCards([...r.opponents].sort((a,b)=>b.win-a.win||b.p-a.p||a.name.localeCompare(b.name)),{compact:true})
 
-  start('The goalscorers')
+  start('Top 5 goalscorers')
   paragraph(`${r.recordedGoals} named-player goals across ${r.covered} of ${r.stats.p} matches. Scoring matches are not appearances.`,{size:12})
-  bars(r.players.slice(0,10).map((p,i)=>({label:p.name,value:p.goals,colour:i===0?theme.accent:C.teal})))
+  bars(r.players.slice(0,5).map((p,i)=>({label:p.name,value:p.goals,colour:i===0?theme.accent:C.teal})))
   if(r.players.length){const topTwo=r.players.slice(0,2).reduce((n,p)=>n+p.goals,0);callout('SHARE OF NAMED-PLAYER GOALS',`The top two scorers account for ${pct(topTwo/Math.max(1,r.recordedGoals)*100)} of recorded named-player goals.`,C.blue)}
 
   start('Player scoring detail')
@@ -296,7 +292,7 @@ export function createTeamAnalysisPdf(r,badge=null) {
   }
 
   start('Data & definitions')
-  r.warnings.forEach(w=>paragraph(w,{size:11.5}))
+  r.warnings.filter(w=>!w.startsWith('Opponent highlights')).forEach(w=>paragraph(w,{size:11.5}))
   paragraph(`Generated ${dateLabel(r.options.today)}. Source: recorded ECFA website data.`,{size:10.5})
   const total=doc.getNumberOfPages()
   for(let p=1;p<=total;p++){
