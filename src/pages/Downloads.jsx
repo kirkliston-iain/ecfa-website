@@ -3,6 +3,8 @@ import { Link } from 'react-router-dom'
 import * as XLSX from 'xlsx'
 import { supabase } from '../supabaseClient'
 import { trackInteraction } from '../utils/webAnalytics'
+import { reportSeasons } from '../utils/teamAnalysis'
+import { londonToday } from '../utils/publicMatches'
 
 const PAGE_SIZE = 1000
 const FEATURES_GUIDE_FILENAME = 'ECFA-Public-Website-Features-Guide.pdf'
@@ -219,6 +221,7 @@ const DOWNLOADS = [
 ]
 
 export default function Downloads() {
+  const lastSeason = reportSeasons(londonToday())[1]
   const [working, setWorking] = useState('')
   const [error, setError] = useState('')
   const [uploadedDownloads, setUploadedDownloads] = useState([])
@@ -381,7 +384,10 @@ export default function Downloads() {
             <div style={{ fontWeight: 700, marginBottom: 4 }}>Team analysis PDF · Managers</div>
             <div style={{ fontSize: 13, color: 'var(--muted)' }}>Detailed team-colour reports by month, current season to date or season. This season and last season only. Manager login required.</div>
           </div>
-          <Link to="/downloads/team-packs" style={{ ...buttonStyle, textDecoration: 'none' }}>Create team pack</Link>
+          <div style={{ display:'flex',gap:8,flexWrap:'wrap' }}>
+            <Link to="/downloads/team-packs" style={{ ...buttonStyle, textDecoration: 'none' }}>This season</Link>
+            <Link to={`/downloads/team-packs?season=${encodeURIComponent(lastSeason)}&mode=season`} style={{ ...buttonStyle, textDecoration: 'none' }}>{lastSeason} full-season pack</Link>
+          </div>
         </div>
       </section>
 

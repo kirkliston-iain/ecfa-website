@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
 import { supabase } from '../supabaseClient'
 import { londonToday } from '../utils/publicMatches'
 import { buildTeamAnalysis, normal, reportSeasons } from '../utils/teamAnalysis'
@@ -10,8 +10,11 @@ const control = { padding:'11px 12px',border:'1px solid var(--line)',borderRadiu
 const button = { padding:'12px 18px',border:0,borderRadius:8,background:'var(--ink)',color:'#fff',fontWeight:700,cursor:'pointer' }
 export default function TeamReportDownload() {
   const today = londonToday(), seasons = reportSeasons(today)
+  const [searchParams] = useSearchParams()
+  const initialSeason = seasons.includes(searchParams.get('season')) ? searchParams.get('season') : seasons[0]
+  const initialMode = searchParams.get('mode') === 'season' || initialSeason === seasons[1] ? 'season' : 'to-date'
   const [access,setAccess] = useState(null), [data,setData] = useState(null), [error,setError] = useState('')
-  const [teamId,setTeamId] = useState(''), [mode,setMode] = useState('to-date'), [season,setSeason] = useState(seasons[0]), [month,setMonth] = useState(today.slice(0,7)), [competition,setCompetition] = useState('')
+  const [teamId,setTeamId] = useState(''), [mode,setMode] = useState(initialMode), [season,setSeason] = useState(initialSeason), [month,setMonth] = useState(initialSeason === seasons[0] ? today.slice(0,7) : `${initialSeason.slice(0,4)}-07`), [competition,setCompetition] = useState('')
   const [working,setWorking] = useState(false)
   useEffect(()=>{
     let active=true
@@ -66,6 +69,12 @@ export default function TeamReportDownload() {
       <button style={button} onClick={()=>window.dispatchEvent(new Event('open-manager-gate'))}>Manager login</button>
     </section>:!data?<p role="status">Loading this season and last season's records…</p>:<>
       <section style={{padding:22,border:'1px solid var(--line)',borderRadius:12,background:'#fff'}}>
+        <div role="group" aria-label="Season packs" style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(210px,1fr))',gap:12,marginBottom:22}}>
+          {seasons.map((s,i)=><button key={s} type="button" aria-pressed={season===s&&mode===(i===0?'to-date':'season')} disabled={working} onClick={()=>{setSeason(s);setMode(i===0?'to-date':'season');setMonth(i===0?today.slice(0,7):`${s.slice(0,4)}-07`);setCompetition('')}} style={{...button,textAlign:'left',padding:16,background:season===s&&mode===(i===0?'to-date':'season')?'var(--ink)':'#f0f3f6',color:season===s&&mode===(i===0?'to-date':'season')?'#fff':'var(--ink)'}}>
+            <span style={{display:'block',fontSize:18}}>{s}</span>
+            <span style={{display:'block',marginTop:5,fontWeight:400}}>{i===0?'Current season to date':'Last season · Full-season pack'}</span>
+          </button>)}
+        </div>
         <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(210px,1fr))',gap:16}}>
           <label>Team<select style={control} value={teamId} onChange={e=>{setTeamId(e.target.value);setCompetition('')}}><option value="">Choose a team</option>{teams.map(t=><option key={t.id} value={t.id}>{t.name}</option>)}</select></label>
           <label>Report period<select style={control} value={mode} onChange={e=>{setMode(e.target.value);if(e.target.value==='to-date'){setSeason(seasons[0]);setMonth(today.slice(0,7));setCompetition('')}}}><option value="to-date">Current season to date</option><option value="month">Choose a month</option><option value="season">Choose a season</option></select></label>
@@ -81,7 +90,7 @@ export default function TeamReportDownload() {
         </div>}
       </section>
       <h2>Inside your pack</h2>
-      <p>Performance overview and commentary; attack and defence; form and monthly trends; home and away; competitions; venue and referee win rates; bogey teams and most successful opponents; player goals by opponent and competition; recorded discipline; last-season comparison; complete results and scoring registers.</p>
+      <p>Performance overview and commentary; attack and defence; form and monthly trends; home and away; competitions; venue and referee win rates; opponent win rates and W/D/L records; Top 5 goalscorers and player goals by opponent and competition; recorded discipline; last-season comparison; complete results and scoring registers.</p>
       <p style={{fontSize:13,color:'var(--muted)'}}>Only {seasons.join(' and ')} are available. Reports explain gaps in scorer and card coverage. Appearances, assists and other unrecorded statistics are not estimated.</p>
     </>}
   </div>
