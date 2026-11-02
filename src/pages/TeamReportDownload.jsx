@@ -59,7 +59,7 @@ export default function TeamReportDownload() {
   return <div className="container" style={{maxWidth:920,padding:'30px 20px 48px'}}>
     <Link to="/downloads">← Downloads</Link>
     <h1 style={{marginBottom:8}}>Team download packs</h1>
-    <p style={{color:'var(--muted)'}}>A detailed PDF analysis of results, venues, referees, opponents and individual scoring performance, in your team's colours.</p>
+    <p style={{color:'var(--muted)'}}>A phone-friendly portrait PDF with larger text, team colours, visual summaries and detailed performance analysis.</p>
     {error&&<p role="alert" style={{color:'#b3261e'}}>{error}</p>}
     {access===null?<p role="status">Checking manager access…</p>:!access?<section style={{padding:24,background:'#f0f3f6',borderRadius:12}}>
       <h2>Manager login required</h2><p>Log in with your manager code to choose a team and create a PDF pack.</p>
@@ -76,7 +76,7 @@ export default function TeamReportDownload() {
         {report&&<div style={{marginTop:20}}>
           <div style={{display:'flex',gap:14,alignItems:'center'}}>{team.logo_url&&<img src={team.logo_url} alt={`${team.name} badge`} style={{width:52,height:52,objectFit:'contain'}}/>}<div><strong>{team.name}</strong><div>{label} · {competition||'All competitions'}</div></div></div>
           <p>{report.stats.p} matches · {report.stats.w} wins · {report.stats.d} draws · {report.stats.l} losses · {report.stats.gf}-{report.stats.ga} goals</p>
-          <button style={button} onClick={download} disabled={working||!report.stats.p}>{working?'Creating your PDF…':'Download analysis PDF'}</button>
+          <button style={button} onClick={download} disabled={working||!report.stats.p}>{working?'Creating your PDF…':'Download mobile-friendly PDF'}</button>
           {!report.stats.p&&<p>No completed matches are recorded for this selection. Choose another period or competition.</p>}
         </div>}
       </section>

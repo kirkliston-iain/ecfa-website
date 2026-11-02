@@ -1,166 +1,312 @@
 import { jsPDF } from 'jspdf'
 import { TEAM_KITS } from './simulatorKits.js'
+import { regularFont, boldFont } from './teamPackFonts.js'
+import { summary } from './teamAnalysis.js'
 
-const ink = '#17232b', muted = '#52616b', pale = '#f0f3f6'
-const fmt = n => Number(n).toFixed(1)
-const clean = v => String(v ?? '').replace(/[–—]/g,'-').replace(/[’]/g,"'").replace(/[^\x20-\x7e\n]/g,'')
+const C = { ink:'#172a43', muted:'#566778', paper:'#f8fafc', line:'#dce5ed', green:'#138363', amber:'#c28a20', red:'#cb5260', teal:'#008b98', blue:'#3465ad' }
+const pct = n => `${Number(n).toFixed(1)}%`
+const fixed = n => Number(n).toFixed(2)
+const clean = value => String(value ?? '').replace(/[–—]/g,'-').replace(/[^\x20-\xff\u2010-\u201f\u2022\n]/g,'')
+const dateLabel = value => value ? new Date(`${value.slice(0,10)}T12:00:00Z`).toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'}) : 'Date not recorded'
+const monthLabel = value => new Date(`${value}-01T12:00:00Z`).toLocaleDateString('en-GB',{month:'short',year:'2-digit'})
+const mix = (hex,amount=.9) => '#'+hex.replace('#','').match(/../g).map(v=>Math.round(parseInt(v,16)*(1-amount)+255*amount).toString(16).padStart(2,'0')).join('')
+const resultColour = result => ({W:C.green,D:C.amber,L:C.red}[result] || C.muted)
+export const TEAM_PACK_PAGE = { width:144, height:240, bodyFont:13, tableFont:11.5 }
 export function teamPackTheme(name) {
   const base = TEAM_KITS[name]
-  const kit = ['The Mission','South East Saints','Ladywell Baptist Church'].includes(name) ? (base?.second || base) : base
-  const colour = kit?.colour || '#224b65'
-  return { colour, text: kit?.text || '#ffffff' }
+  const kit = ['The Mission','South East Saints','Ladywell Baptist Church'].includes(name) ? base?.second || base : base
+  const primary = kit?.colour || C.blue
+  const neutral = ['black','white','grey'].includes(kit?.family)
+  return { colour:primary, text:kit?.text || '#fff', accent:neutral?'#c89435':primary, pale:mix(neutral?'#c89435':primary), dark:C.ink }
 }
 export async function loadTeamBadge(url) {
   if (!url) return null
   try {
-    const response = await fetch(url, { signal: AbortSignal.timeout(12000) })
+    const response = await fetch(url, { signal:AbortSignal.timeout(12000) })
     if (!response.ok) return null
-    const blob = await response.blob()
-    const bitmap = await createImageBitmap(blob)
-    const canvas = document.createElement('canvas'); canvas.width = 240; canvas.height = 240
-    const ctx = canvas.getContext('2d'), scale = Math.min(220/bitmap.width,220/bitmap.height)
-    ctx.drawImage(bitmap,(240-bitmap.width*scale)/2,(240-bitmap.height*scale)/2,bitmap.width*scale,bitmap.height*scale)
+    const bitmap = await createImageBitmap(await response.blob())
+    const canvas = document.createElement('canvas'); canvas.width=320; canvas.height=320
+    const scale=Math.min(300/bitmap.width,300/bitmap.height)
+    canvas.getContext('2d').drawImage(bitmap,(320-bitmap.width*scale)/2,(320-bitmap.height*scale)/2,bitmap.width*scale,bitmap.height*scale)
     bitmap.close()
     return canvas.toDataURL('image/png')
   } catch { return null }
 }
-export function createTeamAnalysisPdf(r, badge = null) {
-  const doc = new jsPDF({ orientation:'landscape', unit:'mm', format:'a4', compress:true })
-  const theme = teamPackTheme(r.team.name), margin = 15, width = 267
-  const period = r.options.label
-  let y = 0, page = 0
-  const font = (size=10,bold=false,colour=ink) => { doc.setFont('helvetica',bold?'bold':'normal');doc.setFontSize(size);doc.setTextColor(colour) }
-  const text = (s,x,yy,size=10,bold=false,colour=ink) => {font(size,bold,colour);doc.text(Array.isArray(s)?s.map(clean):clean(s),x,yy)}
-  function addPage(title, subtitle='') {
-    if (page++) doc.addPage()
-    doc.setFillColor(theme.colour);doc.rect(0,0,297,3,'F')
-    text('ECFA / TEAM ANALYSIS',margin,12,8,true,muted)
-    text(r.team.name,margin,24,18,true)
-    if (badge) doc.addImage(badge,'PNG',263,6,20,20)
-    text(doc.splitTextToSize(clean(`${period} | ${r.options.competition || 'All competitions'}`),240),margin,31,8,false,muted)
-    text(title,margin,45,16,true)
-    y=53
-    if(subtitle) paragraph(subtitle,8)
+export function createTeamAnalysisPdf(r,badge=null) {
+  const {width:W,height:H}=TEAM_PACK_PAGE, M=10, CW=W-2*M, bottom=224
+  const doc=new jsPDF({orientation:'portrait',unit:'mm',format:[W,H],compress:true,putOnlyUsedFonts:true})
+  doc.addFileToVFS('TeamPack-Regular.ttf',regularFont);doc.addFont('TeamPack-Regular.ttf','TeamPack','normal')
+  doc.addFileToVFS('TeamPack-Bold.ttf',boldFont);doc.addFont('TeamPack-Bold.ttf','TeamPack','bold')
+  const theme=teamPackTheme(r.team.name)
+  let y=0, page=0, section=''
+  const font=(size=13,bold=false,colour=C.ink)=>{doc.setFont('TeamPack',bold?'bold':'normal');doc.setFontSize(size);doc.setTextColor(colour)}
+  const text=(value,x,yy,size=13,bold=false,colour=C.ink,options={})=>{font(size,bold,colour);doc.text(Array.isArray(value)?value.map(clean):clean(value),x,yy,{lineHeightFactor:1.25,...options})}
+  const lines=(value,width=CW,size=13,bold=false)=>{font(size,bold);return doc.splitTextToSize(clean(value),width)}
+  const lineHeight=size=>size*.3528*1.25
+  const fill=(colour,x,yy,w,h,radius=0)=>{doc.setFillColor(colour);if(radius)doc.roundedRect(x,yy,w,h,radius,radius,'F');else doc.rect(x,yy,w,h,'F')}
+  function newPage(title=section,continuation=false) {
+    if(page++)doc.addPage([W,H],'portrait')
+    section=title
+    fill('#ffffff',0,0,W,H);fill(theme.colour,0,0,W,3)
+    text('ECFA / TEAM ANALYSIS',M,10,8.5,true,C.muted)
+    const teamLines=lines(r.team.name,CW-18,9,true)
+    text(teamLines,M,16,9,true)
+    if(badge)doc.addImage(badge,'PNG',W-M-14,7,14,14)
+    const titleLines=lines(title,CW,21,true)
+    text(titleLines,M,31,21,true)
+    y=31+(titleLines.length-1)*lineHeight(21)+8
+    fill(theme.accent,M,y-2,17,1)
+    y+=5
+    if(continuation){text('CONTINUED',M,y,8.5,true,C.muted);y+=7}
   }
-  function ensure(height=12) { if(y+height>190) addPage('Continued') }
-  function paragraph(s,size=9) {
-    font(size,false,muted)
-    const lines=doc.splitTextToSize(clean(s),width)
-    for(const line of lines){ensure(5);text(line,margin,y,size,false,muted);y+=4.8}
-    y+=3
+  function start(title) {if(page>1&&y<110){section=title;heading(title,35)}else newPage(title)}
+  function ensure(h) {if(y+h>bottom)newPage(section,true)}
+  function paragraph(value,{size=13,colour=C.muted,gap=5}={}) {
+    const ls=lines(value,CW,size)
+    for(const l of ls){ensure(lineHeight(size)+1);text(l,M,y,size,false,colour);y+=lineHeight(size)}
+    y+=gap
   }
-  function heading(s) {ensure(16);y+=3;text(s,margin,y,11,true);y+=7}
-  function table(headers, rows, widths) {
-    const ws=widths || headers.map(()=>width/headers.length)
-    function row(cells,header=false,index=0) {
-      font(header?8:8,false)
-      const lines=cells.map((v,i)=>doc.splitTextToSize(clean(v),ws[i]-5))
-      const height=Math.max(8, Math.max(...lines.map(l=>l.length))*3.8+4)
-      if(y+height>189){ addPage('Detailed analysis / continued'); if(!header)row(headers,true) }
-      let x=margin
-      doc.setFillColor(header?theme.colour:index%2?pale:'#ffffff');doc.rect(margin,y,width,height,'F')
-      lines.forEach((line,i)=>{text(line,x+2.5,y+5,8,header,header?theme.text:ink);x+=ws[i]})
-      y+=height
+  function heading(title,keep=20) {const ls=lines(title,CW,14,true);ensure(keep+ls.length*6);text(ls,M,y+1,14,true);y+=ls.length*6+4}
+  function callout(label,body,colour=theme.accent) {
+    const labelLines=lines(label,CW-10,11,true), bodyLines=lines(body,CW-10,12.5)
+    const height=10+labelLines.length*5+bodyLines.length*5.6
+    ensure(height+4);fill(mix(colour,.92),M,y,CW,height,2);fill(colour,M,y,1.2,height)
+    text(labelLines,M+5,y+7,11,true,colour)
+    text(bodyLines,M+5,y+8+labelLines.length*5,12.5,false,C.ink)
+    y+=height+5
+  }
+  function statTiles(items,{dark=false}={}) {
+    const cardW=(CW-4)/2, cardH=29
+    const height=Math.ceil(items.length/2)*(cardH+4)
+    ensure(height)
+    items.forEach(([label,value,colour],i)=>{
+      const x=M+(i%2)*(cardW+4),yy=y+Math.floor(i/2)*(cardH+4)
+      fill(dark?'#233c58':mix(colour||theme.accent,.93),x,yy,cardW,cardH,2)
+      fill(colour||theme.accent,x,yy,cardW,1)
+      text(value,x+4,yy+12,23,true,dark?'#fff':colour||C.ink)
+      text(lines(label,cardW-8,10.5),x+4,yy+21,10.5,false,dark?'#d6e2ee':C.muted)
+    });y+=height+2
+  }
+  function table(headers,rows,widths) {
+    function draw(cells,head=false,index=0) {
+      const ls=cells.map((v,i)=>lines(v,widths[i]-5,11.5,head))
+      const h=Math.max(9.2,Math.max(...ls.map(v=>v.length))*5.1+4)
+      if(y+h>bottom){newPage(section,true);if(!head)draw(headers,true)}
+      fill(head?theme.dark:index%2?C.paper:'#ffffff',M,y,CW,h)
+      let x=M
+      ls.forEach((l,i)=>{text(l,x+2.5,y+6,11.5,head,head?'#fff':C.ink);x+=widths[i]})
+      y+=h
     }
-    row(headers,true)
-    if (!rows.length) {paragraph('No records are available for this selection.');return}
-    rows.forEach((cells,i)=>row(cells,false,i));y+=5
+    ensure(24);draw(headers,true)
+    if(!rows.length)paragraph('No records for this selection.')
+    else rows.forEach((row,i)=>draw(row,false,i))
+    y+=6
   }
-  function recordTable(rows) {
-    table(['Name','P','W','D','L','Win %','GF','GA','GD'],rows.map(v=>[v.name,v.p,v.w,v.d,v.l,fmt(v.win)+'%',v.gf,v.ga,v.gd]),[99,18,18,18,18,30,22,22,22])
+  function resultStrip(matches) {
+    const last=matches.slice(-10)
+    heading(`Recent form / last ${last.length}`,19)
+    if(!last.length)return paragraph('No completed matches.')
+    last.forEach((f,i)=>{const x=M+i*(CW/10);fill(resultColour(f.result),x,y,10,10,1);text(f.result,x+5,y+6.8,12,true,'#fff',{align:'center'})})
+    y+=17
+    text('Oldest to newest  ·  W win  D draw  L loss',M,y,9.5,false,C.muted);y+=10
   }
-  function bars(title, rows, suffix='', colour=theme.colour) {
-    heading(title)
-    if(!rows.length){paragraph('No recorded data.');return}
-    const max=suffix==='%'?100:Math.max(1,...rows.map(v=>v.value))
-    rows.forEach(v=>{ensure(11);font(8);const label=doc.splitTextToSize(clean(v.label),76);const h=Math.max(10,label.length*4+2);ensure(h)
-      text(label,margin,y+3,8)
-      doc.setFillColor(pale);doc.roundedRect(96,y-1,155,5,1,1,'F')
-      if(v.value>0){doc.setFillColor(colour);doc.roundedRect(96,y-1,155*v.value/max,5,1,1,'F')}
-      text(`${v.display ?? v.value}${suffix}`,256,y+3,8,true);y+=h
-    });y+=3
+  function legend(items) {
+    let x=M
+    items.forEach(([label,colour])=>{fill(colour,x,y-2.5,3,3);text(label,x+5,y,9.5,false,C.muted);font(9.5);x+=doc.getTextWidth(clean(label))+11})
+    y+=7
   }
-  function cards(items) {
-    const cardW=(width-15)/4
-    items.forEach(([label,value],i)=>{const x=margin+(i%4)*(cardW+5), yy=y+Math.floor(i/4)*27
-      doc.setFillColor(pale);doc.roundedRect(x,yy,cardW,23,2,2,'F')
-      text(value,x+4,yy+10,19,true);text(label,x+4,yy+18,8,false,muted)
-    });y+=Math.ceil(items.length/4)*27+3
+  function bars(rows,{max=null,suffix='',colours=null}={}) {
+    const maximum=max||Math.max(1,...rows.map(row=>row.value))
+    for(const row of rows){
+      const ls=lines(row.label,CW-20,12,true),h=ls.length*5.4+10
+      ensure(h);text(ls,M,y+1,12,true);text(row.display??`${row.value}${suffix}`,W-M,y+1,12,true,row.colour||C.ink,{align:'right'})
+      const by=y+ls.length*5.4
+      fill(C.paper,M,by,CW,4,1)
+      if(row.value>0)fill(row.colour||colours||theme.accent,M,by,Math.max(.5,CW*Math.min(1,row.value/maximum)),4,1)
+      y+=h
+    }
   }
-  addPage('Performance at a glance','Results, patterns and player contributions from recorded ECFA matches.')
-  cards([['Matches',r.stats.p],['Wins / draws / losses',`${r.stats.w} / ${r.stats.d} / ${r.stats.l}`],['Win rate',fmt(r.stats.win)+'%'],['Goal difference',r.stats.gd>0?'+'+r.stats.gd:r.stats.gd],['Goals scored',r.stats.gf],['Goals conceded',r.stats.ga],['Goals per match',r.stats.gfpg.toFixed(2)],['Clean sheets',r.stats.cs]])
-  heading('Standout findings');r.findings.forEach(f=>paragraph(f))
-  paragraph(`Coverage: ${r.bounds.start} to ${r.bounds.end}. Generated ${r.options.today}. Recent form: ${r.matches.slice(-8).map(f=>f.result).join(' ') || 'No matches'}.`)
+  function recordCards(rows,{ranked=false}={}) {
+    if(!rows.length)return paragraph('No recorded matches for this selection.')
+    for(const [i,row] of rows.entries()){
+      const ls=lines(`${ranked?`${i+1}. `:''}${row.name}`,CW-38,12.5,true),h=22+ls.length*5.5
+      ensure(h+4);fill(C.paper,M,y,CW,h,2)
+      text(ls,M+4,y+7,12.5,true);text(pct(row.win),W-M-4,y+7,12.5,true,C.green,{align:'right'})
+      const yy=y+7+ls.length*5.5
+      text(`${row.p} played   ${row.w}W  ${row.d}D  ${row.l}L`,M+4,yy,11.5)
+      text(`Goals ${row.gf}-${row.ga}   GD ${row.gd>0?'+':''}${row.gd}`,M+4,yy+6,11.5,false,C.muted)
+      const barY=y+h-4, barW=CW-8
+      fill(C.line,M+4,barY,barW,1.4)
+      let x=M+4
+      for(const [value,colour] of [[row.w,C.green],[row.d,C.amber],[row.l,C.red]]){if(value&&row.p){const w=barW*value/row.p;fill(colour,x,barY,w,1.4);x+=w}}
+      y+=h+4
+    }
+  }
+  function lineChart(series,labels,{max=100,height=49}={}) {
+    const chartH=height,chartW=CW-13,x=M+12
+    ensure(chartH+21)
+    const top=y+3
+    for(let tick=0;tick<=max;tick+=max/4){const yy=top+chartH-chartH*tick/max;doc.setDrawColor(C.line);doc.setLineWidth(.2);doc.line(x,yy,x+chartW,yy);text(Math.round(tick),x-2,yy+1,8.5,false,C.muted,{align:'right'})}
+    for(const s of series){doc.setDrawColor(s.colour);doc.setLineWidth(.9);s.values.forEach((v,i)=>{const xx=x+(labels.length>1?i/(labels.length-1):.5)*chartW,yy=top+chartH-v/max*chartH;if(i){const px=x+(i-1)/(labels.length-1)*chartW,py=top+chartH-s.values[i-1]/max*chartH;doc.line(px,py,xx,yy)}doc.setFillColor(s.colour);doc.circle(xx,yy,.85,'F')})}
+    labels.forEach((label,i)=>{if(i===0||i===labels.length-1||i===Math.floor(labels.length/2)){const xx=x+(labels.length>1?i/(labels.length-1):.5)*chartW;text(label,xx,top+chartH+6,9,false,C.muted,{align:'center'})}})
+    y=top+chartH+14
+  }
 
-  addPage('Attack, defence and consistency')
-  cards([['Scoring matches',r.stats.scored],['Failed to score',r.stats.blank],['Conceded 2+',r.stats.conceded2],['Both teams scored',r.stats.btts],['Clean-sheet rate',r.stats.p?fmt(r.stats.cs/r.stats.p*100)+'%':'N/A'],['Conceded per match',r.stats.gapg.toFixed(2)],['Games with 3+ goals',r.stats.over25],['Scored in %',r.stats.p?fmt(r.stats.scored/r.stats.p*100)+'%':'N/A']])
-  table(['Longest run within selection','Matches'],Object.entries({ 'Winning':r.streaks.winning,'Unbeaten':r.streaks.unbeaten,'Losing':r.streaks.losing,'Scoring':r.streaks.scoring,'Clean sheets':r.streaks.clean }),[225,42])
+  // Cover: a narrow digital booklet, designed to fit a phone at page width.
+  page++;fill(theme.dark,0,0,W,H);fill(theme.colour,0,0,W,5)
+  fill(theme.accent,M,14,18,1.5);text('ECFA / MANAGER EDITION',M,24,10,true,'#d6e2ee')
+  if(badge){fill('#fff',W-M-27,31,27,27,3);doc.addImage(badge,'PNG',W-M-26,32,25,25)}
+  const teamLines=lines(r.team.name,CW-(badge?33:0),23,true)
+  text(teamLines,M,39,23,true,'#fff')
+  y=Math.max(65,39+(teamLines.length-1)*lineHeight(23)+13)
+  text('TEAM ANALYSIS',M,y,12,true,theme.accent);y+=8
+  const periodLines=lines(r.options.label,CW,13,true);text(periodLines,M,y,13,true,'#fff');y+=periodLines.length*6+2
+  const compLines=lines(r.options.competition||'All competitions',CW,10.5);text(compLines,M,y,10.5,false,'#d6e2ee');y+=compLines.length*5+7
+  statTiles([['Matches',r.stats.p,theme.accent],['Win rate',pct(r.stats.win),C.teal],['Wins / draws / losses',`${r.stats.w}-${r.stats.d}-${r.stats.l}`,theme.accent],['Goal difference',`${r.stats.gd>0?'+':''}${r.stats.gd}`,C.teal],['Goals scored',r.stats.gf,C.green],['Goals conceded',r.stats.ga,C.red]],{dark:true})
+  text(`${dateLabel(r.bounds.start)} - ${dateLabel(r.bounds.end)}`,M,226,9.5,false,'#d6e2ee')
+
+  start('The story so far')
+  paragraph(`${r.stats.w} ${r.stats.w===1?'win':'wins'}, ${r.stats.d} ${r.stats.d===1?'draw':'draws'} and ${r.stats.l} ${r.stats.l===1?'defeat':'defeats'} from ${r.stats.p} matches. The team has scored ${r.stats.gf} and conceded ${r.stats.ga}, with ${fixed(r.stats.gfpg)} goals for and ${fixed(r.stats.gapg)} against per game.`)
+  const bestVenue=r.venues.filter(v=>v.name!=='Not recorded'&&v.p>=2).sort((a,b)=>b.win-a.win||b.p-a.p)[0]
+  if(bestVenue)callout('STRONGEST RECORDED VENUE',`${bestVenue.name}: ${bestVenue.w} wins from ${bestVenue.p} (${pct(bestVenue.win)}).`,C.teal)
+  if(r.players.length)callout('LEADING RECORDED SCORER',`${r.players[0].name}: ${r.players[0].goals} goals in ${r.players[0].scoringMatches} scoring matches.`,theme.accent)
+  callout('ATTACK AND DEFENCE',`${r.stats.scored} of ${r.stats.p} matches with a goal. ${r.stats.cs} clean ${r.stats.cs===1?'sheet':'sheets'}; ${r.stats.conceded2} games conceding two or more.`,C.blue)
+  resultStrip(r.matches)
+
+  start('Form & momentum')
+  legend([['Overall win %',C.blue],['Last 6 games*',theme.accent]])
+  const cumulative=r.matches.map((_,i)=>summary(r.matches.slice(0,i+1)).win)
+  const rolling=r.matches.map((_,i)=>summary(r.matches.slice(Math.max(0,i-5),i+1)).win)
+  lineChart([{values:cumulative,colour:C.blue},{values:rolling,colour:theme.accent}],r.matches.map((_,i)=>String(i+1)))
+  paragraph('*Rolling form uses up to six matches. The horizontal axis is match number within your selection.',{size:10.5})
+  if(r.matches.length>=2){
+    const split=Math.floor(r.matches.length/2),a=summary(r.matches.slice(0,split)),b=summary(r.matches.slice(split))
+    heading('First half vs second half',60)
+    table(['Metric',`First ${a.p}`,`Last ${b.p}`],[['Win rate',pct(a.win),pct(b.win)],['Goals / game',fixed(a.gfpg),fixed(b.gfpg)],['Against / game',fixed(a.gapg),fixed(b.gapg)]],[58,33,33])
+    const change=b.win-a.win
+    paragraph(`Win rate ${change>=0?'rose':'fell'} by ${Math.abs(change).toFixed(1)} percentage points between the two parts of this selection.`,{size:12})
+  }
+  paragraph(`Longest runs in this selection: ${r.streaks.winning} wins, ${r.streaks.unbeaten} unbeaten, ${r.streaks.losing} defeats, ${r.streaks.scoring} scoring games and ${r.streaks.clean} clean sheets.`,{size:12})
+
+  start('Goals & consistency')
+  statTiles([['Scored / game',fixed(r.stats.gfpg),C.teal],['Conceded / game',fixed(r.stats.gapg),C.red],['Clean sheets',r.stats.cs,C.green],['Failed to score',r.stats.blank,C.amber]])
+  const denomin=Math.max(1,r.stats.p)
+  bars([{label:'Scored in a match',value:r.stats.scored/denomin*100,display:`${Math.round(r.stats.scored/denomin*100)}%`,colour:C.teal},{label:'Both teams scored',value:r.stats.btts/denomin*100,display:`${Math.round(r.stats.btts/denomin*100)}%`,colour:C.blue},{label:'Three or more total goals',value:r.stats.over25/denomin*100,display:`${Math.round(r.stats.over25/denomin*100)}%`,colour:theme.accent}],{max:100})
   const biggestWin=[...r.matches].filter(f=>f.result==='W').sort((a,b)=>(b.gf-b.ga)-(a.gf-a.ga)||b.gf-a.gf)[0]
   const biggestLoss=[...r.matches].filter(f=>f.result==='L').sort((a,b)=>(b.ga-b.gf)-(a.ga-a.gf)||b.ga-a.ga)[0]
-  if(biggestWin)paragraph(`Biggest win: ${biggestWin.gf}-${biggestWin.ga} v ${biggestWin.opponent}, ${biggestWin.date}.`)
-  if(biggestLoss)paragraph(`Heaviest defeat: ${biggestLoss.gf}-${biggestLoss.ga} v ${biggestLoss.opponent}, ${biggestLoss.date}.`)
-  bars('Most common scorelines (team goals first)',r.scorelines.slice(0,6).map(v=>({label:v.name,value:v.p})))
+  if(biggestWin)callout('BIGGEST WIN',`${biggestWin.gf}-${biggestWin.ga} v ${biggestWin.opponent} · ${dateLabel(biggestWin.date)}`,C.green)
+  if(biggestLoss)callout('HEAVIEST DEFEAT',`${biggestLoss.gf}-${biggestLoss.ga} v ${biggestLoss.opponent} · ${dateLabel(biggestLoss.date)}`,C.red)
+  start('Scorelines & margins')
+  heading('How the results landed',25)
+  const margins=[['Won by 3+',f=>f.gf-f.ga>=3],['Won by 2',f=>f.gf-f.ga===2],['Won by 1',f=>f.gf-f.ga===1],['Drawn',f=>f.gf===f.ga],['Lost by 1',f=>f.ga-f.gf===1],['Lost by 2',f=>f.ga-f.gf===2],['Lost by 3+',f=>f.ga-f.gf>=3]]
+  table(['Match margin','Games','Share'],margins.map(([label,test])=>{const n=r.matches.filter(test).length;return [label,n,pct(n/Math.max(1,r.stats.p)*100)]}),[68,25,31])
+  heading('Most common scorelines',25)
+  table(['Team score first','Games'],r.scorelines.slice(0,6).map(v=>[v.name,v.p]),[98,26])
 
-  addPage('Form and monthly trends','Monthly totals reflect only matches inside the selected period.')
-  recordTable(r.months)
-  // Paired vector bars retain legibility when a season contains many matches.
-  bars('Goals scored by month',r.months.map(v=>({label:v.name,value:v.gf})))
-  bars('Goals conceded by month',r.months.map(v=>({label:v.name,value:v.ga})), '', '#8c4c49')
-  addPage('Home, away and competitions','Home and away refer to fixture designation. League points below are match points before any deductions, not an official table.')
-  recordTable(r.homeAway);heading('Competition records');recordTable(r.competitions)
+  start('Month by month')
+  legend([['Goals for',C.teal],['Goals against',C.red]])
+  const maximum=Math.max(1,...r.months.flatMap(m=>[m.gf,m.ga]))
+  for(const month of r.months){
+    ensure(46)
+    text(monthLabel(month.name),M,y,14,true);text(`${month.w}W ${month.d}D ${month.l}L`,W-M,y,12,true,C.ink,{align:'right'});y+=8
+    for(const [value,colour] of [[month.gf,C.teal],[month.ga,C.red]]){fill(C.paper,M,y,CW-14,4);if(value)fill(colour,M,y,(CW-14)*value/maximum,4);text(value,W-M,y+3.8,11,true,colour,{align:'right'});y+=7}
+    text(`${pct(month.win)} win rate  ·  ${month.p} matches`,M,y+1,11.5,false,C.muted);y+=13
+  }
+  if(r.months.length){const best=[...r.months].sort((a,b)=>b.win-a.win||b.p-a.p)[0];callout('BEST MONTH BY WIN RATE',`${monthLabel(best.name)}: ${best.w} wins in ${best.p}, ${best.gf} scored and ${best.ga} conceded.`,C.teal)}
+
+  start('Home, away & cups')
+  paragraph('Home and away follow the fixture designation. Shared grounds may not represent a home advantage.',{size:12})
+  recordCards(r.homeAway)
+  heading('Each competition',45);recordCards(r.competitions)
   const leagues=r.competitions.filter(c=>/league/i.test(c.name)&&!/cup/i.test(c.name))
-  if(leagues.length)paragraph(leagues.map(l=>`${l.name}: ${l.w*3+l.d} match points from ${l.p} games.`).join(' '))
+  for(const league of leagues)paragraph(`${league.name}: ${league.w*3+league.d} match points before deductions. This is not the official table.`,{size:11.5})
 
-  addPage('Venue performance','Compare win rates alongside sample sizes. Missing venue records are shown separately.')
-  recordTable(r.venues)
-  bars('Venue win rate',r.venues.filter(v=>v.name!=='Not recorded').map(v=>({label:`${v.name} (${v.p} games)`,value:v.win,display:fmt(v.win)})),'%')
-  addPage('Results with each referee','Descriptive match results only. Differences do not establish referee influence; sample sizes and opponent strength matter.')
-  recordTable(r.referees)
-  bars('Referee win rate',r.referees.filter(v=>v.name!=='Not recorded').map(v=>({label:`${v.name} (${v.p} games)`,value:v.win,display:fmt(v.win)})),'%')
+  start('Venue performance')
+  paragraph('Win rates alongside match counts. Green, gold and red show wins, draws and losses.',{size:12})
+  recordCards([...r.venues].sort((a,b)=>b.win-a.win||b.p-a.p),{ranked:true})
 
-  addPage('Opponents: bogey teams and most joy')
-  paragraph(r.joy&&r.joy.w>0?`Most joy: ${r.joy.name} (${r.joy.w} wins from ${r.joy.p}, ${fmt(r.joy.win)}%).`:'Most joy: no qualifying winning record with at least two meetings.')
-  paragraph(r.bogey&&r.bogey.l>0?`Bogey team: ${r.bogey.name} (${r.bogey.l} losses from ${r.bogey.p}, ${fmt(r.bogey.win)}% win rate).`:'Bogey team: no qualifying losing record with at least two meetings.')
-  recordTable(r.opponents)
+  start('Results by referee')
+  paragraph('Each appointment is a small sample. These results describe the matches; they do not establish referee influence.',{size:12})
+  recordCards([...r.referees].sort((a,b)=>b.win-a.win||b.p-a.p),{ranked:true})
 
-  addPage('Individual scoring performance',`${r.recordedGoals} named-player goals across ${r.covered}/${r.stats.p} matches. Scoring matches are not appearances; missing scorers and own goals are not allocated to players.`)
-  table(['Player','Goals','Scoring matches','2-goal games','3+ goal games','% named goals'],r.players.map(p=>[p.name,p.goals,p.scoringMatches,p.braces,p.hattricks,fmt(p.goals/Math.max(1,r.recordedGoals)*100)+'%']),[92,30,40,35,35,35])
-  if(r.seasonScorers?.length){heading('Archived full-season scorer totals');paragraph('These separately recorded season totals can exceed fixture-linked goals. They cannot be broken down by opponent or month without a match record.');table(['Player','Season goals','Fixture-linked goals'],r.seasonScorers.map(p=>[p.name,p.goals,r.players.find(v=>v.name.trim().toLowerCase()===p.name.trim().toLowerCase())?.goals||0]),[177,45,45])}
-  bars('Leading recorded scorers',r.players.slice(0,10).map(p=>({label:p.name,value:p.goals})))
-  addPage('Player goals by opponent and competition','Every named scorer is included. These are fixture-linked goals within the selected period.')
-  table(['Player','Opponent','Goals'],r.players.flatMap(p=>p.opponents.map(([opponent,goals])=>[p.name,opponent,goals])),[110,125,32])
-  heading('Goals by competition')
-  table(['Player','Competition','Goals'],r.players.flatMap(p=>p.competitions.map(([competition,goals])=>[p.name,competition,goals])),[110,125,32])
-  if(!r.players.length)paragraph('No fixture-linked scorer records are available for this selection.')
+  start('Who brings the joy?')
+  if(r.joy?.w)callout('MOST SUCCESSFUL OPPONENT',`${r.joy.name}: ${r.joy.w} wins in ${r.joy.p} (${pct(r.joy.win)}).`,C.green)
+  else callout('MOST SUCCESSFUL OPPONENT','No qualifying winning record from at least two meetings.',C.green)
+  if(r.bogey?.l)callout('BOGEY TEAM',`${r.bogey.name}: ${r.bogey.w} wins, ${r.bogey.d} draws and ${r.bogey.l} defeats in ${r.bogey.p}.`,C.red)
+  else callout('BOGEY TEAM','No qualifying losing record from at least two meetings.',C.red)
+  paragraph('Highlights need at least two meetings. Full opponent records follow, including single meetings.',{size:11.5})
+  recordCards([...r.opponents].sort((a,b)=>b.win-a.win||b.p-a.p),{ranked:true})
 
-  addPage('Recorded discipline','Current fixture-linked card records only. Historical card coverage is unavailable. A missing return cannot be treated as a confirmed card-free match.')
+  start('The goalscorers')
+  paragraph(`${r.recordedGoals} named-player goals across ${r.covered} of ${r.stats.p} matches. Scoring matches are not appearances.`,{size:12})
+  bars(r.players.slice(0,10).map((p,i)=>({label:p.name,value:p.goals,colour:i===0?theme.accent:C.teal})))
+  if(r.players.length){const topTwo=r.players.slice(0,2).reduce((n,p)=>n+p.goals,0);callout('SHARE OF NAMED-PLAYER GOALS',`The top two scorers account for ${pct(topTwo/Math.max(1,r.recordedGoals)*100)} of recorded named-player goals.`,C.blue)}
+
+  start('Player scoring detail')
+  paragraph('Every scorer, every recorded opponent and every competition within the selected period.',{size:12})
+  for(const p of r.players){
+    const details=[`${p.goals} goals · ${p.scoringMatches} scoring matches`,`${p.braces} two-goal games · ${p.hattricks} ${p.hattricks===1?'game':'games'} with 3+`,`${pct(p.goals/Math.max(1,r.recordedGoals)*100)} of named-player goals`,
+      `Against: ${p.opponents.map(([name,goals])=>`${name} (${goals})`).join('; ')}.`,
+      `Competitions: ${p.competitions.map(([name,goals])=>`${name} (${goals})`).join('; ')}.`]
+    callout(p.name,details.join('\n'),theme.accent)
+  }
+  if(!r.players.length)paragraph('No fixture-linked scorer records for this selection.')
+  if(r.seasonScorers?.length){heading('Archived season totals',35);paragraph('Separate full-season totals can exceed fixture-linked goals. Opponent and month breakdowns require a match record.',{size:12});table(['Player','Season','Linked'],r.seasonScorers.map(p=>[p.name,p.goals,r.players.find(v=>v.name.toLowerCase()===p.name.toLowerCase())?.goals||0]),[76,24,24])}
+
+  start('Recorded discipline')
   const liveCount=r.matches.filter(f=>f.id.startsWith('live:')).length
-  if(r.warnings.some(w=>w.includes('card figures are unavailable')) || !liveCount)paragraph('Card totals are unavailable for this selection.')
+  const cardsAvailable=liveCount&&!r.warnings.some(w=>w.includes('card figures are unavailable'))
+  if(!cardsAvailable)paragraph('Card totals are unavailable for this selection. Historical card records are not held in these source tables.')
   else {
-    cards([['Recorded yellows',r.yellow],['Recorded reds',r.red],['Live fixtures in selection',liveCount],['Matches with cards logged',new Set(r.cards.map(c=>c.fixture_id)).size]])
-    const totals=new Map()
-    r.cards.forEach(c=>{if(!totals.has(c.player))totals.set(c.player,{yellow:0,red:0});totals.get(c.player)[c.card_type]+=Number(c.card_count||0)})
-    table(['Player','Yellow','Red'],[...totals].sort((a,b)=>b[1].red-a[1].red||b[1].yellow-a[1].yellow).map(([n,c])=>[n,c.yellow,c.red]),[187,40,40])
-    heading('Recorded cards by referee')
-    table(['Referee','Matches','Yellow','Red'],r.referees.map(ref=>{const rows=r.cards.filter(c=>(c.match.referee||'Not recorded')===ref.name);return [ref.name,ref.p,rows.filter(c=>c.card_type==='yellow').reduce((n,c)=>n+Number(c.card_count||0),0),rows.filter(c=>c.card_type==='red').reduce((n,c)=>n+Number(c.card_count||0),0)]}),[157,35,40,35])
-    table(['Date','Opponent','Referee','Player','Card','Count'],r.cards.map(c=>[c.match.date,c.match.opponent,c.match.referee||'Not recorded',c.player,c.card_type,c.card_count]),[28,65,55,65,30,24])
+    statTiles([['Recorded yellow cards',r.yellow,C.amber],['Recorded red cards',r.red,C.red]])
+    paragraph(`${new Set(r.cards.map(c=>c.fixture_id)).size} of ${liveCount} live fixtures have cards logged. A missing return does not confirm a card-free game.`,{size:12})
+    const players=new Map()
+    r.cards.forEach(c=>{if(!players.has(c.player))players.set(c.player,{yellow:0,red:0});if(c.card_type==='yellow'||c.card_type==='red')players.get(c.player)[c.card_type]+=Number(c.card_count||0)})
+    heading('Cards by player',30)
+    table(['Player','Y','R'],[...players].sort((a,b)=>b[1].red-a[1].red||b[1].yellow-a[1].yellow).map(([name,c])=>[name,c.yellow,c.red]),[84,20,20])
+    heading('Cards by referee',30)
+    table(['Referee','Y','R'],r.referees.map(ref=>{const records=r.cards.filter(c=>(c.match.referee||'Not recorded')===ref.name);return [ref.name,records.filter(c=>c.card_type==='yellow').reduce((n,c)=>n+Number(c.card_count||0),0),records.filter(c=>c.card_type==='red').reduce((n,c)=>n+Number(c.card_count||0),0)]}),[84,20,20])
+    for(const c of r.cards)callout(`${c.player} · ${c.card_type.toUpperCase()} × ${c.card_count}`,`${dateLabel(c.match.date)} v ${c.match.opponent}\nReferee: ${c.match.referee||'Not recorded'}`,c.card_type==='red'?C.red:C.amber)
   }
 
-  addPage('Comparison with last season','Only this season and last season are used. Per-game rates avoid comparing totals across different match counts.')
-  if(r.comparison){
-    const c=r.comparison,s=r.stats
-    paragraph(r.options.mode==='to-date'?`Last season comparison uses its first ${c.p} matches (up to the ${s.p} selected this season).`:r.options.mode==='month'?'Comparison uses the equivalent calendar month last season.':'Comparison uses the previous full season.')
-    table(['Metric',r.previousSeason,r.options.season], [['Matches',c.p,s.p],['Win rate',fmt(c.win)+'%',fmt(s.win)+'%'],['Goals per match',c.gfpg.toFixed(2),s.gfpg.toFixed(2)],['Conceded per match',c.gapg.toFixed(2),s.gapg.toFixed(2)],['Clean-sheet rate',fmt(c.cs/c.p*100)+'%',s.p?fmt(s.cs/s.p*100)+'%':'N/A']], [147,60,60])
+  start('Last-season comparison')
+  if(r.comparison){const a=r.comparison,b=r.stats
+    paragraph(r.options.mode==='to-date'?`Compare this selection with last season's first ${a.p} matches.`:r.options.mode==='month'?'Compare the same calendar month last season.':'Compare the two full seasons.',{size:12})
+    table(['Metric',r.previousSeason,r.options.season],[['Matches',a.p,b.p],['Win rate',pct(a.win),pct(b.win)],['Goals / game',fixed(a.gfpg),fixed(b.gfpg)],['Against / game',fixed(a.gapg),fixed(b.gapg)],['Clean sheets %',pct(a.cs/a.p*100),b.p?pct(b.cs/b.p*100):'N/A']],[62,31,31])
+    callout('THE CHANGE',`${Math.abs(b.win-a.win).toFixed(1)} percentage points ${b.win>=a.win?'higher':'lower'} win rate. ${fixed(b.gapg)} conceded per game versus ${fixed(a.gapg)} last season.`,b.win>=a.win?C.green:C.red)
   }else paragraph('No comparison within the permitted two seasons is available for this selection.')
-  heading('How to read this pack');r.warnings.forEach(w=>paragraph(w,8))
 
-  addPage('Complete match register','Scores show team goals first. Shoot-out scores retain home-away order. W/D/L excludes shoot-out outcomes.')
-  table(['Date','Opponent','H/A','Competition','Score','W/D/L','Venue','Referee / notes'],r.matches.map(f=>[f.date,f.opponent,f.designation,f.competition,`${f.gf}-${f.ga}`,f.result,f.venue||'Not recorded',[f.referee, f.extra?'AET':'',f.penalties?`Pens: ${f.shootout || 'recorded'}`:'',f.awarded?'Awarded / walkover':''].filter(Boolean).join(' / ')||'Not recorded']),[26,47,16,48,17,15,46,52])
-  heading('Fixture-linked scoring register')
-  table(['Date','Player','Opponent','Competition','Goals'],r.goals.map(g=>[g.date,g.player,g.opponent,g.competition,g.goals]),[28,70,70,75,24])
+  start('Match & scoring record')
+  paragraph('Team score first. Shoot-out scores retain home-away order. Final match W/D/L includes extra time but excludes shoot-out outcomes.',{size:11.5})
+  for(const f of r.matches){
+    const titleLines=lines(f.opponent,CW-38,13,true)
+    const detail=[`${dateLabel(f.date)} · ${f.designation}`,f.competition,`Venue: ${f.venue||'Not recorded'}`,`Referee: ${f.referee||'Not recorded'}`]
+    if(f.extra)detail.push('After extra time')
+    if(f.penalties)detail.push(`Shoot-out (home-away): ${f.shootout||'recorded'}`)
+    if(f.awarded)detail.push('Awarded / walkover')
+    const scorers=r.goals.filter(g=>g.fixtureId===f.id)
+    detail.push(scorers.length?`Scorers: ${scorers.map(g=>`${g.player} (${g.goals})`).join('; ')}.`:f.gf===0?'No team goals.':'No linked scorer records.')
+    const detailLines=detail.flatMap(value=>lines(value,CW-8,11.5))
+    const h=13+titleLines.length*6+detailLines.length*5.2
+    ensure(h+4);fill(C.paper,M,y,CW,h,2);fill(resultColour(f.result),M,y,1.3,h)
+    text(titleLines,M+4,y+7,13,true)
+    text(`${f.gf}-${f.ga} ${f.result}`,W-M-4,y+8,17,true,resultColour(f.result),{align:'right'})
+    text(detailLines,M+4,y+10+titleLines.length*6,11.5,false,C.muted)
+    y+=h+4
+  }
+
+  start('Data & definitions')
+  r.warnings.forEach(w=>paragraph(w,{size:11.5}))
+  paragraph(`Generated ${dateLabel(r.options.today)}. Source: recorded ECFA website data.`,{size:10.5})
   const total=doc.getNumberOfPages()
-  for(let n=1;n<=total;n++){doc.setPage(n);doc.setDrawColor('#d9e0e5');doc.line(margin,196,282,196);text('ECFA / Manager team pack',margin,202,8,false,muted);text(`${n} / ${total}`,268,202,8,false,muted)}
-  doc.setProperties({title:`${r.team.name} - ${period} - Team analysis`,author:'ECFA',subject:'Team performance analysis'})
+  for(let p=1;p<=total;p++){
+    doc.setPage(p)
+    const dark=p===1
+    doc.setDrawColor(dark?'#3b5168':C.line);doc.line(M,H-10,W-M,H-10)
+    text('ECFA · TEAM ANALYSIS',M,H-5.5,8.5,true,dark?'#d6e2ee':C.muted)
+    text(`${p} / ${total}`,W-M,H-5.5,8.5,false,dark?'#d6e2ee':C.muted,{align:'right'})
+  }
+  doc.setProperties({title:`${r.team.name} - ${r.options.label} - Team analysis`,author:'ECFA',subject:'Team performance analysis / mobile portrait edition'})
   return doc
 }
-export function teamPackFilename(r) { return `ecfa-${r.team.name}-${r.options.label}-${r.options.competition||'all-competitions'}`.toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/-$/,'')+'.pdf' }
+export function teamPackFilename(r) {return `ecfa-${r.team.name}-${r.options.label}-${r.options.competition||'all-competitions'}`.toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/-$/,'')+'.pdf'}
