@@ -225,9 +225,11 @@ export function createTeamAnalysisPdf(r,badge=null) {
   paragraph('Win rates alongside match counts. Green, gold and red show wins, draws and losses.',{size:12})
   recordCards([...r.venues].sort((a,b)=>b.win-a.win||b.p-a.p),{ranked:true})
 
-  start('Results by referee')
-  paragraph('Each appointment is a small sample. These results describe the matches; they do not establish referee influence.',{size:12})
-  recordCards([...r.referees].sort((a,b)=>b.win-a.win||b.p-a.p),{ranked:true})
+  if(r.refereeMatches.length){
+    start('Results by referee')
+    paragraph(`Referee analysis covers ${r.refereeSeason} matches only (${r.refereeMatches.length} games in this selection). Each appointment is a small sample.`,{size:12})
+    recordCards([...r.referees].sort((a,b)=>b.win-a.win||b.p-a.p),{ranked:true})
+  }
 
   start('Who brings the joy?')
   paragraph('Win rate against each team. W = wins, D = draws, L = losses.',{size:12})
@@ -236,21 +238,23 @@ export function createTeamAnalysisPdf(r,badge=null) {
   start('Top 5 goalscorers')
   paragraph(`${r.recordedGoals} named-player goals across ${r.covered} of ${r.stats.p} matches. Scoring matches are not appearances.`,{size:12})
   bars(r.players.slice(0,5).map((p,i)=>({label:p.name,value:p.goals,colour:i===0?theme.accent:C.teal})))
+  if(r.scorerFootnote)paragraph(`Note: ${r.scorerFootnote}`,{size:10.5})
   if(r.players.length){const topTwo=r.players.slice(0,2).reduce((n,p)=>n+p.goals,0);callout('SHARE OF NAMED-PLAYER GOALS',`The top two scorers account for ${pct(topTwo/Math.max(1,r.recordedGoals)*100)} of recorded named-player goals.`,C.blue)}
 
-  start('Player scoring detail')
-  paragraph('Every scorer, every recorded opponent and every competition within the selected period.',{size:12})
-  for(const p of r.players){
+  start('Top 5 player detail')
+  paragraph('The five leading scorers, with their recorded goals by opponent and competition.',{size:12})
+  for(const p of r.players.slice(0,5)){
     const details=[`${p.goals} goals · ${p.scoringMatches} scoring matches`,`${p.braces} two-goal games · ${p.hattricks} ${p.hattricks===1?'game':'games'} with 3+`,`${pct(p.goals/Math.max(1,r.recordedGoals)*100)} of named-player goals`,
       `Against: ${p.opponents.map(([name,goals])=>`${name} (${goals})`).join('; ')}.`,
       `Competitions: ${p.competitions.map(([name,goals])=>`${name} (${goals})`).join('; ')}.`]
     callout(p.name,details.join('\n'),theme.accent)
   }
+  if(r.scorerFootnote)paragraph(`Note: ${r.scorerFootnote}`,{size:10.5})
   if(!r.players.length)paragraph('No fixture-linked scorer records for this selection.')
-  if(r.seasonScorers?.length){heading(`Archived ${r.archiveSeason} totals`,35);paragraph('Separate full-season totals can exceed fixture-linked goals. Opponent and month breakdowns require a match record.',{size:12});table(['Player','Season','Linked'],r.seasonScorers.map(p=>[p.name,p.goals,p.linkedGoals??0]),[76,24,24])}
+  if(r.seasonScorers?.length){heading(`Top 5 / ${r.archiveSeason} totals`,35);paragraph('Separate full-season totals can exceed fixture-linked goals. Opponent and month breakdowns require a match record.',{size:12});table(['Player','Season','Linked'],r.seasonScorers.slice(0,5).map(p=>[p.name,p.goals,p.linkedGoals??0]),[76,24,24])}
 
   start('Recorded discipline')
-  const liveCount=r.matches.filter(f=>f.id.startsWith('live:')).length
+  const liveCount=r.refereeMatches.filter(f=>f.id.startsWith('live:')).length
   const cardsAvailable=liveCount&&!r.warnings.some(w=>w.includes('card figures are unavailable'))
   if(!cardsAvailable)paragraph('Card totals are unavailable for this selection. Historical card records are not held in these source tables.')
   else {
@@ -277,7 +281,8 @@ export function createTeamAnalysisPdf(r,badge=null) {
   paragraph('Team score first. Shoot-out scores retain home-away order. Final match W/D/L includes extra time but excludes shoot-out outcomes.',{size:11.5})
   for(const f of r.matches){
     const titleLines=lines(f.opponent,CW-38,13,true)
-    const detail=[`${dateLabel(f.date)} · ${f.designation}`,f.competition,`Venue: ${f.venue||'Not recorded'}`,`Referee: ${f.referee||'Not recorded'}`]
+    const detail=[`${dateLabel(f.date)} · ${f.designation}`,f.competition,`Venue: ${f.venue||'Not recorded'}`]
+    if(f.season===r.refereeSeason)detail.push(`Referee: ${f.referee||'Not recorded'}`)
     if(f.extra)detail.push('After extra time')
     if(f.penalties)detail.push(`Shoot-out (home-away): ${f.shootout||'recorded'}`)
     if(f.awarded)detail.push('Awarded / walkover')

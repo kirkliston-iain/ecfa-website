@@ -75,6 +75,8 @@ function longest(matches, predicate) {
 }
 export function buildTeamAnalysis(data, team, options) {
   const bounds = periodBounds(options)
+  const refereeSeason = reportSeasons(options.today)[0]
+  const scorerFootnote = options.season === 'all' || options.season === reportSeasons(options.today)[1] ? `${reportSeasons(options.today)[1]} scorer figures exclude cup competitions.` : ''
   const teamMatches = data.matches.filter(f => normal(f.home) === normal(team.name) || normal(f.away) === normal(team.name)).map(f => {
     const home = normal(f.home) === normal(team.name), gf = Number(home ? f.hs : f.as), ga = Number(home ? f.as : f.hs)
     return { ...f, opponent: home ? f.away : f.home, designation: home ? 'Home' : 'Away', gf, ga, result: gf > ga ? 'W' : gf < ga ? 'L' : 'D' }
@@ -121,7 +123,8 @@ export function buildTeamAnalysis(data, team, options) {
   }
   const playerRows = [...players.values()].map(p => ({ ...p, scoringMatches: p.scoringMatches.size, braces: [...p.multi.values()].filter(n => n === 2).length, hattricks: [...p.multi.values()].filter(n => n >= 3).length,
     opponents: [...p.opponents].sort((a,b) => b[1] - a[1]), competitions: [...p.competitions].sort((a,b) => b[1] - a[1]) })).sort((a,b) => b.goals - a.goals || a.name.localeCompare(b.name))
-  const cards = data.cards.filter(c => normal(c.team) === normal(team.name) && lookup.has(`live:${c.fixture_id}`)).map(c => ({ ...c, match: lookup.get(`live:${c.fixture_id}`) }))
+  const refereeMatches = matches.filter(f => f.season === refereeSeason)
+  const cards = data.cards.filter(c => normal(c.team) === normal(team.name) && lookup.get(`live:${c.fixture_id}`)?.season === refereeSeason).map(c => ({ ...c, match: lookup.get(`live:${c.fixture_id}`) }))
   const previousSeason = options.season === 'all' ? reportSeasons(options.today)[1] : `${Number(options.season.slice(0,4)) - 1}/${String(Number(options.season.slice(0,4))).slice(-2)}`
   const previous = options.season === reportSeasons(options.today)[0] ? teamMatches.filter(f => f.season === previousSeason && f.date <= options.today && (!options.competition || f.competition === options.competition)) : []
   const comparable = options.mode === 'month' ? previous.filter(f => f.date.slice(5,7) === options.month.slice(5,7)) : options.mode === 'to-date' ? previous.slice(0, matches.length) : previous
@@ -137,13 +140,15 @@ export function buildTeamAnalysis(data, team, options) {
   const venues = grouped(matches, f => f.venue)
   const bestVenue = venues.filter(v => v.name !== 'Not recorded' && v.p >= 2).sort((a,b) => b.win - a.win || b.p - a.p)[0]
   if (bestVenue) findings.push(`Strongest recorded venue by win rate: ${bestVenue.name} (${bestVenue.w}/${bestVenue.p}, ${bestVenue.win.toFixed(1)}%).`)
-  return { team, options, bounds, matches, stats, archiveSeason, seasons:grouped(matches,f=>f.season).sort((a,b)=>a.name.localeCompare(b.name)), seasonScorers:[...archiveTotals.values()].sort((a,b)=>b.goals-a.goals), opponents, joy, bogey, venues, referees: grouped(matches, f => f.referee),
+  return { team, options, bounds, matches, stats, archiveSeason, refereeSeason, refereeMatches, scorerFootnote, seasons:grouped(matches,f=>f.season).sort((a,b)=>a.name.localeCompare(b.name)), seasonScorers:[...archiveTotals.values()].sort((a,b)=>b.goals-a.goals), opponents, joy, bogey, venues, referees: grouped(refereeMatches, f => f.referee),
     competitions: grouped(matches, f => f.competition), homeAway: grouped(matches, f => f.designation), months: grouped(matches, f => f.date.slice(0,7)).sort((a,b) => a.name.localeCompare(b.name)),
     scorelines: grouped(matches, f => `${f.gf}-${f.ga}`).sort((a,b) => b.p-a.p), players: playerRows, goals, covered, recordedGoals, cards, yellow, red,
     comparison: comparable.length ? summary(comparable) : null, previousSeason, findings,
     streaks: { winning: longest(matches, f => f.result === 'W'), unbeaten: longest(matches, f => f.result !== 'L'), losing: longest(matches, f => f.result === 'L'), scoring: longest(matches, f => f.gf > 0), clean: longest(matches, f => f.ga === 0) },
     warnings: [
       ...data.warnings,
+      ...(scorerFootnote ? [scorerFootnote] : []),
+      `Referee information and per-game referee analysis apply to ${refereeSeason} only.`,
       ...(options.season === 'all' ? [`All combines ${reportSeasons(options.today).join(' and ')} only. Historical card coverage remains unavailable; card totals relate to live fixtures only.`] : []),
       'W/D/L uses the final match score, including extra time where recorded. Shoot-outs are listed separately and do not add goals or change a drawn match into a statistical win.',
       'Home/away follows fixture designation; shared and neutral venues may not represent a home-ground advantage.',
