@@ -375,6 +375,17 @@ export default function Downloads() {
       </section>
 
       <section style={{ marginBottom: 28 }}>
+        <h2 style={{ fontSize: 18, marginBottom: 10 }}>Team download packs</h2>
+        <div style={cardStyle}>
+          <div style={{ flex: 1, minWidth: 220 }}>
+            <div style={{ fontWeight: 700, marginBottom: 4 }}>Team analysis PDF · Managers</div>
+            <div style={{ fontSize: 13, color: 'var(--muted)' }}>Detailed team-colour reports by month, current season to date or season. This season and last season only. Manager login required.</div>
+          </div>
+          <Link to="/downloads/team-packs" style={{ ...buttonStyle, textDecoration: 'none' }}>Create team pack</Link>
+        </div>
+      </section>
+
+      <section style={{ marginBottom: 28 }}>
         <h2 style={{ fontSize: 18, marginBottom: 10 }}>Player reports</h2>
         <div style={cardStyle}>
           <div style={{ flex: 1, minWidth: 220 }}>

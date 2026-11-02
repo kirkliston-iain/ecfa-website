@@ -37,6 +37,7 @@ import RefereeProfilesAdmin from './pages/RefereeProfilesAdmin'
 import RefereeLogin from './pages/RefereeLogin'
 import FixtureTracker from './pages/FixtureTracker'
 import Downloads from './pages/Downloads'
+import TeamReportDownload from './pages/TeamReportDownload'
 import PlayerReportDownload from './pages/PlayerReportDownload'
 import WebStats from './pages/WebStats'
 import AdminWebStats from './pages/AdminWebStats'
@@ -98,6 +99,7 @@ export default function App() {
           <Route path="/admin/referee-profiles" element={<ProtectedRoute requireAdmin><RefereeProfilesAdmin /></ProtectedRoute>} />
           <Route path="/referees" element={<RefereesHub key={location.key} />} />
           <Route path="/downloads" element={<Downloads />} />
+          <Route path="/downloads/team-packs" element={<TeamReportDownload />} />
           <Route path="/downloads/player-report" element={<PlayerReportDownload />} />
           <Route path="/downloads/referee-report" element={<Navigate to="/referees/login" replace />} />
           <Route path="/web-stats" element={<WebStats />} />

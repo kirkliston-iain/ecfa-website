@@ -202,6 +202,7 @@ download_rows = [
     ['Current fixtures and results', 'Dates, teams, scores, venues, referees and competition details', 'CSV / Excel'],
     ['Previous-season results', 'The available historical fixture and result archive', 'CSV / Excel'],
     ['Referee match statistics', 'Games, teams, venues and results; card summaries require login', 'CSV / Excel'],
+    ['Team analysis packs', 'Team-colour PDFs by month, season to date or full season; this season and last season only. Manager login required.', 'PDF / Manager login'],
     ['Player scoring report', 'Selected player, current team, fixture-linked goals and season totals', 'PDF / Word'],
     ['Private referee card dashboard', 'Code-protected card totals, averages and player, team and match breakdowns', 'Referee login'],
     ['Published league files', 'Handbooks, guides and other documents uploaded by ECFA administrators', 'View / Download'],
