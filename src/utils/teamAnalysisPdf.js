@@ -247,7 +247,7 @@ export function createTeamAnalysisPdf(r,badge=null) {
     callout(p.name,details.join('\n'),theme.accent)
   }
   if(!r.players.length)paragraph('No fixture-linked scorer records for this selection.')
-  if(r.seasonScorers?.length){heading('Archived season totals',35);paragraph('Separate full-season totals can exceed fixture-linked goals. Opponent and month breakdowns require a match record.',{size:12});table(['Player','Season','Linked'],r.seasonScorers.map(p=>[p.name,p.goals,r.players.find(v=>v.name.toLowerCase()===p.name.toLowerCase())?.goals||0]),[76,24,24])}
+  if(r.seasonScorers?.length){heading(`Archived ${r.archiveSeason} totals`,35);paragraph('Separate full-season totals can exceed fixture-linked goals. Opponent and month breakdowns require a match record.',{size:12});table(['Player','Season','Linked'],r.seasonScorers.map(p=>[p.name,p.goals,p.linkedGoals??0]),[76,24,24])}
 
   start('Recorded discipline')
   const liveCount=r.matches.filter(f=>f.id.startsWith('live:')).length
@@ -265,8 +265,9 @@ export function createTeamAnalysisPdf(r,badge=null) {
     for(const c of r.cards)callout(`${c.player} · ${c.card_type.toUpperCase()} × ${c.card_count}`,`${dateLabel(c.match.date)} v ${c.match.opponent}\nReferee: ${c.match.referee||'Not recorded'}`,c.card_type==='red'?C.red:C.amber)
   }
 
-  start('Last-season comparison')
-  if(r.comparison){const a=r.comparison,b=r.stats
+  start(r.options.season==='all'?'Season breakdown':'Last-season comparison')
+  if(r.options.season==='all'){paragraph('Combined totals in this pack cover both seasons. Their individual records are shown below.',{size:12});recordCards(r.seasons)}
+  else if(r.comparison){const a=r.comparison,b=r.stats
     paragraph(r.options.mode==='to-date'?`Compare this selection with last season's first ${a.p} matches.`:r.options.mode==='month'?'Compare the same calendar month last season.':'Compare the two full seasons.',{size:12})
     table(['Metric',r.previousSeason,r.options.season],[['Matches',a.p,b.p],['Win rate',pct(a.win),pct(b.win)],['Goals / game',fixed(a.gfpg),fixed(b.gfpg)],['Against / game',fixed(a.gapg),fixed(b.gapg)],['Clean sheets %',pct(a.cs/a.p*100),b.p?pct(b.cs/b.p*100):'N/A']],[62,31,31])
     callout('THE CHANGE',`${Math.abs(b.win-a.win).toFixed(1)} percentage points ${b.win>=a.win?'higher':'lower'} win rate. ${fixed(b.gapg)} conceded per game versus ${fixed(a.gapg)} last season.`,b.win>=a.win?C.green:C.red)

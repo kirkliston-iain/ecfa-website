@@ -11,10 +11,10 @@ const button = { padding:'12px 18px',border:0,borderRadius:8,background:'var(--i
 export default function TeamReportDownload() {
   const today = londonToday(), seasons = reportSeasons(today)
   const [searchParams] = useSearchParams()
-  const initialSeason = seasons.includes(searchParams.get('season')) ? searchParams.get('season') : seasons[0]
-  const initialMode = searchParams.get('mode') === 'season' || initialSeason === seasons[1] ? 'season' : 'to-date'
+  const initialSeason = [...seasons,'all'].includes(searchParams.get('season')) ? searchParams.get('season') : seasons[0]
+  const initialMode = searchParams.get('mode') === 'season' || initialSeason !== seasons[0] ? 'season' : 'to-date'
   const [access,setAccess] = useState(null), [data,setData] = useState(null), [error,setError] = useState('')
-  const [teamId,setTeamId] = useState(''), [mode,setMode] = useState(initialMode), [season,setSeason] = useState(initialSeason), [month,setMonth] = useState(initialSeason === seasons[0] ? today.slice(0,7) : `${initialSeason.slice(0,4)}-07`), [competition,setCompetition] = useState('')
+  const [teamId,setTeamId] = useState(''), [mode,setMode] = useState(initialMode), [season,setSeason] = useState(initialSeason), [month,setMonth] = useState(initialSeason === seasons[0] || initialSeason === 'all' ? today.slice(0,7) : `${initialSeason.slice(0,4)}-07`), [competition,setCompetition] = useState('')
   const [working,setWorking] = useState(false)
   useEffect(()=>{
     let active=true
@@ -34,15 +34,15 @@ export default function TeamReportDownload() {
   },[access,today])
   const teams=useMemo(()=>{
     if(!data)return []
-    const names=new Set(data.matches.filter(f=>f.season===season).flatMap(f=>[normal(f.home),normal(f.away)]))
+    const names=new Set(data.matches.filter(f=>season==='all'||f.season===season).flatMap(f=>[normal(f.home),normal(f.away)]))
     return data.teams.filter(t=>names.has(normal(t.name))).sort((a,b)=>a.name.localeCompare(b.name))
   },[data,season])
   const team=teams.find(t=>t.id===teamId)
-  const competitions=useMemo(()=>data&&team?[...new Set(data.matches.filter(f=>f.season===season&&(normal(f.home)===normal(team.name)||normal(f.away)===normal(team.name))).map(f=>f.competition))].sort():[],[data,team,season])
-  const monthOptions=useMemo(()=>Array.from({length:12},(_,i)=>{
-    const d=new Date(Date.UTC(Number(season.slice(0,4)),6+i,1));return d.toISOString().slice(0,7)
+  const competitions=useMemo(()=>data&&team?[...new Set(data.matches.filter(f=>(season==='all'||f.season===season)&&(normal(f.home)===normal(team.name)||normal(f.away)===normal(team.name))).map(f=>f.competition))].sort():[],[data,team,season])
+  const monthOptions=useMemo(()=>Array.from({length:season==='all'?24:12},(_,i)=>{
+    const d=new Date(Date.UTC(Number((season==='all'?seasons[1]:season).slice(0,4)),6+i,1));return d.toISOString().slice(0,7)
   }).filter(m=>m<=today.slice(0,7)),[season,today])
-  const label=mode==='month'?`${new Date(month+'-01T12:00:00Z').toLocaleDateString('en-GB',{month:'long',year:'numeric'})}`:`${season} ${mode==='to-date'?'season to date':'season'}`
+  const label=mode==='month'?`${new Date(month+'-01T12:00:00Z').toLocaleDateString('en-GB',{month:'long',year:'numeric'})}`:season==='all'?`All seasons (${[...seasons].reverse().join(' + ')})`:`${season} ${mode==='to-date'?'season to date':'season'}`
   const report=useMemo(()=>{
     if(!team||!data)return null
     try{return buildTeamAnalysis(data,team,{mode,season,month,today,competition,label})}catch{return null}
@@ -69,16 +69,10 @@ export default function TeamReportDownload() {
       <button style={button} onClick={()=>window.dispatchEvent(new Event('open-manager-gate'))}>Manager login</button>
     </section>:!data?<p role="status">Loading this season and last season's records…</p>:<>
       <section style={{padding:22,border:'1px solid var(--line)',borderRadius:12,background:'#fff'}}>
-        <div role="group" aria-label="Season packs" style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(210px,1fr))',gap:12,marginBottom:22}}>
-          {seasons.map((s,i)=><button key={s} type="button" aria-pressed={season===s&&mode===(i===0?'to-date':'season')} disabled={working} onClick={()=>{setSeason(s);setMode(i===0?'to-date':'season');setMonth(i===0?today.slice(0,7):`${s.slice(0,4)}-07`);setCompetition('')}} style={{...button,textAlign:'left',padding:16,background:season===s&&mode===(i===0?'to-date':'season')?'var(--ink)':'#f0f3f6',color:season===s&&mode===(i===0?'to-date':'season')?'#fff':'var(--ink)'}}>
-            <span style={{display:'block',fontSize:18}}>{s}</span>
-            <span style={{display:'block',marginTop:5,fontWeight:400}}>{i===0?'Current season to date':'Last season · Full-season pack'}</span>
-          </button>)}
-        </div>
         <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(210px,1fr))',gap:16}}>
           <label>Team<select style={control} value={teamId} onChange={e=>{setTeamId(e.target.value);setCompetition('')}}><option value="">Choose a team</option>{teams.map(t=><option key={t.id} value={t.id}>{t.name}</option>)}</select></label>
           <label>Report period<select style={control} value={mode} onChange={e=>{setMode(e.target.value);if(e.target.value==='to-date'){setSeason(seasons[0]);setMonth(today.slice(0,7));setCompetition('')}}}><option value="to-date">Current season to date</option><option value="month">Choose a month</option><option value="season">Choose a season</option></select></label>
-          <label>Season<select style={control} disabled={mode==='to-date'} value={season} onChange={e=>{const s=e.target.value;setSeason(s);setCompetition('');setMonth(s===seasons[0]?today.slice(0,7):`${s.slice(0,4)}-07`)}}>{seasons.map(s=><option key={s}>{s}</option>)}</select></label>
+          <label>Season<select style={control} value={season} onChange={e=>{const s=e.target.value;setSeason(s);if(s!==seasons[0]&&mode==='to-date')setMode('season');setCompetition('');setMonth(s===seasons[0]||s==='all'?today.slice(0,7):`${s.slice(0,4)}-07`)}}>{seasons.map(s=><option key={s}>{s}</option>)}<option value="all">All — both seasons</option></select></label>
           {mode==='month'&&<label>Month<select style={control} value={month} onChange={e=>setMonth(e.target.value)}>{monthOptions.map(m=><option key={m} value={m}>{new Date(m+'-01T12:00:00Z').toLocaleDateString('en-GB',{month:'long',year:'numeric'})}</option>)}</select></label>}
           <label>Competition<select style={control} value={competition} onChange={e=>setCompetition(e.target.value)}><option value="">All competitions</option>{competitions.map(c=><option key={c}>{c}</option>)}</select></label>
         </div>
@@ -91,7 +85,7 @@ export default function TeamReportDownload() {
       </section>
       <h2>Inside your pack</h2>
       <p>Performance overview and commentary; attack and defence; form and monthly trends; home and away; competitions; venue and referee win rates; opponent win rates and W/D/L records; Top 5 goalscorers and player goals by opponent and competition; recorded discipline; last-season comparison; complete results and scoring registers.</p>
-      <p style={{fontSize:13,color:'var(--muted)'}}>Only {seasons.join(' and ')} are available. Reports explain gaps in scorer and card coverage. Appearances, assists and other unrecorded statistics are not estimated.</p>
+      <p style={{fontSize:13,color:'var(--muted)'}}>Choose {seasons.join(' or ')}, or All to combine both seasons. Reports explain gaps in scorer and card coverage. Appearances, assists and other unrecorded statistics are not estimated.</p>
     </>}
   </div>
 }
