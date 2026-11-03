@@ -74,7 +74,7 @@ function longest(matches, predicate) {
   return best
 }
 export function buildTeamAnalysis(data, team, options) {
-  const bounds = periodBounds(options)
+  let bounds = periodBounds(options)
   const refereeSeason = reportSeasons(options.today)[0]
   const scorerFootnote = options.season === 'all' || options.season === reportSeasons(options.today)[1] ? `${reportSeasons(options.today)[1]} scorer figures exclude cup competitions.` : ''
   const teamMatches = data.matches.filter(f => normal(f.home) === normal(team.name) || normal(f.away) === normal(team.name)).map(f => {
@@ -83,7 +83,20 @@ export function buildTeamAnalysis(data, team, options) {
   })
   const selectedSeasons = options.season === 'all' ? reportSeasons(options.today) : [options.season]
   const selected = f => selectedSeasons.includes(f.season) && f.date >= bounds.start && f.date <= bounds.end && (!options.competition || f.competition === options.competition)
-  const matches = teamMatches.filter(selected), stats = summary(matches)
+  let matches = teamMatches.filter(selected).sort((a,b)=>a.date.localeCompare(b.date)||a.id.localeCompare(b.id))
+  if (options.mode === 'games') {
+    const limit = Number(options.gameLimit)
+    if (!Number.isInteger(limit) || limit < 1 || limit > 500) throw new Error('Choose a whole number of games between 1 and 500.')
+    for (const season of selectedSeasons) {
+      const available = matches.filter(f=>f.season===season).length
+      if (available < limit) throw new Error(`${season} has only ${available} completed matches for this selection.`)
+    }
+    const counts = new Map()
+    matches = matches.filter(f=>{const count=(counts.get(f.season)||0)+1;counts.set(f.season,count);return count<=limit})
+    bounds = {start:matches[0].date,end:matches[matches.length-1].date}
+  }
+  const gameCutoffs = options.mode === 'games' ? selectedSeasons.map(season=>{const rows=matches.filter(f=>f.season===season);return {season,games:rows.length,date:rows[rows.length-1].date}}) : []
+  const stats = summary(matches)
   const opponents = grouped(matches, f => f.opponent)
   const eligible = opponents.filter(o => o.p >= 2)
   const joy = [...eligible].sort((a,b) => b.win - a.win || b.gd - a.gd || b.w - a.w)[0]
@@ -127,7 +140,8 @@ export function buildTeamAnalysis(data, team, options) {
   const cards = data.cards.filter(c => normal(c.team) === normal(team.name) && lookup.get(`live:${c.fixture_id}`)?.season === refereeSeason).map(c => ({ ...c, match: lookup.get(`live:${c.fixture_id}`) }))
   const previousSeason = options.season === 'all' ? reportSeasons(options.today)[1] : `${Number(options.season.slice(0,4)) - 1}/${String(Number(options.season.slice(0,4))).slice(-2)}`
   const previous = options.season === reportSeasons(options.today)[0] ? teamMatches.filter(f => f.season === previousSeason && f.date <= options.today && (!options.competition || f.competition === options.competition)) : []
-  const comparable = options.mode === 'month' ? previous.filter(f => f.date.slice(5,7) === options.month.slice(5,7)) : options.mode === 'to-date' ? previous.slice(0, matches.length) : previous
+  previous.sort((a,b)=>a.date.localeCompare(b.date)||a.id.localeCompare(b.id))
+  const comparable = options.mode === 'games' ? previous.slice(0,Number(options.gameLimit)) : options.mode === 'month' ? previous.filter(f => f.date.slice(5,7) === options.month.slice(5,7)) : options.mode === 'to-date' ? previous.slice(0, matches.length) : previous
   const covered = new Set(goals.map(g => g.fixtureId)).size
   const yellow = cards.filter(c => c.card_type === 'yellow').reduce((n,c) => n + Number(c.card_count || 0), 0)
   const red = cards.filter(c => c.card_type === 'red').reduce((n,c) => n + Number(c.card_count || 0), 0)
@@ -140,13 +154,14 @@ export function buildTeamAnalysis(data, team, options) {
   const venues = grouped(matches, f => f.venue)
   const bestVenue = venues.filter(v => v.name !== 'Not recorded' && v.p >= 2).sort((a,b) => b.win - a.win || b.p - a.p)[0]
   if (bestVenue) findings.push(`Strongest recorded venue by win rate: ${bestVenue.name} (${bestVenue.w}/${bestVenue.p}, ${bestVenue.win.toFixed(1)}%).`)
-  return { team, options, bounds, matches, stats, archiveSeason, refereeSeason, refereeMatches, scorerFootnote, seasons:grouped(matches,f=>f.season).sort((a,b)=>a.name.localeCompare(b.name)), seasonScorers:[...archiveTotals.values()].sort((a,b)=>b.goals-a.goals), opponents, joy, bogey, venues, referees: grouped(refereeMatches, f => f.referee),
+  return { team, options, bounds, matches, stats, gameCutoffs, archiveSeason, refereeSeason, refereeMatches, scorerFootnote, seasons:grouped(matches,f=>f.season).sort((a,b)=>a.name.localeCompare(b.name)), seasonScorers:[...archiveTotals.values()].sort((a,b)=>b.goals-a.goals), opponents, joy, bogey, venues, referees: grouped(refereeMatches, f => f.referee),
     competitions: grouped(matches, f => f.competition), homeAway: grouped(matches, f => f.designation), months: grouped(matches, f => f.date.slice(0,7)).sort((a,b) => a.name.localeCompare(b.name)),
     scorelines: grouped(matches, f => `${f.gf}-${f.ga}`).sort((a,b) => b.p-a.p), players: playerRows, goals, covered, recordedGoals, cards, yellow, red,
     comparison: comparable.length ? summary(comparable) : null, previousSeason, findings,
     streaks: { winning: longest(matches, f => f.result === 'W'), unbeaten: longest(matches, f => f.result !== 'L'), losing: longest(matches, f => f.result === 'L'), scoring: longest(matches, f => f.gf > 0), clean: longest(matches, f => f.ga === 0) },
     warnings: [
       ...data.warnings,
+      ...(options.mode === 'games' ? [`This pack uses the first ${options.gameLimit} completed matches in each selected season, in fixture-date order. The competition filter determines which games count; later match results, scorers and cards are excluded.`] : []),
       ...(scorerFootnote ? [scorerFootnote] : []),
       `Referee information and per-game referee analysis apply to ${refereeSeason} only.`,
       ...(options.season === 'all' ? [`All combines ${reportSeasons(options.today).join(' and ')} only. Historical card coverage remains unavailable; card totals relate to live fixtures only.`] : []),

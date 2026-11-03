@@ -166,6 +166,7 @@ export function createTeamAnalysisPdf(r,badge=null) {
   text(`${dateLabel(r.bounds.start)} - ${dateLabel(r.bounds.end)}`,M,226,9.5,false,'#d6e2ee')
 
   start('The story so far')
+  if(r.gameCutoffs?.length)paragraph(r.gameCutoffs.map(c=>`${c.season}: after ${c.games} games, to ${dateLabel(c.date)}.`).join(' '),{size:11.5})
   paragraph(`${r.stats.w} ${r.stats.w===1?'win':'wins'}, ${r.stats.d} ${r.stats.d===1?'draw':'draws'} and ${r.stats.l} ${r.stats.l===1?'defeat':'defeats'} from ${r.stats.p} matches. The team has scored ${r.stats.gf} and conceded ${r.stats.ga}, with ${fixed(r.stats.gfpg)} goals for and ${fixed(r.stats.gapg)} against per game.`)
   const bestVenue=r.venues.filter(v=>v.name!=='Not recorded'&&v.p>=2).sort((a,b)=>b.win-a.win||b.p-a.p)[0]
   if(bestVenue)callout('STRONGEST RECORDED VENUE',`${bestVenue.name}: ${bestVenue.w} wins from ${bestVenue.p} (${pct(bestVenue.win)}).`,C.teal)
@@ -270,9 +271,9 @@ export function createTeamAnalysisPdf(r,badge=null) {
   }
 
   start(r.options.season==='all'?'Season breakdown':'Last-season comparison')
-  if(r.options.season==='all'){paragraph('Combined totals in this pack cover both seasons. Their individual records are shown below.',{size:12});recordCards(r.seasons)}
+  if(r.options.season==='all'){paragraph('Combined totals in this pack cover both seasons. Their individual records are shown below.',{size:12});recordCards(r.seasons);if(r.gameCutoffs?.length)r.gameCutoffs.forEach(c=>paragraph(`${c.season}: game ${c.games} on ${dateLabel(c.date)}.`,{size:11.5}))}
   else if(r.comparison){const a=r.comparison,b=r.stats
-    paragraph(r.options.mode==='to-date'?`Compare this selection with last season's first ${a.p} matches.`:r.options.mode==='month'?'Compare the same calendar month last season.':'Compare the two full seasons.',{size:12})
+    paragraph(r.options.mode==='games'?`Comparison after ${r.options.gameLimit} completed games in each season (${a.p} previous-season games available).`:r.options.mode==='to-date'?`Compare this selection with last season's first ${a.p} matches.`:r.options.mode==='month'?'Compare the same calendar month last season.':'Compare the two full seasons.',{size:12})
     table(['Metric',r.previousSeason,r.options.season],[['Matches',a.p,b.p],['Win rate',pct(a.win),pct(b.win)],['Goals / game',fixed(a.gfpg),fixed(b.gfpg)],['Against / game',fixed(a.gapg),fixed(b.gapg)],['Clean sheets %',pct(a.cs/a.p*100),b.p?pct(b.cs/b.p*100):'N/A']],[62,31,31])
     callout('THE CHANGE',`${Math.abs(b.win-a.win).toFixed(1)} percentage points ${b.win>=a.win?'higher':'lower'} win rate. ${fixed(b.gapg)} conceded per game versus ${fixed(a.gapg)} last season.`,b.win>=a.win?C.green:C.red)
   }else paragraph('No comparison within the permitted two seasons is available for this selection.')

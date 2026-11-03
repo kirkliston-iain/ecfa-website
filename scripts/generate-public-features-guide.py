@@ -202,7 +202,7 @@ download_rows = [
     ['Current fixtures and results', 'Dates, teams, scores, venues, referees and competition details', 'CSV / Excel'],
     ['Previous-season results', 'The available historical fixture and result archive', 'CSV / Excel'],
     ['Referee match statistics', 'Games, teams, venues and results; card summaries require login', 'CSV / Excel'],
-    ['Team analysis packs', 'View or download phone-friendly portrait PDFs with team colours, larger text and visual analysis, by month, season to date or full season. Season dropdown: this season, last season (2025/26), or All to combine both seasons. Manager login required.', 'PDF / Manager login'],
+    ['Team analysis packs', 'View or download phone-friendly portrait PDFs with team colours, larger text and visual analysis, by month, season to date, full season or after a chosen number of games. Choosing All with After X games compares the first X games of each season. Season dropdown: this season, last season (2025/26), or All to combine both seasons. Manager login required.', 'PDF / Manager login'],
     ['Player scoring report', 'Selected player, current team, fixture-linked goals and season totals', 'PDF / Word'],
     ['Private referee card dashboard', 'Code-protected card totals, averages and player, team and match breakdowns', 'Referee login'],
     ['Published league files', 'Handbooks, guides and other documents uploaded by ECFA administrators', 'View / Download'],
