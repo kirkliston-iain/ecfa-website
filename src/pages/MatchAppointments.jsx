@@ -37,6 +37,8 @@ export default function MatchAppointments() {
   const [loading, setLoading] = useState(true)
   const [working, setWorking] = useState('')
   const [message, setMessage] = useState('')
+  const [baseError, setBaseError] = useState('')
+  const [venueLoadError, setVenueLoadError] = useState('')
   const [settingsDirty, setSettingsDirty] = useState(false)
   const [savingRules, setSavingRules] = useState(false)
   const [weekRules, setWeekRules] = useState(emptyWeekRules)
@@ -62,25 +64,29 @@ export default function MatchAppointments() {
   async function saveCriteria() {
     setSavingRules(true)
     setMessage('')
-    const { data, error: readError } = await supabase.from('appointment_settings').select('settings').eq('id', true).single()
-    if (readError) {
-      setMessage(readError.message)
+    try {
+      const { data, error: readError } = await supabase.from('appointment_settings').select('settings').eq('id', true).single()
+      if (readError) throw readError
+      const merged = {
+        ...data.settings,
+        refereePreferences: settings.refereePreferences || {},
+        refereeTeamBlocks: settings.refereeTeamBlocks || [],
+        refereeVenueOnly: settings.refereeVenueOnly || {},
+        venues: settings.venues || [],
+      }
+      const { data: saved, error } = await supabase.from('appointment_settings')
+        .update({ settings: merged, updated_at: new Date().toISOString() }).eq('id', true)
+        .select('settings').single()
+      if (error) throw error
+      if (!saved?.settings) throw new Error('The criteria could not be saved. Please try again.')
+      setSettings(saved.settings)
+      setSettingsDirty(false)
+      setMessage('Venue areas and standing criteria saved. They will be used for future suggestions.')
+    } catch (error) {
+      setMessage(error.message || 'The criteria could not be saved. Please try again.')
+    } finally {
       setSavingRules(false)
-      return
     }
-    const merged = {
-      ...data.settings,
-      refereePreferences: settings.refereePreferences || {},
-      refereeTeamBlocks: settings.refereeTeamBlocks || [],
-      refereeVenueOnly: settings.refereeVenueOnly || {},
-      venues: settings.venues || [],
-    }
-    const { error } = await supabase.from('appointment_settings').update({ settings: merged, updated_at: new Date().toISOString() }).eq('id', true)
-    setSavingRules(false)
-    if (error) return setMessage(error.message)
-    setSettings(merged)
-    setSettingsDirty(false)
-    setMessage('Standing criteria saved. They will be used for future generations.')
   }
 
   const configuredSlots = useMemo(() => {
@@ -145,12 +151,31 @@ export default function MatchAppointments() {
 
   useEffect(() => {
     async function loadBase() {
-      const [{ data: settingsRows }, { data: refereeRows }, { data: historyRows }] = await Promise.all([
+      const [settingsResult, { data: refereeRows }, { data: historyRows }, venueResult] = await Promise.all([
         supabase.from('appointment_settings').select('settings').eq('id', true).single(),
         supabase.from('referees').select('id, name').order('name'),
         supabase.from('fixtures').select('id, fixture_date, venue, referee_name, home_team:home_team_id(id, name), away_team:away_team_id(id, name)').not('fixture_date', 'is', null),
+        supabase.from('venues').select('name').order('name'),
       ])
-      setSettings(settingsRows?.settings || null)
+      if (settingsResult.error || !settingsResult.data?.settings) {
+        setBaseError('Could not load appointment settings. Please reload the page to try again.')
+        setLoading(false)
+        return
+      }
+      if (venueResult.error) setVenueLoadError('The full venue list could not be loaded. Reload the page to see every venue.')
+      const loaded = settingsResult.data.settings
+      // Keep existing slot definitions and area assignments; also include venues
+      // from the admin list and fixture history, even if they have no weekly slots.
+      const venues = [...(loaded.venues || [])]
+      const known = new Set(venues.map((venue) => venue.name))
+      const names = [...(venueResult.data || []).map((venue) => venue.name), ...(historyRows || []).map((fixture) => fixture.venue)]
+      names.filter((name) => name?.trim()).forEach((name) => {
+        name = name.trim()
+        if (known.has(name)) return
+        venues.push({ name, area: 'Any', slots: [] })
+        known.add(name)
+      })
+      setSettings({ ...loaded, venues })
       setReferees(refereeRows || [])
       setHistory(historyRows || [])
     }
@@ -388,7 +413,8 @@ export default function MatchAppointments() {
       {message && <div style={noticeStyle}>{message}</div>}
       {loading && <p style={{ color: 'var(--muted)' }}>Loading this week…</p>}
 
-      {!loading && <>
+      {baseError && <p role="alert">{baseError}</p>}
+      {!loading && settings && <>
         <section style={sectionStyle}>
           <h3 style={subheadingStyle}>Standing appointment criteria</h3>
           <p style={helpStyle}>These rules apply every week. Save changes before generating. Venue and kickoff are taken from each fixture; these rules select referees and assistants for semi-finals and finals.</p>
@@ -400,7 +426,7 @@ export default function MatchAppointments() {
           <details>
             <summary style={summaryStyle}>How the current suggestions are made</summary>
             <div style={{ ...helpStyle, marginTop: 8 }}>
-              Each selected, eligible referee can receive one game. Matching the fixture's stored area gets 35 points, an “Any” preference gets 12, and a different area gets 0. Each previous appointment involving either team subtracts 24 points; previous overall appointments also lower the score slightly. South East Saints home games are assigned first. Team limits apply to referees only. After referees are allocated, remaining available officials are proposed as Assistant 1 and Assistant 2 for semi-finals and finals. Assistants follow venue limits and preferred areas, without team restrictions or repeat-team penalties. Each official receives only one role per matchday.
+              Each selected, eligible referee can receive one game. Matching the area assigned to the fixture's venue gets 35 points, an “Any” preference gets 12, and a different area gets 0. Each previous appointment involving either team subtracts 24 points; previous overall appointments also lower the score slightly. South East Saints home games are assigned first. Team limits apply to referees only. After referees are allocated, remaining available officials are proposed as Assistant 1 and Assistant 2 for semi-finals and finals. Assistants follow venue limits and preferred areas, without team restrictions or repeat-team penalties. Each official receives only one role per matchday.
             </div>
           </details>
           <details style={{ marginTop: 12 }}>
@@ -415,15 +441,18 @@ export default function MatchAppointments() {
             </div>
           </details>
           <details style={{ marginTop: 12 }}>
-            <summary style={summaryStyle}>Venue area labels</summary>
-            <p style={helpStyle}>These East/West labels are compared with each referee's preferred area. Changing a label affects future suggestions, not a fixture's saved venue.</p>
+            <summary style={summaryStyle}>Assign venues to areas</summary>
+            <p style={helpStyle}>Choose East, West or Any for each venue, then save below. These areas are used to match referees and assistants to their preferred area. All saved venues are included, even without weekly appointment slots.</p>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 9 }}>
-              {settings.venues.map((venue, index) => <label key={venue.name} style={labelStyle}>{venue.name}
-                <select value={venue.area || 'Any'} onChange={(event) => editSettings({ venues: settings.venues.map((item, i) => i === index ? { ...item, area: event.target.value } : item) })} style={inputStyle}>
+              {[...settings.venues].sort((a, b) => a.name.localeCompare(b.name)).map((venue) => <label key={venue.name} style={labelStyle}>{venue.name}
+                <select disabled={savingRules} value={venue.area || 'Any'} onChange={(event) => editSettings({ venues: settings.venues.map((item) => item.name === venue.name ? { ...item, area: event.target.value } : item) })} style={inputStyle}>
                   <option>East</option><option>West</option><option>Any</option>
                 </select>
               </label>)}
             </div>
+            {venueLoadError && <p role="alert" style={helpStyle}>{venueLoadError}</p>}
+            <button type="button" onClick={saveCriteria} disabled={!settingsDirty || savingRules} style={{ ...buttonStyle, marginTop: 12, width: '100%' }}>{savingRules ? 'Saving…' : 'Save venue areas'}</button>
+            <p aria-live="polite" style={helpStyle}>{settingsDirty ? 'You have unsaved changes. This button saves all standing criteria changes.' : 'No unsaved changes.'}</p>
           </details>
           <details style={{ marginTop: 12 }}>
             <summary style={summaryStyle}>Teams a referee cannot take ({settings.refereeTeamBlocks?.length || 0})</summary>
