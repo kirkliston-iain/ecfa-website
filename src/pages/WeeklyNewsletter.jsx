@@ -69,6 +69,7 @@ export default function WeeklyNewsletter() {
           <div className="weekly-copy-columns">
             {leader && <p><strong>The league picture.</strong> {shortName(leader.teamName)} head the ECFA Appin Sports League with {leader.points} points from {leader.played} matches{second ? `, ${leader.points-second.points} points ahead of ${shortName(second.teamName)}` : ''}. Their record stands at {leader.won} wins, {leader.drawn} draws and {leader.lost} defeats, with a goal difference of {leader.goalDifference > 0 ? '+' : ''}{leader.goalDifference}.</p>}
             {cupMatch && <p><strong>Cup watch.</strong> {shortName(cupMatch.home_team.name)} and {shortName(cupMatch.away_team.name)} finished {displayedScore(cupMatch)} in the {cupMatch.competition}{cupMatch.round_name ? ` ${cupMatch.round_name.toLowerCase()}` : ''}. <Link to={`/fixtures/${cupMatch.id}`}>Read the match details →</Link></p>}
+            {e.editorial?.map(item => <p key={item.heading}><strong>{item.heading}</strong> {item.text}</p>)}
             <p><strong>Across the season.</strong> The site records {e.totals.matches} completed league and cup matches with {e.totals.goals} goals so far—an average of {(e.totals.goals/e.totals.matches || 0).toFixed(2)} per match. The league accounts for {e.totals.leagueMatches} of those games and {e.totals.leagueGoals} goals.</p>
           </div>
         </section>
