@@ -1,0 +1,20 @@
+.ecfa-christmas { background: #f7faf9; }
+.ecfa-christmas > .christmas-greeting { order: -1; }
+.christmas-greeting { display: flex; justify-content: center; align-items: center; gap: 16px; padding: 3px 16px; background: #173f35; color: #fff; font-size: 11px; letter-spacing: .04em; }
+.christmas-greeting > span > span { color: #e9d59c; padding: 0 5px; }
+.christmas-greeting button { min-height: 36px; background: transparent; color: #fff; border: 0; text-decoration: underline; text-underline-offset: 3px; cursor: pointer; font-size: 11px; }
+.ecfa-christmas header > div:first-child { background: linear-gradient(115deg, #173f35, #245b49 58%, #173f35) !important; border-bottom: 3px solid var(--brass); }
+.ecfa-christmas .site-brand { background-image: radial-gradient(circle, #fff9 1px, transparent 2px); background-size: 29px 29px; }
+.ecfa-christmas .site-main--public :is(.match-card, .home-shortcuts, section, .christmas-card) { position: relative; }
+.ecfa-christmas .site-main--public :is(.match-card, .home-shortcuts, section, .christmas-card)::after { content: ''; position: absolute; right: -5px; top: -13px; width: 25px; height: 25px; background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cpath d='M16 2v28M4 9l24 14M4 23 28 9M11 5l5 5 5-5M11 27l5-5 5 5M4 15l7-2-1-7M28 17l-7 2 1 7M10 26l1-7-7-2M22 6l-1 7 7 2' fill='none' stroke='%237ca9b5' stroke-width='2' stroke-linecap='round'/%3E%3C/svg%3E") center / contain no-repeat; opacity: .8; pointer-events: none; }
+.ecfa-christmas .site-main--public :is(.match-card, .christmas-card) { border-top-color: #b9d3d8 !important; box-shadow: 0 -3px 0 -1px #e5f0f3; }
+.christmas-effects { position: fixed; inset: 0; overflow: hidden; pointer-events: none; z-index: 40; contain: strict; }
+.christmas-flake { position: absolute; top: -30px; width: var(--size); height: var(--size); border-radius: 50%; background: #f3fcff; color: #d1e9ef; box-shadow: 0 0 2px #6494ad66; opacity: .7; font-size: 15px; line-height: 1; animation: christmas-snow var(--duration) var(--delay) linear infinite; }
+.christmas-flake:nth-child(4n + 1) { width: auto; height: auto; background: none; box-shadow: none; }
+.christmas-sleigh { position: absolute; left: -270px; top: 70px; animation: christmas-flight 48s 3s linear infinite; filter: drop-shadow(0 2px 2px #ffffffb3); }
+@keyframes christmas-snow { to { transform: translate3d(var(--drift), calc(100dvh + 60px), 0) rotate(180deg); } }
+@keyframes christmas-flight { 0% { transform: translate3d(0, 20px, 0); } 22%, 100% { transform: translate3d(calc(100vw + 540px), -25px, 0); } }
+.christmas-effects--paused { display: none; }
+@media (max-width: 600px) { .christmas-flake:nth-child(n + 23) { display: none; } .christmas-sleigh svg { width: 185px; height: 60px; } }
+@media (prefers-reduced-motion: reduce) { .christmas-effects { display: none; } .christmas-greeting button { display: none; } }
+@media print { .christmas-effects, .christmas-greeting { display: none !important; } .ecfa-christmas .site-main--public ::after { content: none !important; } }

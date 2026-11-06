@@ -964,7 +964,7 @@ export default function Home() {
         Results and fixtures across every ECFA competition.
       </p>
 
-      <a href="https://appinsports.com/" target="_blank" rel="noopener noreferrer" onClick={() => trackInteraction('sponsor_click', 'Appin Sports — Match Hub')} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 14px', marginBottom: 24, border: '1px solid var(--line)', borderLeft: '5px solid var(--brass)', borderRadius: 8, color: 'var(--ink)', textDecoration: 'none', background: '#fff' }} aria-label="Visit Appin Sports, ECFA league sponsor (opens in a new tab)">
+      <a className="christmas-card" href="https://appinsports.com/" target="_blank" rel="noopener noreferrer" onClick={() => trackInteraction('sponsor_click', 'Appin Sports — Match Hub')} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 14px', marginBottom: 24, border: '1px solid var(--line)', borderLeft: '5px solid var(--brass)', borderRadius: 8, color: 'var(--ink)', textDecoration: 'none', background: '#fff' }} aria-label="Visit Appin Sports, ECFA league sponsor (opens in a new tab)">
         <ManagedSponsorLogo alt="Appin Sports" style={{ width: 76, height: 36, objectFit: 'contain', flexShrink: 0 }} />
         <span style={{ flex: 1, minWidth: 0 }}><strong style={{ display: 'block', fontSize: 15 }}>Appin Sports</strong><span style={{ color: 'var(--muted)', fontSize: 12 }}>ECFA league sponsor</span></span>
         <span style={{ color: 'var(--brass)', fontWeight: 800, fontSize: 13, whiteSpace: 'nowrap' }}>Visit ↗</span>

@@ -98,7 +98,7 @@ cover = Table([[p('ECFA WEBSITE', 'CoverSub')], [p('Public Features Guide', 'Cov
               ]))
 story += [Spacer(1, 35*mm), cover, Spacer(1, 18*mm)]
 story.append(Table([[p('WEBSITE', 'Smallx'), p('https://ecfa-website.vercel.app', 'CardTitle')],
-                    [p('GUIDE UPDATED', 'Smallx'), p('1 November 2026', 'CardTitle')]],
+                    [p('GUIDE UPDATED', 'Smallx'), p('6 November 2026', 'CardTitle')]],
                    colWidths=[35*mm, 125*mm], style=TableStyle([
                        ('BOX', (0,0), (-1,-1), 0.7, LINE), ('INNERGRID', (0,0), (-1,-1), 0.5, LINE),
                        ('BACKGROUND', (0,0), (0,-1), PALE), ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
@@ -119,8 +119,10 @@ story.append(card_grid([
     ('Honours and History', 'Past winners, team honours and previous-season records.'),
     ('Teams and Referees', 'Explore clubs, player records and referee profiles. Referees has its own main navigation tab.'),
     ('Downloads and Search', 'Export public data or search names, teams, competitions and pages.'),
+    ('Christmas at ECFA', 'Through 28 December 2026, public pages have a festive green header, falling snow, an occasional Santa sleigh and snowflake edging. Use Pause effects to hide animations for your visit. Reduced-motion preferences stop animations automatically. The theme ends automatically on 29 December at midnight UK time.'),
 ]))
 story += [Spacer(1, 8), p('<b>Tip:</b> Swipe the top navigation left or right to reveal additional sections. Navigation scrolls independently so the page stays within the screen. Public pages use consistent compact spacing, with narrower reading and contact layouts.', 'Bodyx')]
+story.append(PageBreak())
 story += [Spacer(1, 7)] + section_title('2. Match Hub', 'The Match Hub brings the main matchday information together in one place.')
 story.append(card_grid([
     ('Browse by date', 'Move between available matchdays to see a particular weekend. Back from a match restores the date you were viewing. Opening Match Hub through the site navigation starts at the upcoming games.'),

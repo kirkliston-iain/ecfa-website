@@ -58,6 +58,7 @@ import RecordsAdmin from './pages/RecordsAdmin'
 import AdminDataExport from './pages/AdminDataExport'
 import TeamWebsitesAdmin from './pages/TeamWebsitesAdmin'
 import LogosAdmin from './pages/LogosAdmin'
+import ChristmasTheme, { useChristmasTheme } from './components/ChristmasTheme'
 
 export default function App() {
   const location = useLocation()
@@ -66,9 +67,11 @@ export default function App() {
     if (navigationType === 'PUSH') window.scrollTo({ top: 0, left: 0, behavior: 'instant' })
   }, [location.key, navigationType])
   const isAdminArea = location.pathname.startsWith('/admin') || location.pathname.startsWith('/discipline')
+  const christmasActive = useChristmasTheme() && !isAdminArea
 
   return (
-    <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
+    <div className={christmasActive ? 'ecfa-christmas' : undefined} style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
+      {christmasActive && <ChristmasTheme />}
       <HistoryDirectory>
       <Header />
       <main className={isAdminArea ? 'site-main site-main--admin' : 'site-main site-main--public'} style={{ flex: 1 }}>
