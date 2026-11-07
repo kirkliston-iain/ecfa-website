@@ -11,10 +11,19 @@
 .christmas-effects { position: fixed; inset: 0; overflow: hidden; pointer-events: none; z-index: 40; contain: strict; }
 .christmas-flake { position: absolute; top: -30px; width: var(--size); height: var(--size); border-radius: 50%; background: #f3fcff; color: #d1e9ef; box-shadow: 0 0 2px #6494ad66; opacity: .7; font-size: 15px; line-height: 1; animation: christmas-snow var(--duration) var(--delay) linear infinite; }
 .christmas-flake:nth-child(4n + 1) { width: auto; height: auto; background: none; box-shadow: none; }
-.christmas-sleigh { position: absolute; left: -270px; top: 70px; animation: christmas-flight 48s 3s linear infinite; filter: drop-shadow(0 2px 2px #ffffffb3); }
+.christmas-chase { --chase-width: 540px; position: absolute; width: var(--chase-width); height: 115px; left: calc(-1 * var(--chase-width)); top: 155px; animation: christmas-flight var(--chase-seconds) 1s linear infinite; filter: drop-shadow(0 2px 2px #ffffffb3); }
+.christmas-sleigh { position: absolute; right: 0; top: 0; }
+.christmas-grinch { position: absolute; left: 160px; top: 5px; width: 82px; height: 103px; }
+.grinch-leg { transform-origin: 50px 86px; animation: grinch-run .45s ease-in-out infinite alternate; }
+.grinch-leg--back { animation-direction: alternate-reverse; }
+.grinch-bubble { position: absolute; left: 45px; bottom: 113px; width: 260px; padding: 9px 12px; border: 2px solid #507c26; border-radius: 15px; background: #fffef2; color: #23431f; font-size: 14px; line-height: 1.3; text-align: center; box-shadow: 0 3px 10px #173f3526; overflow-wrap: anywhere; }
+.grinch-bubble::after { content: ''; position: absolute; bottom: -9px; left: 155px; width: 14px; height: 14px; transform: rotate(45deg); background: #fffef2; border-right: 2px solid #507c26; border-bottom: 2px solid #507c26; }
+.grinch-bubble strong { display: block; font-size: 9px; letter-spacing: .1em; color: #507c26; margin-bottom: 3px; }
+.grinch-bubble span { position: relative; z-index: 1; }
+@keyframes grinch-run { from { transform: rotate(-16deg); } to { transform: rotate(16deg); } }
 @keyframes christmas-snow { to { transform: translate3d(var(--drift), calc(100dvh + 60px), 0) rotate(180deg); } }
-@keyframes christmas-flight { 0% { transform: translate3d(0, 20px, 0); } 22%, 100% { transform: translate3d(calc(100vw + 540px), -25px, 0); } }
+@keyframes christmas-flight { 0%, 5% { transform: translate3d(0, 0, 0); } 35%, 55% { transform: translate3d(calc(50vw + var(--chase-width) / 2), 0, 0); } 85%, 100% { transform: translate3d(calc(100vw + var(--chase-width)), -15px, 0); } }
 .christmas-effects--paused { display: none; }
-@media (max-width: 600px) { .christmas-flake:nth-child(n + 23) { display: none; } .christmas-sleigh svg { width: 185px; height: 60px; } }
+@media (max-width: 600px) { .christmas-flake:nth-child(n + 23) { display: none; } .christmas-chase { --chase-width: min(360px, calc(100vw - 16px)); top: 170px; } .christmas-sleigh svg { width: 170px; height: 55px; } .christmas-grinch { left: 90px; width: 65px; height: 82px; } .grinch-bubble { left: 5px; bottom: 113px; width: 220px; font-size: 13px; } .grinch-bubble::after { left: 108px; } }
 @media (prefers-reduced-motion: reduce) { .christmas-effects { display: none; } .christmas-greeting button { display: none; } }
 @media print { .christmas-effects, .christmas-greeting { display: none !important; } .ecfa-christmas .site-main--public ::after { content: none !important; } }
