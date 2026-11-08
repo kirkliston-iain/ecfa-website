@@ -98,7 +98,7 @@ cover = Table([[p('ECFA WEBSITE', 'CoverSub')], [p('Public Features Guide', 'Cov
               ]))
 story += [Spacer(1, 35*mm), cover, Spacer(1, 18*mm)]
 story.append(Table([[p('WEBSITE', 'Smallx'), p('https://ecfa-website.vercel.app', 'CardTitle')],
-                    [p('GUIDE UPDATED', 'Smallx'), p('7 November 2026', 'CardTitle')]],
+                    [p('GUIDE UPDATED', 'Smallx'), p('8 November 2026', 'CardTitle')]],
                    colWidths=[35*mm, 125*mm], style=TableStyle([
                        ('BOX', (0,0), (-1,-1), 0.7, LINE), ('INNERGRID', (0,0), (-1,-1), 0.5, LINE),
                        ('BACKGROUND', (0,0), (0,-1), PALE), ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
@@ -119,7 +119,7 @@ story.append(card_grid([
     ('Honours and History', 'Past winners, team honours and previous-season records.'),
     ('Teams and Referees', 'Explore clubs, player records and referee profiles. Referees has its own main navigation tab.'),
     ('Downloads and Search', 'Export public data or search names, teams, competitions and pages.'),
-    ('Christmas at ECFA', 'Through 28 December 2026, public pages have a festive green header, falling snow, snowflake edging and a Grinch chasing Santa and his reindeer every 20 seconds. A speech bubble rotates up to ten playful comments using the top five current-season scorers and top five highest-scoring teams across competitions; the names refresh from public results. Use Pause effects to hide animations for your visit. Reduced-motion preferences stop animations automatically. The theme ends automatically on 29 December at midnight UK time.'),
+    ('Christmas at ECFA', 'The Christmas theme automatically runs from 1 to 28 December 2026: green header, snow, snowflake edging and a Grinch chasing Santa every 20 seconds. Ten rotating jokes use leading scorers and highest-scoring teams. The button beneath the sleigh, &quot;I&#8217;m a Scrooge - get rid of this&quot;, hides the chase and remembers your choice on this browser. Use Bring Santa back in the festive header to restore it. Pause effects hides all animations for your visit; reduced-motion preferences stop them automatically. The theme is paused until December and ends at midnight UK time on 29 December.'),
 ]))
 story += [Spacer(1, 8), p('<b>Tip:</b> Swipe the top navigation left or right to reveal additional sections. Navigation scrolls independently so the page stays within the screen. Public pages use consistent compact spacing, with narrower reading and contact layouts.', 'Bodyx')]
 story.append(PageBreak())

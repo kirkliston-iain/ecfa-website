@@ -4,19 +4,25 @@ import { CHASE_SECONDS, FALLBACK_GRINCH_LINES } from '../utils/christmasChase.mj
 import { loadGrinchLines } from '../utils/christmasChaseData'
 
 // One-off 2026 celebration, inclusive of 28 December in Edinburgh.
+export const CHRISTMAS_START = Date.parse('2026-12-01T00:00:00Z')
 export const CHRISTMAS_END = Date.parse('2026-12-29T00:00:00Z')
-export const christmasIsActive = (now = Date.now()) => now >= Date.parse('2026-11-06T00:00:00Z') && now < CHRISTMAS_END
+export const christmasIsActive = (now = Date.now()) => now >= CHRISTMAS_START && now < CHRISTMAS_END
 
 export function useChristmasTheme() {
   const [active, setActive] = useState(() => christmasIsActive())
   useEffect(() => {
-    const update = () => setActive(christmasIsActive())
-    const timer = window.setInterval(update, 30000)
-    const expiry = window.setTimeout(update, Math.min(Math.max(CHRISTMAS_END - Date.now(), 0), 2147483647))
+    let timer
+    const update = () => {
+      window.clearTimeout(timer)
+      const now = Date.now()
+      setActive(christmasIsActive(now))
+      const next = now < CHRISTMAS_START ? CHRISTMAS_START : CHRISTMAS_END
+      if (now < next) timer = window.setTimeout(update, Math.min(next - now, 2147483647))
+    }
+    update()
     document.addEventListener('visibilitychange', update)
     return () => {
-      window.clearInterval(timer)
-      window.clearTimeout(expiry)
+      window.clearTimeout(timer)
       document.removeEventListener('visibilitychange', update)
     }
   }, [])
@@ -26,6 +32,13 @@ export function useChristmasTheme() {
 export default function ChristmasTheme() {
   const [lines, setLines] = useState(FALLBACK_GRINCH_LINES)
   const [pass, setPass] = useState(0)
+  const [dismissed, setDismissed] = useState(() => {
+    try { return localStorage.getItem('ecfa-chase-dismissed-2026') === 'true' } catch { return false }
+  })
+  function dismissChase(value) {
+    setDismissed(value)
+    try { localStorage.setItem('ecfa-chase-dismissed-2026', String(value)) } catch { /* Dismiss still works without storage. */ }
+  }
   const [paused, setPaused] = useState(() => {
     try { return sessionStorage.getItem('ecfa-christmas-paused') === 'true' } catch { return false }
   })
@@ -43,15 +56,16 @@ export default function ChristmasTheme() {
     })
   }
   return <>
-    <div className={`christmas-effects${paused ? ' christmas-effects--paused' : ''}`} aria-hidden="true">
-      {Array.from({ length: 36 }, (_, index) => <span key={index} className="christmas-flake" style={{
+    <div className={`christmas-effects${paused ? ' christmas-effects--paused' : ''}`}>
+      {Array.from({ length: 36 }, (_, index) => <span key={index} aria-hidden="true" className="christmas-flake" style={{
         left: `${(index * 37.7) % 100}%`, '--size': `${3 + index % 5}px`,
         '--duration': `${12 + index % 13}s`, '--delay': `${-index * 1.9}s`,
         '--drift': `${(index % 2 ? 1 : -1) * (20 + index % 45)}px`,
       }}>{index % 4 === 0 ? '❄' : ''}</span>)}
-      <div className="christmas-chase" style={{ '--chase-seconds': `${CHASE_SECONDS}s` }} onAnimationIteration={event => {
+      {!dismissed && <div className="christmas-chase" style={{ '--chase-seconds': `${CHASE_SECONDS}s` }} onAnimationIteration={event => {
         if (event.target === event.currentTarget) setPass(value => value + 1)
       }}>
+        <div aria-hidden="true">
         <div className="grinch-bubble"><strong>THE GRINCH</strong><span>{lines[pass % lines.length]}</span></div>
         <svg className="christmas-grinch" viewBox="0 0 100 125" fill="none">
           <path className="grinch-leg grinch-leg--back" d="m44 85-16 24-17 2" stroke="#77ab35" strokeWidth="10" strokeLinecap="round" />
@@ -89,11 +103,14 @@ export default function ChristmasTheme() {
           <path d="M92 40 108 33" stroke="#c52e3f" strokeWidth="7" strokeLinecap="round" />
         </svg>
         </div>
-      </div>
+        </div>
+        <button type="button" className="christmas-scrooge" onClick={() => dismissChase(true)}>I'm a Scrooge — get rid of this <span aria-hidden="true">×</span></button>
+      </div>}
     </div>
     <div className="christmas-greeting">
       <span><span aria-hidden="true">❄</span> Christmas at ECFA <span aria-hidden="true">❄</span></span>
       <button type="button" onClick={toggleSnow} aria-pressed={paused}>{paused ? 'Resume effects' : 'Pause effects'}</button>
+      {dismissed && <button type="button" onClick={() => dismissChase(false)}>Bring Santa back</button>}
     </div>
   </>
 }
