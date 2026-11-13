@@ -63,8 +63,8 @@ export default function WeeklyNewsletter() {
       <div className="weekly-lead-grid" id="weekly-roundup">
         <section className="weekly-lead">
           <span className="weekly-eyebrow">THE BIG STORY / {dateText(e.start)} – {dateText(e.date)}</span>
-          <h2>{winner ? `${shortName(winner.name)} hit ${winningScore}` : 'The week in ECFA football'}</h2>
-          <p className="weekly-deck">{leadMatch ? `${shortName(winner.name)} delivered the highest-scoring team performance of the week as ${e.results.length} completed fixtures produced ${e.totals.weeklyGoals} goals across the ECFA.` : 'Your weekly digest of the league, the cups and the people behind the game.'}</p>
+          <h2>{e.headline || (winner ? `${shortName(winner.name)} hit ${winningScore}` : 'The week in ECFA football')}</h2>
+          <p className="weekly-deck">{e.deck || (leadMatch ? `${shortName(winner.name)} delivered the highest-scoring team performance of the week as ${e.results.length} completed fixtures produced ${e.totals.weeklyGoals} goals across the ECFA.` : 'Your weekly digest of the league, the cups and the people behind the game.')}</p>
           {leadMatch && <div className="weekly-score-hero"><Badge team={leadMatch.home_team}/><div><span>{shortName(leadMatch.home_team.name)}</span><strong>{displayedScore(leadMatch)}</strong><span>{shortName(leadMatch.away_team.name)}</span></div><Badge team={leadMatch.away_team}/></div>}
           <div className="weekly-copy-columns">
             {leader && <p><strong>The league picture.</strong> {shortName(leader.teamName)} head the ECFA Appin Sports League with {leader.points} points from {leader.played} matches{second ? `, ${leader.points-second.points} points ahead of ${shortName(second.teamName)}` : ''}. Their record stands at {leader.won} wins, {leader.drawn} draws and {leader.lost} defeats, with a goal difference of {leader.goalDifference > 0 ? '+' : ''}{leader.goalDifference}.</p>}
