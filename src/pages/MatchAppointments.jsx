@@ -370,11 +370,11 @@ export default function MatchAppointments() {
     for (const row of allocations) {
       const fixture = fixtures.find((item) => item.id === row.fixtureId)
       const slot = slots.find((item) => item.key === row.slotKey)
-      if (!fixture || !slot || !availableReferees.includes(row.referee) || !refereeAllowed(row.referee, fixture, slot)) return setMessage(`The appointment for ${fixture?.home_team?.name || 'a fixture'} breaks the saved availability or referee restrictions.`)
+      if (!fixture || !slot || !availableReferees.includes(row.referee) || !officialAllowed(row.referee, fixture, slot, settings, weekRules, false, false)) return setMessage(`The appointment for ${fixture?.home_team?.name || 'a fixture'} breaks the saved availability or referee restrictions.`)
       const assistants = [row.assistant1, row.assistant2].filter(Boolean)
       if (assistants.length && !needsAssistants(fixture)) return setMessage('Assistants can only be assigned to semi-finals and finals.')
       for (const name of assistants) {
-        if (!referees.some((referee) => referee.name === name) || !availableReferees.includes(name) || !officialAllowed(name, fixture, slot, settings, weekRules, true)) return setMessage(`${name} cannot assist: check availability and venue restrictions.`)
+        if (!referees.some((referee) => referee.name === name) || !availableReferees.includes(name) || !officialAllowed(name, fixture, slot, settings, weekRules, true, false)) return setMessage(`${name} cannot assist: check availability.`)
       }
       const fixed = weekRules.fixedAssignments?.find((rule) => rule.fixtureId === row.fixtureId)
       if (fixed && fixed.referee !== row.referee) return setMessage(`The fixed referee for ${fixture.home_team?.name} v ${fixture.away_team?.name} has changed. Update the weekly stipulation first.`)
@@ -421,12 +421,12 @@ export default function MatchAppointments() {
           <div style={{ ...helpStyle, padding: 10, borderRadius: 6, background: '#f5f8fa', color: 'var(--ink)' }}>
             {['East', 'West', 'Any'].map((area) => <div key={area} style={{ marginBottom: 5 }}><strong>{area}:</strong> {referees.filter((referee) => (settings.refereePreferences?.[referee.name] || 'Any') === area).map((referee) => referee.name).join(', ') || 'None'}</div>)}
             <div><strong>Cannot take:</strong> {(settings.refereeTeamBlocks || []).map((rule) => `${rule.referee} / ${rule.team}`).join('; ') || 'None'}</div>
-            <div><strong>Venue limits:</strong> {Object.entries(settings.refereeVenueOnly || {}).map(([name, venues]) => `${name}: ${venues.join(', ')}`).join('; ') || 'None'}</div>
+            <div><strong>Preferred venues:</strong> {Object.entries(settings.refereeVenueOnly || {}).map(([name, venues]) => `${name}: ${venues.join(', ')}`).join('; ') || 'None'}</div>
           </div>
           <details>
             <summary style={summaryStyle}>How the current suggestions are made</summary>
             <div style={{ ...helpStyle, marginTop: 8 }}>
-              Each selected, eligible referee can receive one game. Matching the area assigned to the fixture's venue gets 35 points, an “Any” preference gets 12, and a different area gets 0. Each previous appointment involving either team subtracts 24 points; previous overall appointments also lower the score slightly. South East Saints home games are assigned first. Team limits apply to referees only. After referees are allocated, remaining available officials are proposed as Assistant 1 and Assistant 2 for semi-finals and finals. Assistants follow venue limits and preferred areas, without team restrictions or repeat-team penalties. Each official receives only one role per matchday.
+              Each selected, eligible referee can receive one game. Matching the area assigned to the fixture's venue gets 35 points, an “Any” preference gets 12, and a different area gets 0. Each previous appointment involving either team subtracts 24 points; previous overall appointments also lower the score slightly. South East Saints home games are assigned first. Team limits apply to referees only. After referees are allocated, remaining available officials are proposed as Assistant 1 and Assistant 2 for semi-finals and finals. Assistant suggestions follow preferred venues and areas, without team restrictions or repeat-team penalties. Each official receives only one role per matchday.
             </div>
           </details>
           <details style={{ marginTop: 12 }}>
@@ -467,8 +467,8 @@ export default function MatchAppointments() {
             </div>
           </details>
           <details style={{ marginTop: 12 }}>
-            <summary style={summaryStyle}>Venue-only limits</summary>
-            <p style={helpStyle}>A referee listed here can only be assigned at the venues shown. Referees without a limit can take any venue.</p>
+            <summary style={summaryStyle}>Preferred venues</summary>
+            <p style={helpStyle}>Suggestions use these preferred venues. You can manually assign any venue; a warning will advise when it is outside an official’s preferences.</p>
             {Object.entries(settings.refereeVenueOnly || {}).map(([name, venues]) => <div key={name} style={{ marginBottom: 10, fontSize: 13 }}><strong>{name}</strong>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 5 }}>{venues.map((venue) => <button type="button" key={venue} title={`Remove ${venue}`} onClick={() => {
                 const next = { ...settings.refereeVenueOnly, [name]: venues.filter((item) => item !== venue) }
@@ -477,13 +477,13 @@ export default function MatchAppointments() {
               }} style={smallButtonStyle}>{venue} ×</button>)}</div>
             </div>)}
             <div style={{ display: 'grid', gap: 7 }}>
-              <select aria-label="Referee for venue limit" value={newVenueReferee} onChange={(event) => setNewVenueReferee(event.target.value)} style={inputStyle}><option value="">Select referee</option>{referees.map((referee) => <option key={referee.id}>{referee.name}</option>)}</select>
-              <select aria-label="Allowed venue" value={newVenue} onChange={(event) => setNewVenue(event.target.value)} style={inputStyle}><option value="">Select allowed venue</option>{settings.venues.map((venue) => <option key={venue.name}>{venue.name}</option>)}</select>
+              <select aria-label="Referee for venue preference" value={newVenueReferee} onChange={(event) => setNewVenueReferee(event.target.value)} style={inputStyle}><option value="">Select referee</option>{referees.map((referee) => <option key={referee.id}>{referee.name}</option>)}</select>
+              <select aria-label="Preferred venue" value={newVenue} onChange={(event) => setNewVenue(event.target.value)} style={inputStyle}><option value="">Select preferred venue</option>{settings.venues.map((venue) => <option key={venue.name}>{venue.name}</option>)}</select>
               <button type="button" disabled={!newVenueReferee || !newVenue} onClick={() => {
                 const allowed = settings.refereeVenueOnly?.[newVenueReferee] || []
                 if (!allowed.includes(newVenue)) editSettings({ refereeVenueOnly: { ...settings.refereeVenueOnly, [newVenueReferee]: [...allowed, newVenue] } })
                 setNewVenue('')
-              }} style={outlineStyle}>Add allowed venue</button>
+              }} style={outlineStyle}>Add preferred venue</button>
             </div>
           </details>
           <button type="button" onClick={saveCriteria} disabled={!settingsDirty || savingRules} style={{ ...buttonStyle, marginTop: 15, width: '100%' }}>{savingRules ? 'Saving…' : settingsDirty ? 'Save standing criteria' : 'Standing criteria saved'}</button>
@@ -574,9 +574,15 @@ export default function MatchAppointments() {
                     {referees.filter((referee) => availableReferees.includes(referee.name)).map((referee) => <option key={referee.id} value={referee.name}>{referee.name}</option>)}
                   </select>
                 </label>)}
-                <p style={helpStyle}>Assistants follow availability, venue limits and preferred area. Team restrictions apply to the referee only.</p>
+                <p style={helpStyle}>Assistant suggestions follow availability, preferred venues and preferred area. Manual venue choices are allowed. Team restrictions apply to the referee only.</p>
                 {(!allocation.assistant1 || !allocation.assistant2) && <p role="status" style={{ ...helpStyle, color: '#9a6700' }}>Assistant slots remain unfilled. Select another available official or confirm without a full assistant team.</p>}
               </>}
+              {[allocation.referee, allocation.assistant1, allocation.assistant2].filter(Boolean).filter((name) => {
+                const preferred = settings.refereeVenueOnly?.[name]
+                return preferred?.length && !preferred.includes(allocation.venue)
+              }).map((name) => <p key={name} role="status" style={{ ...helpStyle, color: '#9a6700', marginTop: 9 }}>
+                {name} prefers {settings.refereeVenueOnly[name].join(', ')}. You can still confirm this appointment at {allocation.venue}.
+              </p>)}
               <div style={{ color: 'var(--muted)', fontSize: 12, marginTop: 9 }}>{allocation.reason}</div>
             </article>
           })}

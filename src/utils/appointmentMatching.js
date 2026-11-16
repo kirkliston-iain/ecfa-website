@@ -27,12 +27,12 @@ export function needsAssistants(fixture) {
     && /^(semi[\s-]*finals?|finals?)$/i.test((fixture.round_name || fixture.stage?.name || '').trim())
 }
 
-export function officialAllowed(name, fixture, slot, settings, weekRules, assistant = false) {
+export function officialAllowed(name, fixture, slot, settings, weekRules, assistant = false, enforceVenue = true) {
   if (weekRules.unavailableReferees?.includes(name)) return false
   const teams = [fixture.home_team?.name, fixture.away_team?.name].filter(Boolean)
   if (!assistant && [settings, weekRules].some((rules) => rules.refereeTeamBlocks?.some((rule) => rule.referee === name && teams.includes(rule.team)))) return false
   const venues = settings.refereeVenueOnly?.[name]
-  return !venues || venues.includes(slot.venue)
+  return !enforceVenue || !venues || venues.includes(slot.venue)
 }
 
 // Referees have priority. Match the remaining pool to the assistant slots,
