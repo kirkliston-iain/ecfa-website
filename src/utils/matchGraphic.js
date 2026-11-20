@@ -115,7 +115,7 @@ export async function renderMatchGraphic(f, scorers, logos, story = false) {
 }
 
 export async function renderWeekendGraphic(report, logos, story = false) {
-  const canvas=document.createElement('canvas');canvas.width=1080;canvas.height=story?1920:1080
+  const canvas=document.createElement('canvas');canvas.width=1080;canvas.height=report.singleImage?Math.max(story?1920:1080,565+report.rows.length*100):(story?1920:1080)
   const ctx=canvas.getContext('2d');const h=canvas.height
   const assets=await Promise.all([image(logos.league),...logos.sponsors.map(s=>image(s.url)),...report.badges.map(url=>image(url))])
   ctx.fillStyle='#131f29';ctx.fillRect(0,0,1080,h);ctx.fillStyle='#b48a38';ctx.fillRect(0,0,1080,12);ctx.fillRect(0,h-12,1080,12)
@@ -144,7 +144,7 @@ export async function renderWeekendGraphic(report, logos, story = false) {
       fit(f.competition_name||f.compName||'ECFA',540,y+(report.type==='fixtures'?1:6),900,Math.min(20,rowHeight*.23),'#d5b65d','center')
       drawImage(assets[1+logos.sponsors.length+i*2],45,y+16,40,40);drawImage(assets[2+logos.sponsors.length+i*2],995,y+16,40,40)
       fit(f.home_team?.name||'Home',100,y+(report.type==='fixtures'?26:45),350,Math.min(27,rowHeight*.32));fit(report.type==='fixtures'?(String(f.fixture_date).slice(11,16)||'TBC'):displayedScore(f),540,y+(report.type==='fixtures'?26:45),160,report.type==='fixtures'?24:Math.min(34,rowHeight*.4),'#fff','center');fit(f.away_team?.name||'Away',980,y+(report.type==='fixtures'?26:45),350,Math.min(27,rowHeight*.32),'#fff','right')
-      const note=report.type==='fixtures'?[f.venue||'Venue TBC',f.referee_name?`Ref: ${f.referee_name}`:'Referee TBC'].join(' · '):fullOutcomeNote(f)
+      const note=report.type==='fixtures'?[report.showDates?new Date(`${String(f.fixture_date).slice(0,10)}T12:00:00Z`).toLocaleDateString('en-GB',{weekday:'short',day:'numeric',month:'short'}):null,f.venue||'Venue TBC',f.referee_name?`Ref: ${f.referee_name}`:'Referee TBC'].filter(Boolean).join(' · '):fullOutcomeNote(f)
       if(report.includeScorers){
         for(const [team,x,align] of [[f.home_team,100,'left'],[f.away_team,980,'right']]){
           const scorers=(f.scorers||[]).filter(s=>s.team_id===team?.id)
