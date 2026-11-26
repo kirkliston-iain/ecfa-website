@@ -361,13 +361,13 @@ export default function Downloads() {
             </div>
           </div>
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-            <a href="/documents/ECFA-League-Handbook-2026-27.pdf" target="_blank" rel="noreferrer" onClick={() => trackInteraction('view', 'ECFA League Handbook 2026/27 PDF')} style={{ ...buttonStyle, textDecoration: 'none' }}>
+            <a href="/documents/ECFA-League-Handbook-2026-27.pdf?v=20261126" target="_blank" rel="noreferrer" onClick={() => trackInteraction('view', 'ECFA League Handbook 2026/27 PDF')} style={{ ...buttonStyle, textDecoration: 'none' }}>
               View PDF
             </a>
-            <a href="/documents/ECFA-League-Handbook-2026-27.pdf" download onClick={() => trackInteraction('download', 'ECFA League Handbook 2026/27 PDF')} style={{ ...buttonStyle, textDecoration: 'none' }}>
+            <a href="/documents/ECFA-League-Handbook-2026-27.pdf?v=20261126" download onClick={() => trackInteraction('download', 'ECFA League Handbook 2026/27 PDF')} style={{ ...buttonStyle, textDecoration: 'none' }}>
               Download PDF
             </a>
-            <a href="/documents/ECFA-League-Handbook-2026-27.docx" download onClick={() => trackInteraction('download', 'ECFA League Handbook 2026/27 Word')} style={{ ...buttonStyle, textDecoration: 'none' }}>
+            <a href="/documents/ECFA-League-Handbook-2026-27.docx?v=20261126" download onClick={() => trackInteraction('download', 'ECFA League Handbook 2026/27 Word')} style={{ ...buttonStyle, textDecoration: 'none' }}>
               Download Word
             </a>
           </div>
