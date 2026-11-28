@@ -1471,8 +1471,7 @@ export default function AdminDashboard() {
                       >
                         <option value="">Select player…</option>
                         {[...(sideSquad || [])]
-                          .sort((a, b) => (a.last_name || '').localeCompare(b.last_name || '', 'en-GB', { sensitivity: 'base' })
-                            || (a.first_name || '').localeCompare(b.first_name || '', 'en-GB', { sensitivity: 'base' }))
+                          .sort((a, b) => `${a.first_name || ''} ${a.last_name || ''}`.trim().localeCompare(`${b.first_name || ''} ${b.last_name || ''}`.trim(), 'en-GB', { sensitivity: 'base' }))
                           .map((p) => (
                             <option key={p.id} value={p.id}>
                               {p.first_name} {p.last_name}
@@ -1549,8 +1548,7 @@ export default function AdminDashboard() {
                       >
                         <option value="">Select player…</option>
                         {[...(disciplineSideSquad || [])]
-                          .sort((a, b) => (a.last_name || '').localeCompare(b.last_name || '', 'en-GB', { sensitivity: 'base' })
-                            || (a.first_name || '').localeCompare(b.first_name || '', 'en-GB', { sensitivity: 'base' }))
+                          .sort((a, b) => `${a.first_name || ''} ${a.last_name || ''}`.trim().localeCompare(`${b.first_name || ''} ${b.last_name || ''}`.trim(), 'en-GB', { sensitivity: 'base' }))
                           .map((p) => (
                             <option key={p.id} value={p.id}>
                               {p.first_name} {p.last_name}
