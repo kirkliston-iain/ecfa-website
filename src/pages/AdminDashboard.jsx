@@ -1,3 +1,4 @@
+import FixtureResultOverride from '../components/FixtureResultOverride'
 import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { supabase } from '../supabaseClient'
@@ -317,9 +318,10 @@ export default function AdminDashboard() {
       )
       .order('fixture_date')
     if (stageId) query = query.eq('stage_id', stageId)
-    const { data } = await query
+    const [{ data }, overrides] = await Promise.all([query, supabase.from('fixture_result_overrides').select('fixture_id,actual_home_score,actual_away_score,winner_team_id')])
     if (request !== fixtureLoadRequest.current) return
-    setFixtures(data || [])
+    const overrideMap = new Map((overrides.data || []).map(row => [row.fixture_id,row]))
+    setFixtures((data || []).map(f => ({...f,_resultOverride:overrideMap.get(f.id),_overrideUnavailable:!!overrides.error})))
   }
 
   function openPostponedFixture(fixture) {
@@ -384,15 +386,16 @@ export default function AdminDashboard() {
   }
 
   async function saveFixture(fixture) {
-    if (fixture.went_to_extra_time && (fixture.home_extra_time_score === '' || fixture.away_extra_time_score === '' || fixture.home_extra_time_score == null || fixture.away_extra_time_score == null)) {
+    if (fixture._overrideUnavailable) { setFixtureSaveStatus(current=>({...current,[fixture.id]:'Result override controls could not load. Refresh before saving.'})); return }
+    if (!fixture._resultOverride && fixture.went_to_extra_time && (fixture.home_extra_time_score === '' || fixture.away_extra_time_score === '' || fixture.home_extra_time_score == null || fixture.away_extra_time_score == null)) {
       setFixtureSaveStatus((current) => ({ ...current, [fixture.id]: 'Enter both after-extra-time scores before saving.' }))
       return
     }
-    if (fixture.decided_by_penalties && (fixture.home_penalty_score === '' || fixture.away_penalty_score === '' || fixture.home_penalty_score == null || fixture.away_penalty_score == null)) {
+    if (!fixture._resultOverride && fixture.decided_by_penalties && (fixture.home_penalty_score === '' || fixture.away_penalty_score === '' || fixture.home_penalty_score == null || fixture.away_penalty_score == null)) {
       setFixtureSaveStatus((current) => ({ ...current, [fixture.id]: 'Enter both penalty shootout scores before saving.' }))
       return
     }
-    if (fixture.decided_by_penalties && Number(fixture.home_penalty_score) === Number(fixture.away_penalty_score)) {
+    if (!fixture._resultOverride && fixture.decided_by_penalties && Number(fixture.home_penalty_score) === Number(fixture.away_penalty_score)) {
       setFixtureSaveStatus((current) => ({ ...current, [fixture.id]: 'A penalty shootout must have a winner.' }))
       return
     }
@@ -409,10 +412,10 @@ export default function AdminDashboard() {
       .update({
         home_score: fixture.home_score === '' ? null : Number(fixture.home_score),
         away_score: fixture.away_score === '' ? null : Number(fixture.away_score),
-        went_to_extra_time: !!fixture.went_to_extra_time,
+        went_to_extra_time: !fixture._resultOverride && !!fixture.went_to_extra_time,
         home_extra_time_score: fixture.went_to_extra_time ? Number(fixture.home_extra_time_score) : null,
         away_extra_time_score: fixture.went_to_extra_time ? Number(fixture.away_extra_time_score) : null,
-        decided_by_penalties: !!fixture.decided_by_penalties,
+        decided_by_penalties: !fixture._resultOverride && !!fixture.decided_by_penalties,
         home_penalty_score: fixture.decided_by_penalties ? Number(fixture.home_penalty_score) : null,
         away_penalty_score: fixture.decided_by_penalties ? Number(fixture.away_penalty_score) : null,
         status: savedStatus,
@@ -464,6 +467,7 @@ export default function AdminDashboard() {
       return
     }
     setExpandedFixture(fixture.id)
+    if (error) { setScorerSaveStatus(prev => ({...prev,[fixture.id]:`Scorer could not be saved: ${error.message}`})); return }
     setScorerForm({ side: 'home', playerId: '', goals: 1 })
     setDisciplineForm({ side: 'home', playerId: '', cardType: 'yellow', count: 1, seriousOffence: '' })
 
@@ -500,7 +504,7 @@ export default function AdminDashboard() {
     if (!playerId) return
     const teamId = side === 'home' ? fixture.home_team.id : fixture.away_team.id
 
-    await supabase
+    const { error } = await supabase
       .from('fixture_scorers')
       .upsert(
         { fixture_id: fixture.id, player_id: playerId, team_id: teamId, goals: Number(goals) },
@@ -1170,6 +1174,8 @@ export default function AdminDashboard() {
                   <input
                     type="number"
                     placeholder="Home"
+                    disabled={!!f._resultOverride}
+                    aria-label="Home official score"
                     value={f.home_score ?? ''}
                     onChange={(e) => updateLocal(f.id, 'home_score', e.target.value)}
                     style={{ ...scoreInputStyle, flex: 1 }}
@@ -1178,13 +1184,17 @@ export default function AdminDashboard() {
                   <input
                     type="number"
                     placeholder="Away"
+                    disabled={!!f._resultOverride}
+                    aria-label="Away official score"
                     value={f.away_score ?? ''}
                     onChange={(e) => updateLocal(f.id, 'away_score', e.target.value)}
                     style={{ ...scoreInputStyle, flex: 1 }}
                   />
                 </div>
 
+                {f._resultOverride && <p style={{fontSize:12}}>Official result shown above. Edit the actual score under Void result / award 3–0 below.</p>}
                 <select
+                  disabled={!!f._resultOverride}
                   value={f.status}
                   onChange={(e) => updateLocal(f.id, 'status', e.target.value)}
                   style={{ ...fullSelectStyle, marginBottom: 10 }}
@@ -1351,6 +1361,7 @@ export default function AdminDashboard() {
                     {expandedFixture === f.id ? 'Hide details' : 'Scorers & cards'}
                   </button>
                 </div>
+                <FixtureResultOverride fixture={f} onSaved={loadFixtures}/>
                 <a href={`/fixtures/${f.id}?graphic=1#match-graphic`} target="_blank" rel="noopener noreferrer" style={{display:'inline-block',margin:'8px 0',fontSize:12}}>Create graphic from saved match ↗</a>
                 {fixtureSaveStatus[f.id] && (
                   <div
