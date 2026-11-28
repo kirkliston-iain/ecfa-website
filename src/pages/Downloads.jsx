@@ -389,13 +389,13 @@ export default function Downloads() {
         <h2 style={{ fontSize: 18, marginBottom: 10 }}>Player reports</h2>
         <div style={cardStyle}>
           <div style={{ flex: 1, minWidth: 220 }}>
-            <div style={{ fontWeight: 700, marginBottom: 4 }}>Individual player scoring report</div>
+            <div style={{ fontWeight: 700, marginBottom: 4 }}>Player performance packs</div>
             <div style={{ fontSize: 13, color: 'var(--muted)' }}>
-              Choose a player and one season or combine their full history. Includes verified scoring matches and season-by-season totals.
+              Choose a player and one season or combine their full history. View the full report online, with scoring rankings, charts, career totals, favourite opponents and match highlights, or download PDF and Word copies.
             </div>
           </div>
           <Link to="/downloads/player-report" style={{ ...buttonStyle, textDecoration: 'none' }}>
-            Create report
+            View / download report
           </Link>
         </div>
       </section>

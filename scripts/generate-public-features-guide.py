@@ -162,6 +162,7 @@ story.append(card_grid([
     ('Player profiles', 'View a player’s current team, goals, yellow and red cards, and every recorded transfer, including moves without goals or appearances. Dated squad history retains additions and removals. Website record dates are labelled separately from confirmed transfer dates; unknown joining dates stay unknown. Club names open their team pages.'),
     ('Scoring history', 'Goals are totalled by season and the club represented in each match. Transferring a player keeps previous goals and cards with their original clubs.'),
     ('Match-linked goals', 'Player scoring history links to recorded matches from 2025/26 onwards, including players outside current squads. Follow team names, season totals and goals by opponent into further history. Earlier totals do not infer match links.'),
+    ('Player performance packs', 'Downloads > Player packs offers a full view-only report as well as PDF and Word downloads. Choose a player and season or combine all seasons. Modern cards and charts show recorded goals, shared scorer rank, season trends, club totals, favourite opponents, competitions, home and away, braces, hat-tricks and a match journal. Historical totals and fixture-linked analysis have separate coverage notes; scoring matches are not appearances.'),
     ('Name search', 'Find current players and historical scorers using full or partial names.'),
 ]))
 story += [Spacer(1, 10)] + section_title('5. Teams')
