@@ -53,6 +53,7 @@ export default function AdminDashboard() {
   const newContactCount = contactEnquiries.filter((enquiry) => enquiry.status === 'new').length
 
   const [squadsByFixture, setSquadsByFixture] = useState({})
+  const [squadLoadStatus, setSquadLoadStatus] = useState({})
   const [scorersByFixture, setScorersByFixture] = useState({})
   const [scorerChangesByFixture, setScorerChangesByFixture] = useState({})
   const [savingScorers, setSavingScorers] = useState(null)
@@ -467,20 +468,28 @@ export default function AdminDashboard() {
       return
     }
     setExpandedFixture(fixture.id)
-    if (error) { setScorerSaveStatus(prev => ({...prev,[fixture.id]:`Scorer could not be saved: ${error.message}`})); return }
     setScorerForm({ side: 'home', playerId: '', goals: 1 })
     setDisciplineForm({ side: 'home', playerId: '', cardType: 'yellow', count: 1, seriousOffence: '' })
 
-    if (!squadsByFixture[fixture.id]) {
-      const [{ data: homeSquad }, { data: awaySquad }] = await Promise.all([
-        supabase.from('players').select('id, first_name, last_name').eq('team_id', fixture.home_team.id).order('last_name'),
-        supabase.from('players').select('id, first_name, last_name').eq('team_id', fixture.away_team.id).order('last_name'),
-      ])
-      setSquadsByFixture((prev) => ({ ...prev, [fixture.id]: { home: homeSquad || [], away: awaySquad || [] } }))
-    }
+    if (!squadsByFixture[fixture.id]) await loadFixtureSquads(fixture)
 
     await refreshScorers(fixture.id)
     await refreshDiscipline(fixture.id)
+  }
+
+  async function loadFixtureSquads(fixture) {
+    setSquadLoadStatus((prev) => ({ ...prev, [fixture.id]: 'Loading players…' }))
+    try {
+      const [home, away] = await Promise.all([
+        supabase.from('players').select('id, first_name, last_name').eq('team_id', fixture.home_team.id).order('last_name'),
+        supabase.from('players').select('id, first_name, last_name').eq('team_id', fixture.away_team.id).order('last_name'),
+      ])
+      if (home.error || away.error) throw home.error || away.error
+      setSquadsByFixture((prev) => ({ ...prev, [fixture.id]: { home: home.data || [], away: away.data || [] } }))
+      setSquadLoadStatus((prev) => ({ ...prev, [fixture.id]: '' }))
+    } catch (error) {
+      setSquadLoadStatus((prev) => ({ ...prev, [fixture.id]: 'Could not load players. Please retry.' }))
+    }
   }
 
   async function refreshScorers(fixtureId) {
@@ -1379,6 +1388,10 @@ export default function AdminDashboard() {
 
                 {expandedFixture === f.id && (
                   <div style={{ marginTop: 14, paddingTop: 14, borderTop: '1px solid var(--line)' }}>
+                    {squadLoadStatus[f.id] && <div role="status" style={{ marginBottom: 10 }}>
+                      {squadLoadStatus[f.id]}
+                      {squadLoadStatus[f.id] !== 'Loading players…' && <button type="button" onClick={() => loadFixtureSquads(f)}>Retry loading players</button>}
+                    </div>}
                     <div style={{ fontWeight: 600, fontSize: 13, marginBottom: 6 }}>Scorers</div>
                     <div style={{ marginBottom: 10 }}>
                       {[...(scorersByFixture[f.id] || [])]
