@@ -167,6 +167,8 @@ story.append(card_grid([
 ]))
 story += [Spacer(1, 10)] + section_title('5. Teams')
 story.append(card_grid([
+    ('Live Team Hub', 'Open Teams and choose a club. Overview includes current-season league rank, form, goals, clean sheets, next-match comparisons, talking points, a league points chart, leading scorers, home and away win rates, unbeaten runs, season records and comparison after the same number of league games last season. Missing historical coverage is labelled. Use Players, Fixtures and Records to explore more.'),
+    ('Follow and share', 'Follow team saves one club on this browser and adds a shortcut on the Match Hub. Share this week’s team card creates a PNG with real season figures, recent form, next opponent and a talking point; compatible phones offer native sharing, otherwise the image downloads.'),
     ('Team overview', 'Browse the current-team badge links or use Select a team to choose a current league club or a previous team. Contrasting headings separate current and previous teams. Former clubs are marked as no longer in the league and open their historical records.'),
     ('Team websites', 'Select a club to see up to five website or social links on its team profile. Links appear only for the selected club. Links are labelled Facebook, Instagram, X, Own Website or Other when available.'),
     ('Form and fixtures', 'See the next five fixtures with home or away, competition and venue. Upcoming lists show these details too and default to the Appin Sports League. Choose another competition or all, filter by month or date, and share the list as a picture.'),

@@ -1,0 +1,3 @@
+import { useEffect, useState } from 'react'
+import { Link } from 'react-router-dom'
+export default function FollowedTeamLink(){const [team,setTeam]=useState(null);useEffect(()=>{const read=()=>{try{const t=JSON.parse(localStorage.getItem('ecfa-followed-team'));setTeam(t?.id&&t?.name?t:null)}catch{setTeam(null)}};read();window.addEventListener('storage',read);window.addEventListener('ecfa-followed-team',read);return()=>{window.removeEventListener('storage',read);window.removeEventListener('ecfa-followed-team',read)}},[]);return team?<Link className="followed-team-link" to={`/teams/${encodeURIComponent(team.id)}`}><span><small>YOUR TEAM HUB</small><strong>{team.name}</strong></span><span aria-hidden="true">→</span></Link>:null}

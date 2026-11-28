@@ -1,3 +1,5 @@
+import FollowedTeamLink from '../components/FollowedTeamLink'
+import '../components/teamHub.css'
 import PitchStatus, { PitchReportSummary } from '../components/PitchStatus'
 import usePitchReport from '../hooks/usePitchReport'
 import AssistantOfficials from '../components/AssistantOfficials'
@@ -956,6 +958,7 @@ export default function Home() {
 
   return (
     <div className="container" style={{ padding: '32px 20px 48px' }}>
+      <FollowedTeamLink/>
       <h1 style={{ fontSize: 30 }}>Match Hub</h1>
       <div className="home-shortcuts">
         {[["/predictions", "Weekly Predictions ⚽"], ["/news", "Latest News"], ["/on-this-day", "On This Day 📅"], ["/matchday-graphics", "Matchday Graphics 🖼️"]].map(([to, label]) => <Link key={to} to={to} style={{ padding: '7px 9px', border: '1px solid var(--brass)', borderRadius: 5, fontSize: 12, fontWeight: 700, color: 'var(--ink)', textAlign: 'center' }}>{label}</Link>)}

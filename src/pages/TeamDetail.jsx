@@ -1,3 +1,4 @@
+import TeamHub from '../components/TeamHub'
 import { PlayerHistoryLink, TeamHistoryLink } from '../components/HistoryLinks'
 import { useRememberedState, useRememberedScroll } from '../hooks/usePageMemory'
 import { useEffect } from 'react'
@@ -95,6 +96,7 @@ function wrapCanvasText(ctx, value, maxWidth) {
 export default function TeamDetail() {
   const { id } = useParams()
   const navigate = useNavigate()
+  const [hubSection, setHubSection] = useRememberedState('hubSection', 'overview')
   const [team, setTeam] = useRememberedState('team', null)
   const [playedFixtures, setPlayedFixtures] = useRememberedState('playedFixtures', [])
   const [upcomingFixtures, setUpcomingFixtures] = useRememberedState('upcomingFixtures', [])
@@ -334,6 +336,9 @@ export default function TeamDetail() {
         </div>
       )}
 
+      <nav className="hub-navigation" aria-label="Team page sections">{[['overview','Overview'],['players','Players'],['fixtures','Fixtures'],['records','Records']].map(([key,label])=><button type="button" key={key} aria-pressed={hubSection===key} onClick={()=>setHubSection(key)}>{label}</button>)}</nav>
+      <div hidden={hubSection !== 'overview'}><TeamHub key={team.id} team={team}/></div>
+      <div hidden={hubSection !== 'records'} id="team-records">
       {honours.length > 0 && (
         <div
           style={{
@@ -373,7 +378,8 @@ export default function TeamDetail() {
           ))}
       </div>
 
-      <div className="club-sections">
+      </div>
+      <div hidden={!['players','fixtures'].includes(hubSection)} className={`club-sections team-panel-${hubSection}`}>
         <section>
           <h2 style={{ fontSize: 13, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 16, paddingBottom: 8, borderBottom: '1px solid var(--line)' }}>
             Next Fixtures
@@ -445,7 +451,7 @@ export default function TeamDetail() {
         </section>
       </div>
 
-      <section id="all-fixtures" style={{ marginBottom: 24 }}>
+      <section hidden={hubSection !== 'fixtures'} id="all-fixtures" style={{ marginBottom: 24 }}>
         <h2 style={{ fontSize: 13, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 8, paddingBottom: 8, borderBottom: '1px solid var(--line)' }}>
           All upcoming fixtures
         </h2>
@@ -486,7 +492,7 @@ export default function TeamDetail() {
         )}
       </section>
 
-      <section style={{ marginBottom: 24 }}>
+      <section hidden={hubSection !== 'records'} style={{ marginBottom: 24 }}>
         <h2 style={{ fontSize: 13, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 16, paddingBottom: 8, borderBottom: '1px solid var(--line)' }}>
           Results
         </h2>
@@ -552,7 +558,7 @@ export default function TeamDetail() {
         </ul>
       </section>
 
-      <section>
+      <section hidden={hubSection !== 'players'} id="team-squad">
         <h2 style={{ fontSize: 13, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 16, paddingBottom: 8, borderBottom: '1px solid var(--line)' }}>
           Squad
         </h2>
