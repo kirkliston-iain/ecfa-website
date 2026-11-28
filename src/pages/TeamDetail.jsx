@@ -291,7 +291,7 @@ export default function TeamDetail() {
   const competitionOrder = ['League', 'League Cup', 'Knockout Cup', 'Brian Latto Cup']
 
   return (
-    <div className="container" style={{ padding: '32px 20px 48px' }}>
+    <div className="container team-detail-page" style={{ padding: '32px 20px 48px' }}>
       <button
         onClick={() => navigate(-1)}
         style={{
@@ -308,7 +308,7 @@ export default function TeamDetail() {
         &larr; Back
       </button>
 
-      <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 12 }}>
+      <div className="team-detail-identity" style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 12 }}>
         <Badge logoUrl={team.logo_url} name={team.name} size={64} />
         <div>
           <h1 style={{ fontSize: 26, margin: 0 }}>{team.name}</h1>
