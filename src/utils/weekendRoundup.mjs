@@ -22,3 +22,10 @@ export function roundup(fixtures,scorers,cards,saturday){
  const playerRows=rank([...players.values()].map(p=>({...p,clubs:[...p.clubs].join(', ')}))),teamRows=rank([...teams.values()])
  return{saturday,end,matches:results,goals,wins:winners.size,decisiveMatches:wins,draws,shootouts,clean,homeWins,awayWins,yellow,red,recordedGoals,players:playerRows,teams:teamRows,teamsPlayed:teams.size,notCompleted:weekend.length-matches.length,avg:matches.length?(goals/matches.length).toFixed(1):'0.0',topTies:playerRows.length?playerRows.filter(p=>p.goals===playerRows[0].goals).length:0}
 }
+
+export function compactScorers(players){
+ const multi=players.filter(p=>p.goals>1),singles=players.filter(p=>p.goals===1),featured=multi.slice(0,5)
+ const groupSingles=singles.length>5-featured.length
+ if(!groupSingles)featured.push(...singles)
+ return{featured,groupedSingles:groupSingles?singles.length:0,omittedMulti:Math.max(0,multi.length-5)}
+}

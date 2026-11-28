@@ -1,4 +1,3 @@
-import WeekendRoundup from '../components/WeekendRoundup'
 import FollowedTeamLink from '../components/FollowedTeamLink'
 import '../components/teamHub.css'
 import PitchStatus, { PitchReportSummary } from '../components/PitchStatus'
@@ -962,7 +961,7 @@ export default function Home() {
       <FollowedTeamLink/>
       <h1 style={{ fontSize: 30 }}>Match Hub</h1>
       <div className="home-shortcuts">
-        {[["/predictions", "Weekly Predictions ⚽"], ["/news", "Latest News"], ["/on-this-day", "On This Day 📅"], ["/matchday-graphics", "Matchday Graphics 🖼️"], ["/#weekend-roundup", "Weekend Roundup 📊"]].map(([to, label]) => <Link key={to} to={to} onClick={to === "/#weekend-roundup" ? (event) => { event.preventDefault(); document.getElementById("weekend-roundup")?.scrollIntoView({ behavior: "smooth", block: "start" }) } : undefined} style={{ padding: '7px 9px', border: '1px solid var(--brass)', borderRadius: 5, fontSize: 12, fontWeight: 700, color: 'var(--ink)', textAlign: 'center' }}>{label}</Link>)}
+        {[["/predictions", "Weekly Predictions ⚽"], ["/news", "Latest News"], ["/on-this-day", "On This Day 📅"], ["/matchday-graphics", "Matchday Graphics 🖼️"], ["/weekend-roundup", "Weekend Roundup 📊"]].map(([to, label]) => <Link key={to} id={to === "/weekend-roundup" ? "weekend-roundup" : undefined} to={to} style={{ padding: '7px 9px', border: '1px solid var(--brass)', borderRadius: 5, fontSize: 12, fontWeight: 700, color: 'var(--ink)', textAlign: 'center' }}>{label}</Link>)}
       </div>
       <p style={{ color: 'var(--muted)', marginBottom: 20 }}>
         Results and fixtures across every ECFA competition.
@@ -978,7 +977,7 @@ export default function Home() {
 
       <MatchdayCarousel days={allDays} selected={selectedDate} onSelect={setSelectedDate} />
 
-      <WeekendRoundup/>
+
 
       {hasResultsToday && recapParagraphs.length > 0 && (
         <section style={{ marginBottom: 28 }}>

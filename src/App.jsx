@@ -1,3 +1,4 @@
+import WeekendRoundupPage from './pages/WeekendRoundupPage'
 import OnThisDay from './pages/OnThisDay'
 import MatchdayGraphics from './pages/MatchdayGraphics'
 import { useLayoutEffect } from 'react'
@@ -77,6 +78,7 @@ export default function App() {
       <main className={isAdminArea ? 'site-main site-main--admin' : 'site-main site-main--public'} style={{ flex: 1 }}>
         <Routes>
           <Route path="/" element={<Home key={location.key} />} />
+          <Route path="/weekend-roundup" element={<WeekendRoundupPage />} />
           <Route path="/on-this-day" element={<OnThisDay />} />
           <Route path="/matchday-graphics" element={<MatchdayGraphics />} />
           <Route path="/predictions" element={<WeekendPredictions />} />
